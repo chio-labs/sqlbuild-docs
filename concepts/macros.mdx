@@ -1,0 +1,50 @@
+---
+title: "Python Macros"
+description: "Reusable Python functions that generate SQL fragments at compile time."
+---
+
+# Python Macros
+
+Macros are Python functions that generate SQL fragments at compile time. They are useful for repetitive SQL patterns like conditional logic, environment-specific transforms, or complex expressions.
+
+## Defining macros
+
+Create Python files under `macros/` in your project:
+
+```python
+# macros/grant_target.py
+def grant_target(target):
+    return f"GRANT SELECT ON {target} TO analyst_role"
+```
+
+## Using macros
+
+Call macros in model SQL using the `@macro_name(args)` syntax:
+
+```sql
+MODEL (
+  materialized: table,
+  post_hook: ["@grant_target('${CTX:target.qualified}')"]
+);
+
+SELECT 1 AS id
+```
+
+## Context templates
+
+Macros and hooks can reference context variables using `${CTX:...}` templates:
+
+| Template | Value |
+|----------|-------|
+| `${CTX:target.qualified}` | Fully qualified target relation name |
+| `${CTX:target.schema}` | Target schema |
+| `${CTX:target.name}` | Target relation name |
+| `${CTX:model_name}` | Model name |
+| `${CTX:environment}` | Current environment name |
+| `${CTX:run_id}` | Current run ID |
+
+## Hook macros
+
+Macros are expanded inside `pre_hook` and `post_hook` strings. This allows dynamic hook SQL generation at compile time.
+
+Hook SQL is also validated at compile time using SQLGlot, so invalid hook SQL will be caught before execution.

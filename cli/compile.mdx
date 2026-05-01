@@ -1,0 +1,47 @@
+---
+title: "compile"
+description: "Compile models into resolved SQL and write target artifacts."
+---
+
+# sqb compile
+
+Compiles all discovered models, seeds, audits, and tests. Writes compiled artifacts to `target/`.
+
+## Usage
+
+```bash
+sqb compile --project-dir <path>
+```
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--project-dir` | Path to the project directory |
+| `--no-sql-validation` | Skip SQLGlot SQL syntax validation |
+| `--defer-to` | Defer unselected models to another environment |
+| `--json` | Output compile results as JSON |
+| `--debug` | Enable debug diagnostics to stderr and `target/sqlbuild.log` |
+
+## JSON output
+
+```bash
+sqb compile --project-dir examples/waffle_shop --json
+```
+
+Returns structured JSON with resolved SQL and logical DDL for every model and seed.
+
+## What it does
+
+1. Discovers all project files from `sqlbuild_project.yml`
+2. Parses `MODEL()` headers, schema YAML, audit definitions, and test files
+3. Resolves macros, variables, and SQL references
+4. Validates SQL syntax (unless `--no-sql-validation`)
+5. Validates incremental config, cursor config, and hook SQL
+6. Writes compiled artifacts to `target/compiled/` and `target/manifest.json`
+
+## Notes
+
+- Compile does not execute anything against the warehouse
+- Compile does not write to `target/run/` (runtime artifacts come from `build` or `run`)
+- Hook SQL (`pre_hook` / `post_hook`) is validated at compile time for syntactic correctness

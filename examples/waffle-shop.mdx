@@ -1,0 +1,119 @@
+---
+title: "Waffle Shop"
+description: "A complete walkthrough of the waffle shop example project."
+---
+
+# Waffle Shop Example
+
+The waffle shop is a self-contained example project that demonstrates the core features of SQLBuild: views, tables, incremental models, microbatch execution, seeds, audits, tests, and custom materializations.
+
+## Project overview
+
+The project models a fictional waffle shop's order data:
+
+- **Raw sources**: `raw_customers`, `raw_orders`, `raw_payments` (provisioned by `seed_raw_data.sql`)
+- **Staging views**: `stg_customers`, `stg_orders`, `stg_payments`
+- **Fact/dimension tables**: `fact_orders`, `dim_customers`, `daily_revenue`
+- **Incremental models**: cursor-based and microbatch models with runtime-owned cursor resolution
+- **Custom materialization**: `daily_order_partitioned` using a Python partition-tracked strategy
+- **Seed**: `waffle_types` CSV
+- **Audits**: `not_null`, `unique`, `accepted_values`, `expression_is_true`
+- **Test**: `test_stg_orders` SQL unit test
+
+## Model DAG
+
+```
+raw_customers ──> stg_customers ──> dim_customers
+raw_orders ────> stg_orders ────> fact_orders ──> customer_status_snapshot
+raw_payments ──> stg_payments ──>  │              order_status_index
+                                   │              hourly_order_activity ──> daily_activity_rollup
+                                   │                                       hourly_activity_with_daily_context
+                                   └──> daily_revenue
+                                   └──> daily_order_partitioned
+```
+
+## Incremental models
+
+### customer_status_snapshot
+
+- Strategy: `merge`
+- Cursor: `last_ordered_at` (timestamp, second grain)
+- Model-backed cursor input from `fact_orders.ordered_at`
+- Backfill policies: `query_change_backfill: full`, `schema_change_backfill.type_change: full`
+
+### hourly_order_activity
+
+- Strategy: `delete_insert`
+- Cursor: `activity_hour` (timestamp, hour grain)
+- Microbatch with `batch_size: 1d`
+- Model-backed cursor input from `fact_orders.ordered_at`
+
+### daily_activity_rollup
+
+- Strategy: `delete_insert`
+- Cursor: `activity_day` (timestamp, day grain)
+- Microbatch with `batch_size: 2d`
+- Model-backed cursor input from `hourly_order_activity.activity_hour`
+- Backfill policy: `query_change_backfill: bounded(14d)`
+
+### hourly_activity_with_daily_context
+
+- Strategy: `delete_insert`
+- Cursor: `activity_hour` (timestamp, hour grain)
+- Microbatch with `batch_size: 6h`
+- Model-backed cursor input from `daily_activity_rollup.activity_day`
+- Demonstrates opposite-grain replay: finer downstream from coarser upstream
+
+### order_status_index
+
+- Strategy: `delete_insert`
+- Cursor: `order_id` (integer)
+- Non-microbatch incremental
+
+## Running the example
+
+```bash
+# Seed raw data
+python -c "
+from pathlib import Path
+import duckdb
+project_dir = Path('examples/waffle_shop')
+db_path = project_dir / 'waffle_shop.duckdb'
+con = duckdb.connect(str(db_path))
+con.execute((project_dir / 'seed_raw_data.sql').read_text(encoding='utf-8'))
+con.close()
+"
+
+# Build everything
+sqb build --project-dir examples/waffle_shop --no-color
+
+# Check the plan
+sqb plan --project-dir examples/waffle_shop --no-color
+
+# Run a subset
+sqb build --project-dir examples/waffle_shop --select path:marts --no-color
+
+# Debug a specific model
+sqb build --project-dir examples/waffle_shop --debug --select hourly_order_activity
+```
+
+## Project config
+
+```yaml
+# sqlbuild_project.yml
+name: waffle_shop
+adapter: duckdb
+
+connection:
+  database: waffle_shop.duckdb
+
+settings:
+  default_audit_severity: warn
+
+defaults:
+  materialized: table
+
+path_defaults:
+  models/staging:
+    materialized: view
+```

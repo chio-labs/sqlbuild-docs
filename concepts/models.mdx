@@ -1,0 +1,83 @@
+---
+title: "Models"
+description: "SQL model definitions, the MODEL() block, and how the DAG is built."
+---
+
+# Models
+
+A model is a SQL file that defines one transformation step. Each model produces one table or view in the warehouse.
+
+## MODEL() header
+
+Every model file starts with a `MODEL()` block that declares its materialization and configuration:
+
+```sql
+MODEL (
+  materialized: table,
+  tags: ["marts"]
+);
+
+SELECT
+  order_id,
+  customer_id,
+  ordered_at
+FROM __ref("stg_orders")
+```
+
+## Materialization types
+
+| Type | Description |
+|------|-------------|
+| `view` | Creates a database view. Rebuilt on every run. |
+| `table` | Creates a table via `CREATE TABLE AS`. Fully rebuilt each time. |
+| `incremental` | Inserts/updates into an existing table using a cursor-based strategy. |
+| `custom` | User-defined Python materialization function. |
+
+## References
+
+Models reference other models with `__ref("model_name")` and sources with `__source("source_name")`:
+
+```sql
+SELECT *
+FROM __ref("stg_orders") o
+LEFT JOIN __ref("stg_payments") p ON o.order_id = p.order_id
+```
+
+SQLBuild resolves these references to qualified warehouse relation names during compilation.
+
+## DAG ordering
+
+SQLBuild automatically discovers the dependency graph from `__ref()` and `__source()` calls, then executes models in topological order. Upstream models are always built before their downstream dependents.
+
+## Schema declarations
+
+Models can have schema metadata declared in a companion `schema.yml` file:
+
+```yaml
+models:
+  - name: fact_orders
+    columns:
+      - name: order_id
+        audits:
+          - not_null
+          - unique
+```
+
+Schema declarations attach audits and optionally declare column types for type enforcement and schema-change detection.
+
+## Config options
+
+Common `MODEL()` config fields:
+
+| Field | Description |
+|-------|-------------|
+| `materialized` | `view`, `table`, `incremental`, or a custom name |
+| `tags` | List of tags for selector filtering |
+| `schema` | Override target schema |
+| `database` | Override target database |
+| `alias` | Override target relation name |
+| `pre_hook` | SQL to execute before materialization |
+| `post_hook` | SQL to execute after materialization |
+| `enabled` | Set to `false` to skip the model |
+
+For incremental-specific config, see [Incremental](/concepts/incremental).

@@ -1,0 +1,54 @@
+---
+title: "seed"
+description: "Load seed CSV files into the warehouse."
+---
+
+# sqb seed
+
+Loads seed CSV files into the warehouse as tables.
+
+## Usage
+
+```bash
+sqb seed --project-dir <path> [flags]
+```
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--project-dir` | Path to the project directory |
+| `--no-color` | Disable ANSI color output |
+| `--select` | Select specific seeds |
+| `--exclude` | Exclude specific seeds |
+| `--debug` | Enable debug diagnostics |
+
+## Seed definition
+
+Seeds are CSV files under `seeds/` with a companion `schema.yml`:
+
+```
+seeds/
+  waffle_types.csv
+  schema.yml
+```
+
+```yaml
+seeds:
+  - name: waffle_types
+    columns:
+      - name: waffle_type_id
+        type: INTEGER
+      - name: waffle_name
+        type: VARCHAR
+      - name: category
+        type: VARCHAR
+      - name: price_cents
+        type: INTEGER
+```
+
+## Notes
+
+- Seeds are always fully replaced on each load
+- Seeds can be referenced by models using `__ref("seed_name")`
+- During `build`, seeds are loaded before any models execute

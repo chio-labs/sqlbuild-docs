@@ -1,0 +1,80 @@
+---
+title: "build"
+description: "Execute the full build lifecycle: seeds, tests, models, and audits."
+---
+
+# sqb build
+
+Compiles, plans, and executes the full build lifecycle including seeds, SQL unit tests, model materialization, and audits.
+
+## Usage
+
+```bash
+sqb build --project-dir <path> [flags]
+```
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--project-dir` | Path to the project directory |
+| `--no-color` | Disable ANSI color output |
+| `--no-sql-validation` | Skip compile-time SQL syntax validation |
+| `--fail-fast` | Stop on first failure and skip remaining nodes |
+| `--full-refresh` | Drop and rebuild all selected models from scratch |
+| `--concurrency` | Number of worker connections (default: 1) |
+| `--select` | Select specific models |
+| `--exclude` | Exclude specific models |
+| `--verbose` | Show lifecycle SQL inline after each model |
+| `--debug` | Show every executed SQL statement via debug diagnostics |
+| `--defer-to` | Defer unselected models to another environment |
+
+## Execution order
+
+1. Seeds are loaded first
+2. SQL unit tests run before their target model
+3. Models are materialized in DAG topological order
+4. Audits run after their attached model completes
+
+## Output
+
+```
+  1/13  seed      waffle_types                           OK     0.03s
+  2/13  view      stg_customers                          OK     0.02s
+          audit     not_null (customer_id)               PASS
+          audit     unique (customer_id)                 PASS
+  ...
+  8/13  table     fact_orders                            OK     0.04s
+          audit     not_null (order_id)                  PASS
+
+Completed successfully.
+PASS=66  WARN=0  FAIL=0  SKIP=0  TOTAL=66  (0.93s)
+```
+
+## Failure behavior
+
+When a model fails:
+- Downstream models are automatically blocked and skipped
+- Staging/delta tables are retained for inspection
+- Failure details show the model name, failed phase, and error message
+
+Example failure output:
+
+```
+Failures:
+
+  hourly_order_activity  (audit)
+    delta audit for 'hourly_order_activity' failed before target update
+    with severity level: error
+    delta table kept for inspection: main.hourly_order_activity__delta
+```
+
+## Fingerprints
+
+After a successful build, SQLBuild writes query fingerprints to `_sqlbuild_fingerprints` in the target schema. These are used by `plan` to detect query changes on subsequent runs.
+
+Fingerprinting is controlled by `settings.query_change_tracking` in `sqlbuild_project.yml`. When disabled, no fingerprints are written and no query-change warnings are emitted.
+
+## Runtime artifacts
+
+Build writes executed lifecycle SQL to `target/run/models/...`. These files contain the actual SQL that was executed, including resolved cursor bounds and runtime substitutions.

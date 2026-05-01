@@ -1,0 +1,97 @@
+---
+title: "Audits"
+description: "Generic data quality checks attached to models and sources."
+---
+
+# Audits
+
+Audits are reusable SQL checks that verify data quality after models are built. They are defined as generic SQL files and attached to models through `schema.yml`.
+
+## Generic audit definitions
+
+Create reusable audit SQL files under `audits/generic/`:
+
+```sql
+-- audits/generic/not_null.sql
+AUDIT ();
+
+SELECT @column FROM __ref("@model") WHERE @column IS NULL
+```
+
+The `@column` and `@model` variables are substituted at compile time based on where the audit is attached.
+
+## Attaching audits
+
+Attach audits to models in `schema.yml`:
+
+```yaml
+models:
+  - name: fact_orders
+    columns:
+      - name: order_id
+        audits:
+          - not_null
+          - unique
+    audits:
+      - expression_is_true:
+          name: revenue is non-negative
+          expression: "total_revenue_cents >= 0"
+```
+
+Column-level audits receive the column name as `@column`. Model-level audits can use any expression.
+
+## Severity
+
+Audit severity determines whether a failure blocks the build:
+
+| Severity | Behavior |
+|----------|----------|
+| `error` | Stops the build and reports a failure |
+| `warn` | Reports a warning but allows the build to continue |
+
+Set the default severity in `sqlbuild_project.yml`:
+
+```yaml
+settings:
+  default_audit_severity: warn
+```
+
+Or override per audit instance:
+
+```yaml
+columns:
+  - name: order_id
+    audits:
+      - not_null:
+          severity: error
+```
+
+## Run scope
+
+Audits on incremental models can run at different lifecycle phases:
+
+| Scope | Behavior |
+|-------|----------|
+| `final` | Run once after all DML against the target table (default) |
+| `delta_and_final` | Run against the delta before DML, then again against the target after DML |
+
+```yaml
+audits:
+  - expression_is_true:
+      expression: "orders_placed >= 0"
+      run_scope: delta_and_final
+```
+
+Delta-phase audits with `error` severity block DML before the target is updated. Final-phase audit failures happen after the target is already updated.
+
+## Source audits
+
+Audits can also be attached to sources in source YAML files for pre-build data quality checks.
+
+## Running audits standalone
+
+```bash
+sqb audit --project-dir examples/waffle_shop --no-color
+```
+
+This runs all audits without rebuilding any models.

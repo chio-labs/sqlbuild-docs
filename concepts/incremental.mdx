@@ -1,0 +1,132 @@
+---
+title: "Incremental Models"
+description: "Cursor-based incremental strategies, microbatch execution, and backfill policies."
+---
+
+# Incremental Models
+
+Incremental models process only new or changed data instead of rebuilding the entire table. SQLBuild supports three incremental strategies and two execution modes.
+
+## Strategies
+
+### append
+
+Inserts new rows without modifying existing data.
+
+```sql
+MODEL (
+  materialized: incremental,
+  incremental_strategy: append
+);
+```
+
+### delete_insert
+
+Deletes rows in the cursor range, then inserts the new delta. Requires either `cursor` or `unique_key`.
+
+```sql
+MODEL (
+  materialized: incremental,
+  incremental_strategy: delete_insert,
+  cursor: "order_id",
+  cursor_type: integer,
+  cursor_grain: second
+);
+```
+
+### merge
+
+Upserts rows using a unique key. Matched rows are updated; unmatched rows are inserted.
+
+```sql
+MODEL (
+  materialized: incremental,
+  incremental_strategy: merge,
+  unique_key: ["customer_id"],
+  cursor: "last_ordered_at",
+  cursor_type: timestamp,
+  cursor_grain: second
+);
+```
+
+## Cursor configuration
+
+Cursors define the incremental replay boundary:
+
+| Field | Description |
+|-------|-------------|
+| `cursor` | Output column used to track incremental position |
+| `cursor_type` | `timestamp` or `integer` |
+| `cursor_grain` | Required for timestamp cursors: `second`, `minute`, `hour`, `day`, `month`, `year` |
+| `cursor_inputs` | Map of upstream ref/source names to their cursor columns |
+
+When a model references multiple upstream inputs, `cursor_inputs` is required to specify which column on each input carries the cursor.
+
+## Microbatch execution
+
+For large incremental ranges, microbatch mode splits the replay into smaller windows:
+
+```sql
+MODEL (
+  materialized: incremental,
+  incremental_strategy: delete_insert,
+  cursor: "activity_hour",
+  cursor_type: timestamp,
+  cursor_grain: hour,
+  incremental_mode: microbatch,
+  batch_size: "1d"
+);
+```
+
+Each batch is processed serially: create delta, run delta audits, apply DML, clean up.
+
+### Mixed-grain chains
+
+When a downstream microbatch model depends on an upstream model with a larger time bucket (e.g., hour downstream from day upstream), SQLBuild automatically widens the replay window to the largest participating time bucket. This prevents empty batch windows and ensures correctness.
+
+## Backfill policies
+
+### query_change_backfill
+
+Controls what happens when the model SQL changes between runs:
+
+```sql
+MODEL (
+  ...
+  query_change_backfill: "full"
+);
+```
+
+| Value | Effect |
+|-------|--------|
+| `full` | Full table rebuild when query changes |
+| `bounded(14d)` | Rebuild the last 14 days of data |
+| *(omitted)* | Warn only; no automatic rebuild |
+
+### schema_change_backfill
+
+Controls response to schema differences between expected and warehouse columns:
+
+```sql
+MODEL (
+  ...
+  schema_change_backfill:
+    add_column: "bounded(7d)"
+    type_change: "full"
+);
+```
+
+### on_schema_change
+
+Controls how schema differences are handled at execution time:
+
+| Value | Effect |
+|-------|--------|
+| `append_new_columns` | Add new columns to the target table (default) |
+| `sync_all_columns` | Add, drop, and alter columns to match the delta |
+| `ignore` | Log and continue without schema changes |
+| `fail` | Reject the build with an error |
+
+## Cascade behavior
+
+When an upstream model has a non-warn backfill policy and its query or schema changes, the backfill signal cascades to downstream incremental models. The plan shows these as `Upstream changed` with the root cause and effective rebuild window.
