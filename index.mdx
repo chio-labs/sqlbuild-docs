@@ -1,0 +1,48 @@
+---
+title: "Introduction"
+description: "Batch SQL transformation framework with incremental execution, change detection, and audits."
+---
+
+# What is SQLBuild?
+
+SQLBuild is a CLI tool for building and managing batch SQL transformation pipelines. You define your pipeline as SQL models in a project directory, and SQLBuild handles compilation, planning, execution, schema management, and data quality auditing.
+
+SQLBuild works with DuckDB out of the box, with support for additional warehouses coming soon.
+
+## How it works
+
+1. **Define** your models as SQL files with `MODEL()` headers and optional schema YAML
+2. **Compile** to resolve references, macros, and validate SQL
+3. **Plan** what needs to change based on fingerprints, schema diffs, and backfill policies
+4. **Build** by executing the plan: materialize tables/views, run audits, and write fingerprints
+5. **Iterate** with incremental reruns, query-change detection, and selective rebuilds
+
+## Key features
+
+- **Declarative SQL models** -- define transforms as `SELECT` statements with `MODEL()` metadata
+- **Incremental execution** -- `append`, `delete_insert`, and `merge` strategies with cursor-bounded replay
+- **Microbatch processing** -- split large incremental ranges into configurable time or integer batches
+- **Query-change detection** -- fingerprint-based tracking detects when model SQL has actually changed
+- **Schema-change detection** -- automatic column diff with configurable `on_schema_change` policies
+- **Backfill cascade** -- upstream query/schema changes propagate bounded or full rebuild signals downstream
+- **Generic audits** -- reusable data quality checks like `not_null`, `unique`, and `expression_is_true`
+- **SQL unit tests** -- test model logic with expected-vs-actual CTE comparisons
+- **Selectors** -- target individual models, paths, tags, or DAG subsets with `--select` and `--exclude`
+- **Debug diagnostics** -- `--debug` shows every SQL statement executed; `--verbose` shows lifecycle SQL inline
+
+## Quick links
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get a project running locally in minutes.
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/cli/build">
+    Full reference for every SQLBuild command.
+  </Card>
+  <Card title="Concepts" icon="book" href="/concepts/models">
+    Understand models, incremental strategies, audits, and selectors.
+  </Card>
+  <Card title="Waffle Shop Example" icon="store" href="/examples/waffle-shop">
+    Walk through a complete example project.
+  </Card>
+</CardGroup>

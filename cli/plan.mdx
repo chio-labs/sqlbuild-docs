@@ -1,0 +1,55 @@
+---
+title: "plan"
+description: "Preview what SQLBuild will do before executing."
+---
+
+# sqb plan
+
+Shows the execution plan without making any changes. Useful for inspecting change detection, backfill policies, and selector scope.
+
+## Usage
+
+```bash
+sqb plan --project-dir <path>
+```
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--project-dir` | Path to the project directory |
+| `--no-sql-validation` | Skip SQLGlot SQL syntax validation |
+| `--defer-to` | Defer unselected models to another environment |
+| `--json` | Output plan as JSON |
+| `--full-refresh` | Plan a full rebuild of all selected models |
+| `--no-color` | Disable ANSI color output |
+| `--select` | Select specific models, paths, tags, or DAG subsets |
+| `--exclude` | Exclude specific models from the selection |
+| `--debug` | Enable debug diagnostics |
+
+## Plan output
+
+The human-readable plan groups models by reason:
+
+- **Normal** -- no changes detected; models will run their normal incremental or rebuild behavior
+- **First run** -- model has never been built
+- **Query changed** -- model SQL has changed since last fingerprint
+- **Schema changed** -- column schema differences detected
+- **Upstream changed** -- an upstream model's backfill policy cascaded downstream
+
+Each section shows model names, materialization labels, and inline context like cursor columns, batch mode, query diffs, and policy details.
+
+## JSON output
+
+```bash
+sqb plan --project-dir examples/waffle_shop --json
+```
+
+JSON output includes `reason`, `action`, `backfill`, and optional `cascade` metadata for each model. Cascaded models emit `reason: "upstream_changed"` to match the human-readable plan grouping.
+
+## Warnings
+
+The plan surfaces warnings for:
+- Incremental models with query changes but no `query_change_backfill` policy
+- Schema changes under `on_schema_change: fail` or `ignore`
+- Enforced type mismatches between YAML declarations and warehouse state

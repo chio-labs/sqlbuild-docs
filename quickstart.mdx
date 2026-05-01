@@ -1,0 +1,170 @@
+---
+title: "Quickstart"
+description: "Get a SQLBuild project running locally with DuckDB."
+---
+
+# Quickstart
+
+This guide walks you through running the waffle shop example -- a complete transformation project with views, tables, incremental models, audits, and tests -- all running locally against DuckDB.
+
+## Prerequisites
+
+- Python 3.14+
+- SQLBuild installed: `uv add sqlbuild` or `pip install sqlbuild`
+
+## 1. Clone and set up
+
+```bash
+git clone https://github.com/mimo-io/sqlbuild.git
+cd sqlbuild
+uv sync
+```
+
+## 2. Seed the raw data
+
+The waffle shop example needs raw source tables before SQLBuild can build:
+
+```bash
+python -c "
+from pathlib import Path
+import duckdb
+project_dir = Path('examples/waffle_shop')
+db_path = project_dir / 'waffle_shop.duckdb'
+con = duckdb.connect(str(db_path))
+con.execute((project_dir / 'seed_raw_data.sql').read_text(encoding='utf-8'))
+con.close()
+"
+```
+
+## 3. Plan
+
+Preview what SQLBuild will do:
+
+```bash
+sqb plan --project-dir examples/waffle_shop
+```
+
+```
+Plan ready (13 selected)
+
+First run (12)
+  stg_customers               view
+  stg_payments                view
+  stg_orders                  view
+  daily_order_partitioned     partition_tracked (custom)
+  daily_revenue               table
+  dim_customers               table
+  fact_orders                 table
+  customer_status_snapshot    merge (timestamp)
+  hourly_order_activity       delete_insert (timestamp, microbatch)
+  daily_activity_rollup       delete_insert (timestamp, microbatch)
+  hourly_activity_with_daily_context delete_insert (timestamp, microbatch)
+  order_status_index          delete_insert (integer)
+
+Seeds (1)
+  waffle_types
+```
+
+## 4. Build
+
+Execute the full build with tests and audits:
+
+```bash
+sqb build --project-dir examples/waffle_shop --no-color
+```
+
+SQLBuild materializes all models in DAG order, runs SQL unit tests before their target models, and executes generic audits after each model completes.
+
+## 5. Verify
+
+Run the plan again to see the steady-state:
+
+```bash
+sqb plan --project-dir examples/waffle_shop
+```
+
+```
+Plan ready (13 selected)
+
+Normal (12)
+    3 view
+    3 table
+    3 delete_insert (timestamp, microbatch)
+    1 partition_tracked (custom)
+    1 merge (timestamp)
+    1 delete_insert (integer)
+
+Seeds (1)
+  waffle_types
+```
+
+All models now show `Normal` instead of `First run`.
+
+## 6. Common operations
+
+```bash
+# Rebuild a specific model
+sqb build --project-dir examples/waffle_shop --select daily_revenue
+
+# Rebuild models under a path
+sqb build --project-dir examples/waffle_shop --select path:marts
+
+# Full refresh of everything
+sqb build --project-dir examples/waffle_shop --full-refresh
+
+# Run tests only
+sqb test --project-dir examples/waffle_shop
+
+# Run audits only
+sqb audit --project-dir examples/waffle_shop
+
+# See debug SQL for a specific model
+sqb build --project-dir examples/waffle_shop --debug --select hourly_order_activity
+```
+
+## 7. Understand the project structure
+
+```
+examples/waffle_shop/
+  sqlbuild_project.yml          # project config
+  seed_raw_data.sql             # raw source provisioning
+  seeds/
+    waffle_types.csv            # seed data
+    schema.yml                  # seed schema
+  sources/
+    raw.yml                     # source declarations
+  models/
+    staging/
+      stg_customers.sql         # view
+      stg_orders.sql            # view
+      stg_payments.sql          # view
+      schema.yml                # audits for staging
+    marts/
+      fact_orders.sql           # table
+      dim_customers.sql         # table
+      daily_revenue.sql         # table
+      hourly_order_activity.sql # microbatch incremental
+      daily_activity_rollup.sql # microbatch incremental
+      schema.yml                # audits for marts
+    intermediate/
+      customer_status_snapshot.sql  # merge incremental
+      order_status_index.sql       # integer cursor incremental
+      schema.yml                   # audits for intermediate
+  audits/
+    generic/
+      not_null.sql
+      unique.sql
+      accepted_values.sql
+      expression_is_true.sql
+  tests/
+    test_stg_orders.sql         # SQL unit test
+  materializations/
+    partition_tracked.py        # custom materialization
+```
+
+## Next steps
+
+- [Models](/concepts/models) -- understand `MODEL()` headers and materialization types
+- [Incremental](/concepts/incremental) -- learn about cursor-based incremental strategies
+- [Audits](/concepts/audits) -- configure data quality checks
+- [CLI Reference](/cli/build) -- full command reference

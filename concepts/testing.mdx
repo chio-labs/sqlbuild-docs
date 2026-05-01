@@ -1,0 +1,49 @@
+---
+title: "Testing"
+description: "SQL-native unit tests for SQLBuild models."
+---
+
+# Testing
+
+SQLBuild supports SQL-native unit tests that validate model logic by comparing actual query results against expected values.
+
+## How tests work
+
+A test file defines mock inputs and expected outputs using CTEs. SQLBuild compares each expected CTE against the actual model output using `EXCEPT` queries.
+
+```sql
+-- tests/test_stg_orders.sql
+TEST ();
+
+WITH __ref__stg_orders AS (
+  SELECT 1 AS order_id, 10 AS customer_id
+),
+__expected__stg_orders AS (
+  SELECT 1 AS order_id, 10 AS customer_id
+)
+SELECT 1;
+```
+
+## Test execution
+
+Tests run automatically during `sqb build` in DAG order, before their target model is materialized. If a test fails, the target model and its downstream dependents are blocked.
+
+Run tests standalone:
+
+```bash
+sqb test --project-dir examples/waffle_shop --no-color
+```
+
+## Test placement
+
+Place test files under `tests/` in your project directory. SQLBuild discovers them automatically.
+
+## Selectors
+
+Tests can be scoped with selectors:
+
+```bash
+sqb test --select stg_orders
+```
+
+This runs only the tests that target `stg_orders`.

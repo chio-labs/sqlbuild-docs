@@ -1,0 +1,68 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "SQLBuild",
+  "colors": {
+    "primary": "#0078D4",
+    "light": "#2196F3",
+    "dark": "#0078D4"
+  },
+  "logo": {
+    "light": "/light-logo-long-cropped.png",
+    "dark": "/dark-logo-long-cropped.png"
+  },
+  "favicon": "/favicon.png",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Getting Started",
+        "pages": [
+          "index",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "Concepts",
+        "pages": [
+          "concepts/models",
+          "concepts/incremental",
+          "concepts/audits",
+          "concepts/testing",
+          "concepts/macros",
+          "concepts/selectors"
+        ]
+      },
+      {
+        "group": "CLI Reference",
+        "pages": [
+          "cli/compile",
+          "cli/plan",
+          "cli/build",
+          "cli/run",
+          "cli/test",
+          "cli/audit",
+          "cli/seed"
+        ]
+      },
+      {
+        "group": "Examples",
+        "pages": [
+          "examples/waffle-shop"
+        ]
+      }
+    ]
+  },
+  "topbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "url": "https://github.com/mimo-io/sqlbuild"
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/mimo-io/sqlbuild"
+    }
+  }
+}

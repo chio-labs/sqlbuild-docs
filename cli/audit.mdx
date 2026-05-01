@@ -1,0 +1,50 @@
+---
+title: "audit"
+description: "Run data quality audits in isolation."
+---
+
+# sqb audit
+
+Runs all attached audits without rebuilding models. Useful for verifying data quality on existing warehouse state.
+
+## Usage
+
+```bash
+sqb audit --project-dir <path> [flags]
+```
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--project-dir` | Path to the project directory |
+| `--no-color` | Disable ANSI color output |
+| `--no-sql-validation` | Skip compile-time SQL syntax validation |
+| `--defer-to` | Defer unselected models to another environment |
+| `--select` | Select specific models to audit |
+| `--exclude` | Exclude specific models |
+| `--debug` | Enable debug diagnostics |
+
+## Output
+
+```
+Audit (24 selected, 8 models)
+
+  stg_customers
+    not_null (customer_id)             PASS
+    unique (customer_id)               PASS
+    not_null (email)                   PASS
+
+  fact_orders
+    not_null (order_id)                PASS
+  ...
+
+PASS=24  WARN=0  FAIL=0  TOTAL=24
+```
+
+## Notes
+
+- Audits are grouped by their attached model
+- Both model-level and column-level audits are included
+- Source audits run before model audits
+- Standalone audit does not rebuild models; it runs against existing warehouse state

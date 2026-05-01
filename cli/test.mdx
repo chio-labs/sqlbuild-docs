@@ -1,0 +1,42 @@
+---
+title: "test"
+description: "Run SQL-native unit tests."
+---
+
+# sqb test
+
+Runs SQL unit tests in isolation without building models.
+
+## Usage
+
+```bash
+sqb test --project-dir <path> [flags]
+```
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--project-dir` | Path to the project directory |
+| `--no-color` | Disable ANSI color output |
+| `--no-sql-validation` | Skip compile-time SQL syntax validation |
+| `--select` | Select specific tests or models to test |
+| `--exclude` | Exclude specific tests or models |
+| `--debug` | Enable debug diagnostics |
+
+## Output
+
+```
+Test (1 selected, 1 models)
+
+  stg_orders
+    test_stg_orders                    PASS
+
+PASS=1  FAIL=0  TOTAL=1
+```
+
+## Notes
+
+- Tests are grouped by their target model in the output
+- Tests can be scoped with selectors just like models
+- During `build`, tests also run automatically before their target model
