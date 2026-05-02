@@ -25,7 +25,8 @@
         "group": "Concepts",
         "pages": [
           "concepts/models",
-          "concepts/sources-and-seeds",
+          "concepts/sources",
+          "concepts/seeds",
           "concepts/incremental",
           "concepts/audits",
           "concepts/testing",
