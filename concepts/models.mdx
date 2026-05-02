@@ -14,7 +14,7 @@ Every model file starts with a `MODEL()` block that declares its materialization
 ```sql
 MODEL (
   materialized: table,
-  tags: ["marts"]
+  tags: ["marts"],
 );
 
 SELECT
@@ -35,7 +35,7 @@ Creates a database view. Rebuilt on every run.
 ```sql
 MODEL (
   materialized: view,
-  tags: ["staging"]
+  tags: ["staging"],
 );
 
 SELECT id AS order_id, customer_id, status
@@ -49,7 +49,7 @@ Creates a table via `CREATE TABLE AS`. SQLBuild materializes into a staging tabl
 ```sql
 MODEL (
   materialized: table,
-  tags: ["marts"]
+  tags: ["marts"],
 );
 
 SELECT customer_id, COUNT(*) AS total_orders
@@ -73,7 +73,7 @@ MODEL (
   },
   incremental_mode: microbatch,
   batch_size: "1d",
-  tags: ["marts"]
+  tags: ["marts"],
 );
 
 SELECT
@@ -93,13 +93,13 @@ MODEL (
   materialized: "partition_tracked",
   tags: ["marts"],
   placeholders:
-    partition_start: "'2026-04-01'"
-    partition_end: "'2026-04-05'"
+    partition_start: "'2026-04-01'",
+    partition_end: "'2026-04-05'",
   config:
-    tracking_table: "main.partition_state"
-    partition_column: "order_date"
-    date_range_start: "2026-04-01"
-    date_range_end: "2026-04-05"
+    tracking_table: "main.partition_state",
+    partition_column: "order_date",
+    date_range_start: "2026-04-01",
+    date_range_end: "2026-04-05",
 );
 
 SELECT
@@ -183,7 +183,7 @@ Pre-hooks and post-hooks execute SQL before and after materialization. They supp
 ```sql
 MODEL (
   materialized: table,
-  post_hook: ["@grant_target('${CTX:target.qualified}')"]
+  post_hook: ["@grant_target('${CTX:target.qualified}')"],
 );
 ```
 
