@@ -1,53 +1,137 @@
 ---
 title: "Audits"
-description: "Generic data quality checks attached to models and sources."
+description: "Data quality checks that run before data reaches the target table."
 ---
 
 # Audits
 
-Audits are reusable SQL checks that verify data quality after models are built. They are defined as generic SQL files and attached to models through `schema.yml`.
+Audits are SQL queries that verify data quality. If an audit returns rows, something is wrong. SQLBuild runs audits *before* data is promoted to the target table, so bad data never reaches production.
 
-## Generic audit definitions
+## How audits work
 
-Create reusable audit SQL files under `audits/generic/`:
+An audit is a SELECT query that returns rows that violate a condition. Zero rows means the audit passes. Any rows returned means a failure.
+
+For `error` severity audits:
+- **Full table builds:** SQLBuild materializes into a staging table, runs audits against it, and only promotes to the target if all audits pass. If any fail, the staging table is kept for inspection and the production table is untouched.
+- **Incremental models:** Delta-phase audits validate each batch before DML is applied. If an audit fails, the batch is not applied.
+
+For `warn` severity audits, the build continues and the failure is reported in the output.
+
+## Generic audits
+
+Generic audits are reusable SQL templates defined under `audits/generic/`. They use parameter substitution to work across any model or column.
+
+### Defining generic audits
 
 ```sql
 -- audits/generic/not_null.sql
 AUDIT ();
 
-SELECT @column FROM __ref("@model") WHERE @column IS NULL
+SELECT @column
+FROM __ref("@model")
+WHERE @column IS NULL
 ```
 
-The `@column` and `@model` variables are substituted at compile time based on where the audit is attached.
+```sql
+-- audits/generic/unique.sql
+AUDIT ();
 
-## Attaching audits
+SELECT @column
+FROM __ref("@model")
+GROUP BY @column
+HAVING COUNT(*) > 1
+```
+
+```sql
+-- audits/generic/accepted_values.sql
+AUDIT ();
+
+SELECT @column
+FROM __ref("@model")
+WHERE @column NOT IN (@'values')
+```
+
+```sql
+-- audits/generic/expression_is_true.sql
+AUDIT ();
+
+SELECT *
+FROM __ref("@model")
+WHERE NOT (@expression)
+```
+
+The `@column` and `@model` parameters are substituted at compile time based on where the audit is attached. Custom parameters like `@expression` and `@'values'` are passed from the schema YAML.
+
+### Attaching generic audits
 
 Attach audits to models in `schema.yml`:
 
 ```yaml
 models:
-  - name: fact_orders
+  - name: stg_orders
     columns:
       - name: order_id
         audits:
           - not_null
           - unique
+      - name: customer_id
+        audits:
+          - not_null
+      - name: status
+        audits:
+          - accepted_values:
+              values: ["placed", "preparing", "ready", "completed", "cancelled"]
     audits:
       - expression_is_true:
           name: revenue is non-negative
           expression: "total_revenue_cents >= 0"
 ```
 
-Column-level audits receive the column name as `@column`. Model-level audits can use any expression.
+Column-level audits receive the column name as `@column`. Model-level audits use custom parameters like `@expression`.
+
+## Singular audits
+
+Singular audits are standalone SQL files under `audits/` (outside the `generic/` directory) that reference models directly. They're useful for one-off checks that don't fit a reusable template.
+
+```sql
+-- audits/orders_have_payments.sql
+AUDIT ();
+
+SELECT o.order_id
+FROM __ref("fact_orders") o
+LEFT JOIN __ref("stg_payments") p ON o.order_id = p.order_id
+WHERE p.payment_id IS NULL
+  AND o.order_status = 'completed'
+```
+
+SQLBuild automatically infers which model a singular audit attaches to based on the `__ref()` calls in the query. If the audit references a single model, it attaches to that model. If it references multiple models, SQLBuild attaches it to the latest (most downstream) model in the DAG. If attachment can't be inferred, the audit runs at the end of the build.
+
+## Source audits
+
+Sources support the same audit system as models. Audits attached to sources run *before* any dependent model is built:
+
+```yaml
+sources:
+  - name: raw_orders
+    columns:
+      - name: id
+        audits:
+          - not_null
+          - unique
+    audits:
+      - expression_is_true:
+          name: no future orders
+          expression: "ordered_at <= CURRENT_TIMESTAMP"
+```
+
+If a source audit with `error` severity fails, all downstream models that depend on that source are blocked. This lets you catch data quality issues at the source before any transformations run.
 
 ## Severity
 
-Audit severity determines whether a failure blocks the build:
-
 | Severity | Behavior |
 |----------|----------|
-| `error` | Stops the build and reports a failure |
-| `warn` | Reports a warning but allows the build to continue |
+| `error` | Blocks the build. Staging table is not promoted, DML is not applied. |
+| `warn` | Reports a warning but allows the build to continue. |
 
 Set the default severity in `sqlbuild_project.yml`:
 
@@ -56,7 +140,7 @@ settings:
   default_audit_severity: warn
 ```
 
-Or override per audit instance:
+Override per audit instance:
 
 ```yaml
 columns:
@@ -72,26 +156,40 @@ Audits on incremental models can run at different lifecycle phases:
 
 | Scope | Behavior |
 |-------|----------|
-| `final` | Run once after all DML against the target table (default) |
-| `delta_and_final` | Run against the delta before DML, then again against the target after DML |
+| `final` | Run once after materialization against the target table (default). |
+| `delta_and_final` | Run against each delta batch before DML, then again against the target after all batches complete. |
 
 ```yaml
+columns:
+  - name: activity_hour
+    audits:
+      - not_null:
+          run_scope: delta_and_final
 audits:
   - expression_is_true:
+      name: orders placed is non-negative
       expression: "orders_placed >= 0"
       run_scope: delta_and_final
 ```
 
-Delta-phase audits with `error` severity block DML before the target is updated. Final-phase audit failures happen after the target is already updated.
+Delta-phase audits with `error` severity block DML before the target is updated. This is visible in the build output as `audit (d)` for delta-phase and `audit (f)` for final-phase:
 
-## Source audits
+```
+  10/13  table     hourly_order_activity  (delete_insert)                OK     0.16s
+           audit (d) expression_is_true                                  PASS  4/4
+           audit (d) not_null (activity_hour)                            PASS  4/4
+           audit (f) expression_is_true                                  PASS
+           audit (f) not_null (activity_hour)                            PASS
+```
 
-Audits can also be attached to sources in source YAML files for pre-build data quality checks.
+The `4/4` indicates the audit passed for all 4 microbatch batches.
+
+If a model is not incremental, `delta_and_final` degrades to `final` automatically.
 
 ## Running audits standalone
 
 ```bash
-sqb audit --project-dir examples/waffle_shop --no-color
+sqb --project-dir examples/waffle_shop audit
 ```
 
 This runs all audits without rebuilding any models.
