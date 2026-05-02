@@ -5,21 +5,84 @@ description: "Reusable Python functions that generate SQL fragments at compile t
 
 # Python Macros
 
-Macros are Python functions that generate SQL fragments at compile time. They are useful for repetitive SQL patterns like conditional logic, environment-specific transforms, or complex expressions.
+Macros are Python functions that generate SQL fragments at compile time. Instead of Jinja templates, you write real Python -- testable, debuggable, and composable with standard tooling.
 
 ## Defining macros
 
-Create Python files under `macros/` in your project:
+Create Python files under `macros/` in your project. Every public function in a macro file becomes a callable macro:
 
 ```python
-# macros/grant_target.py
+# macros/currency.py
+def cents_to_dollars(column):
+    """Convert a cents integer column to a dollars decimal."""
+    return f"ROUND(CAST({column} AS DOUBLE) / 100, 2)"
+```
+
+Macros can accept any Python arguments (strings, numbers, lists, dicts, booleans) and must return a SQL string when called from SQL.
+
+## Using macros in models
+
+Call macros in model SQL using the `@macro_name(args)` syntax:
+
+```sql
+MODEL (
+  materialized table,
+  tags [marts],
+);
+
+SELECT
+  CAST(o.ordered_at AS DATE) AS revenue_date,
+  COUNT(DISTINCT o.order_id) AS order_count,
+  SUM(p.amount_cents) AS total_revenue_cents,
+  @cents_to_dollars('SUM(p.amount_cents)') AS total_revenue_dollars
+FROM __ref("stg_orders") o
+INNER JOIN __ref("stg_payments") p ON o.order_id = p.order_id
+GROUP BY CAST(o.ordered_at AS DATE)
+```
+
+At compile time, `@cents_to_dollars('SUM(p.amount_cents)')` expands to `ROUND(CAST(SUM(p.amount_cents) AS DOUBLE) / 100, 2)`.
+
+## Using macros in tests
+
+Because unit tests are written in SQL, they support macro calls. This is useful for reusable mock data generators:
+
+```python
+# macros/test_helpers.py
+def mock_orders(count=1):
+    """Generate mock order rows."""
+    rows = [
+        f"SELECT {i} AS id, {i * 100} AS customer_id, 'completed' AS status"
+        for i in range(1, count + 1)
+    ]
+    return " UNION ALL ".join(rows)
+```
+
+```sql
+TEST();
+
+WITH
+__source__raw_orders AS (
+  @mock_orders(3)
+),
+__expected__stg_orders AS (
+  SELECT 1 AS order_id, 100 AS customer_id, 'completed' AS status
+  UNION ALL
+  SELECT 2 AS order_id, 200 AS customer_id, 'completed' AS status
+  UNION ALL
+  SELECT 3 AS order_id, 300 AS customer_id, 'completed' AS status
+)
+SELECT 1
+```
+
+## Using macros in hooks
+
+Macros are expanded inside `pre_hook` and `post_hook` strings:
+
+```python
+# macros/permissions.py
 def grant_target(target):
     return f"GRANT SELECT ON {target} TO analyst_role"
 ```
-
-## Using macros
-
-Call macros in model SQL using the `@macro_name(args)` syntax:
 
 ```sql
 MODEL (
@@ -30,9 +93,63 @@ MODEL (
 SELECT 1 AS id
 ```
 
+Hook SQL is validated at compile time using SQLGlot, so invalid hook SQL is caught before execution.
+
+## Macro arguments
+
+Macro arguments use Python literal syntax. Supported types:
+
+- **Strings:** `'value'` or `"value"`
+- **Numbers:** `42`, `3.14`, `-1`
+- **Booleans:** `True`, `False`
+- **Lists:** `[1, 2, 3]`
+- **Dicts:** `{'key': 'value'}`
+- **None:** `None`
+- **Nested macro calls:** `@other_macro('arg')`
+
+Keyword arguments are supported:
+
+```sql
+@mock_orders(count=5, status='completed')
+```
+
+## Composing macros
+
+Macros cannot call other macros in their output -- the expansion is single-pass. If you need composition, compose in Python:
+
+```python
+# macros/reporting.py
+from macros.currency import cents_to_dollars
+
+def revenue_column(column, alias):
+    dollars_expr = cents_to_dollars(column)
+    return f"{dollars_expr} AS {alias}"
+```
+
+## Project variables
+
+Project variables are simple string substitutions defined in `sqlbuild_project.yml` or per-environment. They use the `@name` syntax (without parentheses) and are distinct from macros:
+
+```yaml
+# sqlbuild_project.yml
+vars:
+  schema_prefix: analytics
+
+environments:
+  prod:
+    vars:
+      schema_prefix: prod_analytics
+```
+
+```sql
+SELECT * FROM @schema_prefix.customers
+```
+
+Variables and macros share the `@` namespace. If a variable name collides with a macro name, SQLBuild raises an error at compile time.
+
 ## Context templates
 
-Macros and hooks can reference context variables using `${CTX:...}` templates:
+Hooks and macros can reference context variables using `${CTX:...}` templates:
 
 | Template | Value |
 |----------|-------|
@@ -43,8 +160,11 @@ Macros and hooks can reference context variables using `${CTX:...}` templates:
 | `${CTX:environment}` | Current environment name |
 | `${CTX:run_id}` | Current run ID |
 
-## Hook macros
+Context templates are expanded after macro expansion, so macros can emit `${CTX:...}` references that will be resolved at build time.
 
-Macros are expanded inside `pre_hook` and `post_hook` strings. This allows dynamic hook SQL generation at compile time.
+## Discovery rules
 
-Hook SQL is also validated at compile time using SQLGlot, so invalid hook SQL will be caught before execution.
+- SQLBuild discovers all `.py` files under `macros/` recursively
+- Every public function (not starting with `_`) becomes a macro
+- Macro names must be unique across all macro files -- duplicates raise a compile error
+- Macros are loaded once at compile time, not per-model
