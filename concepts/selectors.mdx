@@ -45,10 +45,11 @@ Select all models under a directory path:
 ```bash
 sqb build --select path:marts
 sqb build --select /marts
+sqb build --select marts/
 sqb build --select path:intermediate
 ```
 
-Both `path:marts` and `/marts` work the same way. The `models/` prefix is stripped automatically, so use `path:marts` not `path:models/marts`.
+Any name containing `/` is treated as a path selector. `path:marts`, `/marts`, and `marts/` all work the same way. Nested paths work too: `staging/orders`. The `models/` prefix is stripped automatically, so use `path:marts` not `path:models/marts`.
 
 ### Seed and source
 
