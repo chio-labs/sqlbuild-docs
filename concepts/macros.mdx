@@ -113,9 +113,25 @@ Keyword arguments are supported:
 @mock_orders(count=5, status='completed')
 ```
 
+### Nested macro calls in arguments
+
+Macros can be passed as arguments to other macros. The inner macro evaluates first and its result becomes an argument to the outer macro:
+
+```sql
+@format_column('revenue', @cents_to_dollars('SUM(amount_cents)'))
+```
+
+You can mix regular arguments with nested macro calls:
+
+```sql
+@wrap_with_alias(@cents_to_dollars('total_cents'), 'total_dollars')
+```
+
+Inner macros used as arguments don't have to return strings - they can return any Python object that the outer macro accepts.
+
 ## Composing macros
 
-Macros cannot call other macros in their output -- the expansion is single-pass. If you need composition, compose in Python:
+Macro output cannot contain macro calls. Expansion is single-pass: if a macro returns SQL containing `@another_macro()`, SQLBuild raises an error. If you need composition, compose in Python:
 
 ```python
 # macros/reporting.py
@@ -125,6 +141,29 @@ def revenue_column(column, alias):
     dollars_expr = cents_to_dollars(column)
     return f"{dollars_expr} AS {alias}"
 ```
+
+## Compilation order
+
+SQLBuild processes SQL in this order:
+
+1. **Project variables** (`@name` without parentheses) are substituted first
+2. **Macro calls** (`@name(args)`) are expanded second
+3. **SQLGlot validation** runs against the fully expanded SQL
+4. **Context templates** (`${CTX:...}`) in hooks and config are resolved during config compilation
+
+This means:
+- Macros see already-substituted variable values in the SQL
+- Macros can emit `${CTX:...}` references that will be resolved later
+- SQLGlot validates the final expanded SQL, catching syntax errors from both vars and macros
+
+## Where macros are allowed
+
+- **Model query SQL** - the SELECT statement after the MODEL() header
+- **Hook strings** - `pre_hook` and `post_hook` values in MODEL() config
+- **Test SQL** - unit test CTE bodies
+- **Audit SQL** - singular audit queries
+
+Macros are **not allowed** in MODEL() config values (other than hooks). If a config field contains `@macro()`, SQLBuild raises a compile error.
 
 ## Project variables
 
@@ -147,9 +186,11 @@ SELECT * FROM @schema_prefix.customers
 
 Variables and macros share the `@` namespace. If a variable name collides with a macro name, SQLBuild raises an error at compile time.
 
+Variables can also be set in `sqlbuild_local.yml` for developer-specific overrides.
+
 ## Context templates
 
-Hooks and macros can reference context variables using `${CTX:...}` templates:
+Hooks and config can reference context variables using `${CTX:...}` templates:
 
 | Template | Value |
 |----------|-------|
@@ -160,11 +201,11 @@ Hooks and macros can reference context variables using `${CTX:...}` templates:
 | `${CTX:environment}` | Current environment name |
 | `${CTX:run_id}` | Current run ID |
 
-Context templates are expanded after macro expansion, so macros can emit `${CTX:...}` references that will be resolved at build time.
+Context templates are resolved during config compilation, after macro expansion. Macros can emit `${CTX:...}` references in hook strings that will be resolved at that stage.
 
 ## Discovery rules
 
 - SQLBuild discovers all `.py` files under `macros/` recursively
 - Every public function (not starting with `_`) becomes a macro
-- Macro names must be unique across all macro files -- duplicates raise a compile error
+- Macro names must be unique across all macro files - duplicates raise a compile error
 - Macros are loaded once at compile time, not per-model
