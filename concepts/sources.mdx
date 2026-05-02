@@ -35,7 +35,7 @@ sources:
       ) AS raw_customers(id, first_name, last_name, email, created_at)
 ```
 
-Expression sources are resolved at compile time. They're useful for examples, testing, and small reference datasets that don't need a separate loading step.
+Expression sources are resolved at compile time. They're the escape hatch for anything the framework doesn't natively model: external tables, warehouse-specific syntax, function calls, or any other relation type that doesn't fit a standard table reference.
 
 ## Source audits
 
