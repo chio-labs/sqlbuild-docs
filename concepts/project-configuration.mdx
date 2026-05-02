@@ -1,0 +1,255 @@
+---
+title: "Project Configuration"
+description: "Configure your SQLBuild project with sqlbuild_project.yml and sqlbuild_local.yml."
+---
+
+# Project Configuration
+
+SQLBuild projects are configured with two files in the project root:
+
+- **`sqlbuild_project.yml`** - shared project configuration, committed to version control
+- **`sqlbuild_local.yml`** - local developer overrides, gitignored
+
+## sqlbuild_project.yml
+
+A complete example:
+
+```yaml
+name: waffle_shop
+adapter: duckdb
+
+default_environment: dev
+
+connection:
+  database: waffle_shop_control.duckdb
+
+settings:
+  default_audit_severity: warn
+
+defaults:
+  materialized: table
+
+environments:
+  prod:
+    schema: prod
+  dev:
+    schema: dev
+
+path_defaults:
+  models/staging:
+    materialized: view
+```
+
+### Required fields
+
+| Field | Description |
+|-------|-------------|
+| `name` | Project name. Used in fingerprint tracking and manifest generation. |
+| `adapter` | Database adapter. Currently `duckdb`, with `snowflake`, `bigquery`, and `databricks` coming soon. |
+
+### Connection
+
+The `connection` block is passed directly to the adapter. For DuckDB:
+
+```yaml
+connection:
+  database: my_project.duckdb
+```
+
+Environments can override the connection:
+
+```yaml
+environments:
+  prod:
+    connection:
+      database: prod.duckdb
+  dev:
+    connection:
+      database: dev.duckdb
+```
+
+## Environments
+
+Environments let you build to different schemas, databases, or connections from the same project. Each environment can override:
+
+| Field | Description |
+|-------|-------------|
+| `schema` | Target schema for all models in this environment |
+| `database` | Target database for all models in this environment |
+| `connection` | Override the base connection config |
+| `vars` | Environment-specific project variables |
+| `clone` | Clone policy (see below) |
+
+```yaml
+environments:
+  prod:
+    schema: prod
+    vars:
+      source_schema: raw_prod
+  dev:
+    schema: dev
+    vars:
+      source_schema: raw_dev
+  staging:
+    schema: staging
+    connection:
+      database: staging.duckdb
+```
+
+### Selecting an environment
+
+The active environment is determined by (in order of precedence):
+
+1. `sqlbuild_local.yml` `environment` field (highest priority)
+2. `default_environment` in `sqlbuild_project.yml`
+3. No environment (models build to default schema)
+
+### Clone policies
+
+Environments can declare whether they allow cloning to or from:
+
+```yaml
+environments:
+  prod:
+    schema: prod
+    clone:
+      allow_as_source: true
+      allow_as_target: false
+  dev:
+    schema: dev
+    clone:
+      allow_as_source: false
+      allow_as_target: true
+```
+
+## Defaults
+
+Project-wide model defaults. Any field you can set in a `MODEL()` header can be set here as a default:
+
+```yaml
+defaults:
+  materialized: table
+  incremental_strategy: delete_insert
+  query_change_backfill: full
+  tags: [managed]
+```
+
+These apply to all models unless overridden by path defaults or the model's own `MODEL()` header.
+
+## Path defaults
+
+Per-directory model defaults. Useful for applying different config to different parts of your project:
+
+```yaml
+path_defaults:
+  models/staging:
+    materialized: view
+  models/marts:
+    materialized: table
+    query_change_backfill: full
+```
+
+Path matching uses the model's relative file path. A model at `models/staging/stg_orders.sql` matches the `models/staging` path default.
+
+### Config layering order
+
+Configuration is layered in this order, with later layers overriding earlier ones:
+
+1. **Project defaults** (`defaults`)
+2. **Path defaults** (`path_defaults`) - if the model's path matches
+3. **MODEL() header** - the model's own config
+
+Tags are special: they are *unioned* across layers rather than overridden. A model with `tags [marts]` in its header that matches a path default with `tags [managed]` will have both tags.
+
+## Settings
+
+Global feature toggles:
+
+```yaml
+settings:
+  sqlglot: true
+  query_change_tracking: true
+  sql_validation: true
+  max_concurrency: 1
+  table_promotion_mode: staged
+  default_audit_severity: warn
+  default_audit_run_scope: final
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `sqlglot` | `true` | Enable SQLGlot-based SQL validation at compile time |
+| `query_change_tracking` | `true` | Track query fingerprints for change detection |
+| `sql_validation` | `true` | Validate SQL syntax during compilation |
+| `max_concurrency` | `1` | Maximum parallel model execution (currently serial only) |
+| `table_promotion_mode` | adapter default | `staged` (CTAS to staging, audit, then promote) or `direct` (CTAS directly to target) |
+| `default_audit_severity` | `warn` | Default severity for audits: `warn` or `error` |
+| `default_audit_run_scope` | `final` | Default run scope for audits: `final` or `delta_and_final` |
+
+### Table promotion mode
+
+- **`staged`** (default for most adapters): Materializes into a staging table, runs audits, then swaps into the target. If audits fail, the production table is untouched.
+- **`direct`**: Creates the table directly at the target location. Audits run after materialization. Simpler but no pre-promotion safety net.
+
+## Project variables
+
+Variables are simple string substitutions available in model SQL via the `@name` syntax:
+
+```yaml
+vars:
+  schema_prefix: analytics
+  retention_days: "90"
+```
+
+Environment-specific variables override project-level ones:
+
+```yaml
+vars:
+  schema_prefix: analytics
+
+environments:
+  prod:
+    vars:
+      schema_prefix: prod_analytics
+```
+
+See [Macros](/concepts/macros) for details on variable substitution and how variables interact with macros.
+
+## Janitor
+
+Configuration for the `sqb janitor` command, which cleans up stale warehouse relations:
+
+```yaml
+janitor:
+  enabled: false
+  retention_days: 30
+  delete_tracked_only: true
+  exclude_patterns:
+    - "audit_*"
+    - "tmp_*"
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `enabled` | `false` | Whether janitor is active |
+| `retention_days` | `30` | Only clean relations older than this many days |
+| `delete_tracked_only` | `true` | Only clean relations that appear in fingerprint tracking |
+| `exclude_patterns` | `[]` | Glob patterns for relations to skip |
+
+## sqlbuild_local.yml
+
+Local developer overrides. This file should be gitignored.
+
+```yaml
+environment: dev
+
+vars:
+  debug_mode: "true"
+```
+
+| Field | Description |
+|-------|-------------|
+| `environment` | Override which environment is active for this developer |
+| `vars` | Developer-specific variable overrides (merged on top of project + environment vars) |
+
+This replaces the common dbt pattern of switching profiles or setting environment variables to change targets. Each developer sets their environment once in `sqlbuild_local.yml` and it persists across sessions.
