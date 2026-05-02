@@ -1,15 +1,15 @@
 ---
 title: "Quickstart"
-description: "Get a SQLBuild project running locally with DuckDB."
+description: "Get a SQLBuild project running locally with DuckDB in under a minute."
 ---
 
 # Quickstart
 
-This guide walks you through running the waffle shop example -- a complete transformation project with views, tables, incremental models, audits, and tests -- all running locally against DuckDB.
+This guide walks you through running the waffle shop example - a complete transformation project with views, tables, incremental models, audits, tests, and a custom materialization - all running locally against DuckDB. No external data setup required.
 
 ## Prerequisites
 
-- Python 3.14+
+- Python 3.12+
 - SQLBuild installed: `uv add sqlbuild` or `pip install sqlbuild`
 
 ## 1. Clone and set up
@@ -20,28 +20,12 @@ cd sqlbuild
 uv sync
 ```
 
-## 2. Seed the raw data
-
-The waffle shop example needs raw source tables before SQLBuild can build:
-
-```bash
-python -c "
-from pathlib import Path
-import duckdb
-project_dir = Path('examples/waffle_shop')
-db_path = project_dir / 'waffle_shop.duckdb'
-con = duckdb.connect(str(db_path))
-con.execute((project_dir / 'seed_raw_data.sql').read_text(encoding='utf-8'))
-con.close()
-"
-```
-
-## 3. Plan
+## 2. Plan
 
 Preview what SQLBuild will do:
 
 ```bash
-sqb plan --project-dir examples/waffle_shop
+sqb --project-dir examples/waffle_shop plan
 ```
 
 ```
@@ -65,22 +49,80 @@ Seeds (1)
   waffle_types
 ```
 
-## 4. Build
+No seeding step needed. Source data is defined as inline expressions in `sources/raw.yml`, so SQLBuild resolves everything at compile time.
 
-Execute the full build with tests and audits:
+## 3. Build
+
+Execute the full build:
 
 ```bash
-sqb build --project-dir examples/waffle_shop --no-color
+sqb --project-dir examples/waffle_shop --no-color build
 ```
 
-SQLBuild materializes all models in DAG order, runs SQL unit tests before their target models, and executes generic audits after each model completes.
+SQLBuild materializes all models in DAG order, runs SQL unit tests before their target models, and executes audits after each model completes:
 
-## 5. Verify
+```
+Execution  sqb build  (concurrency: 1)
+
+   1/13  seed      waffle_types                                          OK     0.09s
+   2/13  view      stg_customers                                         OK     0.05s
+           audit     not_null (customer_id)                              PASS
+           audit     unique (customer_id)                                PASS
+           audit     not_null (email)                                    PASS
+   3/13  view      stg_payments                                          OK     0.02s
+           audit     not_null (payment_id)                               PASS
+           audit     unique (payment_id)                                 PASS
+           audit     not_null (order_id)                                 PASS
+   4/13  view      stg_orders                                            OK     0.03s
+           test      test_stg_orders                                     PASS
+           audit     not_null (order_id)                                 PASS
+           audit     unique (order_id)                                   PASS
+           audit     not_null (customer_id)                              PASS
+           audit     accepted_values (status)                            PASS
+   5/13  custom    daily_order_partitioned                               OK     0.17s
+           audit     expression_is_true                                  PASS  4/4
+           audit     not_null (order_date)                               PASS  4/4
+   6/13  table     daily_revenue                                         OK     0.05s
+           audit     expression_is_true                                  PASS
+   7/13  table     dim_customers                                         OK     0.05s
+           audit     not_null (customer_id)                              PASS
+           audit     unique (customer_id)                                PASS
+   8/13  table     fact_orders                                           OK     0.04s
+           audit     not_null (order_id)                                 PASS
+   9/13  table     customer_status_snapshot  (merge)                     OK     0.04s
+           audit     not_null (customer_id)                              PASS
+           audit     unique (customer_id)                                PASS
+  10/13  table     hourly_order_activity  (delete_insert)                OK     0.16s
+           audit (d) expression_is_true                                  PASS  4/4
+           audit (d) not_null (activity_hour)                            PASS  4/4
+           audit (f) expression_is_true                                  PASS
+           audit (f) not_null (activity_hour)                            PASS
+  11/13  table     order_status_index  (delete_insert)                   OK     0.03s
+           audit     not_null (order_id)                                 PASS
+           audit     unique (order_id)                                   PASS
+  12/13  table     daily_activity_rollup  (delete_insert)                OK     0.08s
+           audit (d) expression_is_true                                  PASS  2/2
+           audit (d) not_null (activity_day)                             PASS  2/2
+           audit (f) expression_is_true                                  PASS
+           audit (f) not_null (activity_day)                             PASS
+  13/13  table     hourly_activity_with_daily_context  (delete_insert)   OK     0.17s
+           audit (d) expression_is_true                                  PASS  4/4
+           audit (d) not_null (activity_hour)                            PASS  4/4
+           audit (f) expression_is_true                                  PASS
+           audit (f) not_null (activity_hour)                            PASS
+
+Completed successfully.
+PASS=66  WARN=0  FAIL=0  SKIP=0  TOTAL=66  (1.09s)
+```
+
+Notice `audit (d)` and `audit (f)` on incremental models - these are delta-phase and final-phase audits. Delta audits validate each batch before DML is applied; final audits run against the target after promotion.
+
+## 4. Verify
 
 Run the plan again to see the steady-state:
 
 ```bash
-sqb plan --project-dir examples/waffle_shop
+sqb --project-dir examples/waffle_shop plan
 ```
 
 ```
@@ -100,39 +142,36 @@ Seeds (1)
 
 All models now show `Normal` instead of `First run`.
 
-## 6. Common operations
+## 5. Common operations
 
 ```bash
 # Rebuild a specific model
-sqb build --project-dir examples/waffle_shop --select daily_revenue
+sqb --project-dir examples/waffle_shop build --select daily_revenue
 
 # Rebuild models under a path
-sqb build --project-dir examples/waffle_shop --select path:marts
+sqb --project-dir examples/waffle_shop build --select path:marts
 
 # Full refresh of everything
-sqb build --project-dir examples/waffle_shop --full-refresh
+sqb --project-dir examples/waffle_shop build --full-refresh
 
 # Run tests only
-sqb test --project-dir examples/waffle_shop
+sqb --project-dir examples/waffle_shop test
 
 # Run audits only
-sqb audit --project-dir examples/waffle_shop
-
-# See debug SQL for a specific model
-sqb build --project-dir examples/waffle_shop --debug --select hourly_order_activity
+sqb --project-dir examples/waffle_shop audit
 ```
 
-## 7. Understand the project structure
+## 6. Project structure
 
 ```
 examples/waffle_shop/
   sqlbuild_project.yml          # project config
-  seed_raw_data.sql             # raw source provisioning
+  sqlbuild_local.yml            # local environment override
+  sources/
+    raw.yml                     # source declarations (inline expression data)
   seeds/
     waffle_types.csv            # seed data
     schema.yml                  # seed schema
-  sources/
-    raw.yml                     # source declarations
   models/
     staging/
       stg_customers.sql         # view
@@ -143,7 +182,9 @@ examples/waffle_shop/
       fact_orders.sql           # table
       dim_customers.sql         # table
       daily_revenue.sql         # table
+      daily_order_partitioned.sql # custom materialization
       hourly_order_activity.sql # microbatch incremental
+      hourly_activity_with_daily_context.sql # microbatch incremental
       daily_activity_rollup.sql # microbatch incremental
       schema.yml                # audits for marts
     intermediate/
@@ -164,7 +205,8 @@ examples/waffle_shop/
 
 ## Next steps
 
-- [Models](/concepts/models) -- understand `MODEL()` headers and materialization types
-- [Incremental](/concepts/incremental) -- learn about cursor-based incremental strategies
-- [Audits](/concepts/audits) -- configure data quality checks
-- [CLI Reference](/cli/build) -- full command reference
+- [Models](/concepts/models) - understand `MODEL()` headers and materialization types
+- [Incremental](/concepts/incremental) - learn about cursor-based incremental strategies
+- [Audits](/concepts/audits) - configure data quality checks
+- [Testing](/concepts/testing) - write SQL unit tests with chaining and macro support
+- [CLI Reference](/cli/build) - full command reference
