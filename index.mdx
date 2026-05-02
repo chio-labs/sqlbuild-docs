@@ -73,6 +73,10 @@ def grant_target(target):
 ### Multi-environment workflows
 
 - **Environment diffs:** Compare schemas and row-level data between environments with `sqb diff --from prod --to dev`.
+
+<Frame>
+  <img src="/sqlbuild_diff.png" alt="SQLBuild diff output showing schema comparison, row-level differences, and changed column values between prod and dev environments" />
+</Frame>
 - **Zero-copy cloning:** Branch environments instantly with `sqb clone` without duplicating data.
 - **Deferred references:** Compile and plan against a production environment with `--defer-to` while building in dev.
 
