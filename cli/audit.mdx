@@ -10,41 +10,24 @@ Runs all attached audits without rebuilding models. Useful for verifying data qu
 ## Usage
 
 ```bash
-sqb audit --project-dir <path> [flags]
+sqb --project-dir <path> audit [flags]
 ```
 
 ## Flags
 
 | Flag | Description |
 |------|-------------|
-| `--project-dir` | Path to the project directory |
-| `--no-color` | Disable ANSI color output |
 | `--no-sql-validation` | Skip compile-time SQL syntax validation |
-| `--defer-to` | Defer unselected models to another environment |
-| `--select` | Select specific models to audit |
-| `--exclude` | Exclude specific models |
-| `--debug` | Enable debug diagnostics |
+| `--defer-to` | Resolve model references against another environment |
+| `--select`, `-s` | Select audits attached to specific models |
+| `--exclude` | Exclude audits attached to specific models |
 
-## Output
+## Examples
 
+```bash
+# Run all audits
+sqb --project-dir examples/waffle_shop audit
+
+# Run audits for marts only
+sqb --project-dir examples/waffle_shop audit --select path:marts
 ```
-Audit (24 selected, 8 models)
-
-  stg_customers
-    not_null (customer_id)             PASS
-    unique (customer_id)               PASS
-    not_null (email)                   PASS
-
-  fact_orders
-    not_null (order_id)                PASS
-  ...
-
-PASS=24  WARN=0  FAIL=0  TOTAL=24
-```
-
-## Notes
-
-- Audits are grouped by their attached model
-- Both model-level and column-level audits are included
-- Source audits run before model audits
-- Standalone audit does not rebuild models; it runs against existing warehouse state

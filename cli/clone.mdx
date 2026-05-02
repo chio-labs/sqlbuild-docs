@@ -1,0 +1,44 @@
+---
+title: "clone"
+description: "Copy models between environments using zero-copy cloning."
+---
+
+# sqb clone
+
+Copies model relations from one environment to another. Uses zero-copy cloning where the adapter supports it, falling back to physical copies with `--hard-copy`.
+
+No `manifest.json` generation or artifact management is required. Clone works directly against live environments.
+
+## Usage
+
+```bash
+sqb --project-dir <path> clone --from <env> --to <env> [flags]
+```
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--from` | Source environment (required) |
+| `--to` | Target environment (required) |
+| `--hard-copy` | Force physical table copies instead of zero-copy cloning |
+| `--no-sql-validation` | Skip compile-time SQL syntax validation |
+| `--select`, `-s` | Select specific models to clone |
+| `--exclude` | Exclude specific models from cloning |
+
+## Examples
+
+```bash
+# Clone all models from prod to dev
+sqb --project-dir examples/waffle_shop clone --from prod --to dev
+
+# Clone only marts to dev
+sqb --project-dir examples/waffle_shop clone --from prod --to dev --select path:marts
+
+# Force physical copies
+sqb --project-dir examples/waffle_shop clone --from prod --to dev --hard-copy
+```
+
+## Clone policies
+
+Environments must allow cloning in `sqlbuild_project.yml`. See [Project Configuration](/concepts/project-configuration) for details.
