@@ -142,8 +142,10 @@ Per-directory model defaults. Useful for applying different config to different 
 path_defaults:
   models/staging:
     materialized: view
+    tags: [staging]
   models/marts:
     materialized: table
+    tags: [marts]
     query_change_backfill: full
 ```
 
