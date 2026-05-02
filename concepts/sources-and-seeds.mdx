@@ -1,0 +1,132 @@
+---
+title: "Sources & Seeds"
+description: "Declare external data inputs and load static CSV data into your pipeline."
+---
+
+# Sources & Seeds
+
+Sources and seeds are the entry points to your DAG. Sources declare external data that already exists in your warehouse (or can be defined inline). Seeds load static CSV files as tables.
+
+## Sources
+
+Sources are declared in YAML files under `sources/` in your project directory.
+
+### Table sources
+
+Point at an existing table or view in your warehouse:
+
+```yaml
+sources:
+  - name: raw_events
+    database: analytics
+    schema: raw
+    table: events
+```
+
+Reference it in models with `__source("raw_events")`.
+
+### Expression sources
+
+Define source data inline as a SQL expression. No external tables or setup scripts needed:
+
+```yaml
+sources:
+  - name: raw_customers
+    expression: |
+      SELECT * FROM (VALUES
+        (1, 'Leslie', 'Knope', 'leslie@pawnee.gov', TIMESTAMP '2026-01-15 09:00:00'),
+        (2, 'Ron', 'Swanson', 'ron@pawnee.gov', TIMESTAMP '2026-02-01 08:00:00')
+      ) AS raw_customers(id, first_name, last_name, email, created_at)
+```
+
+Expression sources are resolved at compile time. They're useful for examples, testing, and small reference datasets that don't need a separate loading step.
+
+### Source audits
+
+Sources support the same audit system as models. Audits attached to sources run before any dependent model is built:
+
+```yaml
+sources:
+  - name: raw_orders
+    columns:
+      - name: id
+        audits:
+          - not_null
+          - unique
+    audits:
+      - expression_is_true:
+          name: no future orders
+          expression: "ordered_at <= CURRENT_TIMESTAMP"
+```
+
+If a source audit with `error` severity fails, all downstream models that depend on that source are blocked.
+
+### Source config
+
+| Field | Description |
+|-------|-------------|
+| `name` | Source name, used in `__source("name")` references |
+| `database` | Target database (optional) |
+| `schema` | Target schema (optional) |
+| `table` | Target table name (defaults to `name` if omitted) |
+| `expression` | Inline SQL expression (alternative to table reference) |
+| `description` | Human-readable description |
+| `type_enforcement` | Enable type casting based on declared column types |
+| `columns` | Column declarations with optional types and audits |
+| `audits` | Source-level audits |
+
+## Seeds
+
+Seeds are CSV files under `seeds/` that SQLBuild loads as tables in the warehouse. They're useful for small, static reference data like lookup tables, category mappings, or configuration values.
+
+### Defining a seed
+
+Place a CSV file in your `seeds/` directory:
+
+```csv
+waffle_type_id,waffle_name,category,price_cents
+1,Classic Belgian,sweet,850
+2,Liege,sweet,950
+3,Brussels,sweet,750
+4,Cheddar Herb,savory,1050
+```
+
+Optionally declare column types in `seeds/schema.yml`:
+
+```yaml
+seeds:
+  - name: waffle_types
+    description: Waffle menu items with pricing.
+    columns:
+      - name: waffle_type_id
+        type: INTEGER
+      - name: waffle_name
+        type: VARCHAR
+      - name: category
+        type: VARCHAR
+      - name: price_cents
+        type: INTEGER
+```
+
+### Referencing seeds
+
+Seeds are referenced in models with `__ref()`, the same syntax as model references:
+
+```sql
+SELECT
+  o.order_id,
+  w.waffle_name,
+  w.price_cents * o.quantity AS line_total_cents
+FROM __ref("stg_orders") o
+LEFT JOIN __ref("waffle_types") w ON o.waffle_type_id = w.waffle_type_id
+```
+
+### Loading seeds
+
+Seeds are loaded automatically during `sqb build`. You can also load them standalone:
+
+```bash
+sqb --project-dir examples/waffle_shop seed
+```
+
+Seeds are fully replaced on every run. If the CSV changes, the table is recreated with the new data.
