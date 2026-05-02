@@ -32,7 +32,8 @@
           "concepts/audits",
           "concepts/testing",
           "concepts/macros",
-          "concepts/selectors"
+          "concepts/selectors",
+          "concepts/environment-diffs"
         ]
       },
       {
