@@ -13,8 +13,8 @@ Every model file starts with a `MODEL()` block that declares its materialization
 
 ```sql
 MODEL (
-  materialized: table,
-  tags: ["marts"],
+  materialized table,
+  tags [marts],
 );
 
 SELECT
@@ -34,8 +34,8 @@ Creates a database view. Rebuilt on every run.
 
 ```sql
 MODEL (
-  materialized: view,
-  tags: ["staging"],
+  materialized view,
+  tags [staging],
 );
 
 SELECT id AS order_id, customer_id, status
@@ -48,8 +48,8 @@ Creates a table via `CREATE TABLE AS`. SQLBuild materializes into a staging tabl
 
 ```sql
 MODEL (
-  materialized: table,
-  tags: ["marts"],
+  materialized table,
+  tags [marts],
 );
 
 SELECT customer_id, COUNT(*) AS total_orders
@@ -63,17 +63,17 @@ Inserts or updates into an existing table using a cursor-based strategy. See [In
 
 ```sql
 MODEL (
-  materialized: incremental,
-  incremental_strategy: delete_insert,
-  cursor: "activity_hour",
-  cursor_type: timestamp,
-  cursor_grain: hour,
-  cursor_inputs: {
-    fact_orders: "ordered_at"
-  },
-  incremental_mode: microbatch,
-  batch_size: "1d",
-  tags: ["marts"],
+  materialized incremental,
+  incremental_strategy delete_insert,
+  cursor activity_hour,
+  cursor_type timestamp,
+  cursor_grain hour,
+  cursor_inputs (
+    fact_orders ordered_at,
+  ),
+  incremental_mode microbatch,
+  batch_size 1d,
+  tags [marts],
 );
 
 SELECT
@@ -90,16 +90,18 @@ User-defined Python materialization function. Custom materializations get full a
 
 ```sql
 MODEL (
-  materialized: "partition_tracked",
-  tags: ["marts"],
-  placeholders:
-    partition_start: "'2026-04-01'",
-    partition_end: "'2026-04-05'",
-  config:
-    tracking_table: "main.partition_state",
-    partition_column: "order_date",
-    date_range_start: "2026-04-01",
-    date_range_end: "2026-04-05",
+  materialized partition_tracked,
+  tags [marts],
+  placeholders (
+    partition_start '\'2026-04-01\'',
+    partition_end '\'2026-04-05\'',
+  ),
+  config (
+    tracking_table main.partition_state,
+    partition_column order_date,
+    date_range_start 2026-04-01,
+    date_range_end 2026-04-05,
+  ),
 );
 
 SELECT
@@ -122,7 +124,6 @@ SELECT *
 FROM __ref("stg_orders") o
 LEFT JOIN __ref("stg_payments") p ON o.order_id = p.order_id
 LEFT JOIN __ref("waffle_types") w ON o.waffle_type_id = w.waffle_type_id
-WHERE o.ordered_at >= __source("cutoff_dates").min_date
 ```
 
 SQLBuild resolves these references to qualified warehouse relation names during compilation.
@@ -182,8 +183,8 @@ Pre-hooks and post-hooks execute SQL before and after materialization. They supp
 
 ```sql
 MODEL (
-  materialized: table,
-  post_hook: ["@grant_target('${CTX:target.qualified}')"],
+  materialized table,
+  post_hook ['@grant_target(${CTX:target.qualified})'],
 );
 ```
 
@@ -225,11 +226,11 @@ Available context templates:
 | `cursor_inputs` | Map of upstream ref/source names to their cursor columns |
 | `unique_key` | Column(s) used for merge and delete_insert matching |
 | `incremental_mode` | Set to `microbatch` to enable batched execution |
-| `batch_size` | Batch window size (e.g. `"1d"`, `"1h"`, or an integer) |
+| `batch_size` | Batch window size (e.g. `1d`, `1h`, or an integer) |
 | `lookback` | Extend the replay window backwards to re-process recent data |
 | `on_schema_change` | `append_new_columns`, `sync_all_columns`, `ignore`, or `fail` |
-| `query_change_backfill` | `"full"`, `"bounded(14d)"`, or omit for warn-only |
-| `schema_change_backfill` | Per-change-type backfill policies (e.g. `add_column: "bounded(7d)"`, `type_change: "full"`) |
+| `query_change_backfill` | `full` or `bounded-14d` (hyphenated duration) |
+| `schema_change_backfill` | Per-change-type backfill policies (e.g. `add_column bounded-7d`, `type_change full`) |
 
 See [Incremental](/concepts/incremental) for detailed usage.
 

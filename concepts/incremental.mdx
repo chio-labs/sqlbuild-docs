@@ -15,8 +15,8 @@ Inserts new rows without modifying existing data.
 
 ```sql
 MODEL (
-  materialized: incremental,
-  incremental_strategy: append
+  materialized incremental,
+  incremental_strategy append,
 );
 ```
 
@@ -26,11 +26,10 @@ Deletes rows in the cursor range, then inserts the new delta. Requires either `c
 
 ```sql
 MODEL (
-  materialized: incremental,
-  incremental_strategy: delete_insert,
-  cursor: "order_id",
-  cursor_type: integer,
-  cursor_grain: second
+  materialized incremental,
+  incremental_strategy delete_insert,
+  cursor order_id,
+  cursor_type integer,
 );
 ```
 
@@ -40,12 +39,12 @@ Upserts rows using a unique key. Matched rows are updated; unmatched rows are in
 
 ```sql
 MODEL (
-  materialized: incremental,
-  incremental_strategy: merge,
-  unique_key: ["customer_id"],
-  cursor: "last_ordered_at",
-  cursor_type: timestamp,
-  cursor_grain: second
+  materialized incremental,
+  incremental_strategy merge,
+  unique_key [customer_id],
+  cursor last_ordered_at,
+  cursor_type timestamp,
+  cursor_grain second,
 );
 ```
 
@@ -68,13 +67,13 @@ For large incremental ranges, microbatch mode splits the replay into smaller win
 
 ```sql
 MODEL (
-  materialized: incremental,
-  incremental_strategy: delete_insert,
-  cursor: "activity_hour",
-  cursor_type: timestamp,
-  cursor_grain: hour,
-  incremental_mode: microbatch,
-  batch_size: "1d"
+  materialized incremental,
+  incremental_strategy delete_insert,
+  cursor activity_hour,
+  cursor_type timestamp,
+  cursor_grain hour,
+  incremental_mode microbatch,
+  batch_size 1d,
 );
 ```
 
@@ -93,14 +92,14 @@ Controls what happens when the model SQL changes between runs:
 ```sql
 MODEL (
   ...
-  query_change_backfill: "full"
+  query_change_backfill full,
 );
 ```
 
 | Value | Effect |
 |-------|--------|
 | `full` | Full table rebuild when query changes |
-| `bounded(14d)` | Rebuild the last 14 days of data |
+| `bounded-14d` | Rebuild the last 14 days of data |
 | *(omitted)* | Warn only; no automatic rebuild |
 
 ### schema_change_backfill
@@ -110,9 +109,10 @@ Controls response to schema differences between expected and warehouse columns:
 ```sql
 MODEL (
   ...
-  schema_change_backfill:
-    add_column: "bounded(7d)"
-    type_change: "full"
+  schema_change_backfill (
+    add_column bounded-7d,
+    type_change full,
+  ),
 );
 ```
 
