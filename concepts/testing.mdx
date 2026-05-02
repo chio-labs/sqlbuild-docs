@@ -80,7 +80,31 @@ SELECT 1
 
 SQLBuild topologically sorts the expected models, resolves each intermediate model's real SQL with mocks substituted, and chains the outputs forward. Every model between the mocked sources and the expected model is computed automatically.
 
-You can also mock at any level, not just sources. Use `__ref__<name>` to mock a model directly, skipping its real SQL. As long as every leaf dependency is satisfied (either by a mock or by being in the chain), the test resolves.
+## Mocking refs
+
+You can mock models directly with `__ref__<name>`, not just sources. This skips the model's real SQL and provides controlled data instead:
+
+```sql
+-- Mock stg_orders directly instead of mocking the raw source and resolving through it.
+TEST();
+
+WITH
+__ref__stg_orders AS (
+  SELECT 1 AS order_id, 100 AS customer_id, 2 AS waffle_type_id, 3 AS quantity,
+         '2026-04-01 10:00:00' AS ordered_at, 'completed' AS status
+),
+__ref__stg_payments AS (
+  SELECT 1 AS payment_id, 1 AS order_id, 1500 AS amount_cents,
+         'credit_card' AS payment_method, 'success' AS payment_status
+),
+__expected__fact_orders AS (
+  SELECT 1 AS order_id, 100 AS customer_id, 1500 AS payment_amount_cents,
+         'credit_card' AS payment_method
+)
+SELECT 1
+```
+
+You can mix `__source__` and `__ref__` mocks in the same test. As long as every leaf dependency is satisfied (either by a source mock, a ref mock, or by being in the expected chain), the test resolves.
 
 ## Multiple expected models
 
@@ -91,18 +115,28 @@ TEST();
 
 WITH
 __source__raw_orders AS (
-  SELECT 1 AS id, 100 AS customer_id, 'completed' AS status
+  SELECT 1 AS id, 100 AS customer_id, 2 AS waffle_type_id, 3 AS quantity,
+         '2026-04-01 10:00:00' AS ordered_at, 'completed' AS status
 ),
-__expected__stg_orders AS (
-  SELECT 1 AS order_id, 100 AS customer_id, 'completed' AS status
+__source__raw_payments AS (
+  SELECT 1 AS payment_id, 1 AS order_id, 1500 AS amount_cents,
+         'credit_card' AS method, '2026-04-01 10:01:00' AS paid_at, 'success' AS status
+),
+__source__raw_customers AS (
+  SELECT 100 AS id, 'Leslie' AS first_name, 'Knope' AS last_name,
+         'leslie@pawnee.gov' AS email, '2026-01-15 09:00:00' AS created_at
+),
+__expected__fact_orders AS (
+  SELECT 1 AS order_id, 100 AS customer_id, 1500 AS payment_amount_cents,
+         'credit_card' AS payment_method
 ),
 __expected__dim_customers AS (
-  SELECT 100 AS customer_id, 1 AS total_orders
+  SELECT 100 AS customer_id, 1 AS total_orders, 1500 AS lifetime_spend_cents
 )
 SELECT 1
 ```
 
-If the expected models form a chain (e.g. `stg_orders` feeds into `dim_customers`), SQLBuild resolves them in dependency order, using the output of earlier steps as input to later ones.
+If the expected models form a chain (e.g. `stg_orders` feeds into `fact_orders` which feeds into `dim_customers`), SQLBuild resolves them in dependency order, using the output of earlier steps as input to later ones.
 
 ## Macro-powered mocks
 
