@@ -23,8 +23,8 @@ Call macros in model SQL using the `@macro_name(args)` syntax:
 
 ```sql
 MODEL (
-  materialized: table,
-  post_hook: ["@grant_target('${CTX:target.qualified}')"]
+  materialized table,
+  post_hook ['@grant_target(${CTX:target.qualified})'],
 );
 
 SELECT 1 AS id
