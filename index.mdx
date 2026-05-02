@@ -21,8 +21,8 @@ SQLBuild is a framework for building batch SQL transformation pipelines where co
 
 ### SQL unit tests that scale
 
-- **Chain across models** -- Mock your sources, assert on the model you care about, and SQLBuild automatically resolves every intermediate model using its real SQL. One test file can be a full integration test across your entire pipeline.
-- **Macro-powered mocks** -- Because unit tests are written in SQL, they support macro calls -- so you can write reusable mock generators and fixture builders instead of copy-pasting mock inputs across test files.
+- **Chain across models:** Mock your sources, assert on the model you care about, and SQLBuild automatically resolves every intermediate model using its real SQL. One test file can be a full integration test across your entire pipeline.
+- **Macro-powered mocks:** Because unit tests are written in SQL, they support macro calls, so you can write reusable mock generators and fixture builders instead of copy-pasting mock inputs across test files.
 
 ```sql
 -- Mock two sources, assert on the final mart.
@@ -45,12 +45,12 @@ SELECT 1
 
 ### Audits that block bad data
 
-- **Full table builds** -- SQLBuild materializes into a staging table and runs `error`-severity audits before promotion. If any fail, the swap is blocked and the production table is untouched.
-- **Incremental models** -- Delta-phase audits validate each batch before DML is applied. Bad data is caught before it reaches the target.
+- **Full table builds:** SQLBuild materializes into a staging table and runs `error`-severity audits before promotion. If any fail, the swap is blocked and the production table is untouched.
+- **Incremental models:** Delta-phase audits validate each batch before DML is applied. Bad data is caught before it reaches the target.
 
 ### Python macros, not Jinja
 
-Macros are real Python functions -- testable, debuggable, and composable with standard tooling. No templating language, no string interpolation surprises.
+- **Real Python functions:** Testable, debuggable, and composable with standard tooling. No templating language, no string interpolation surprises.
 
 ```python
 # macros/grant_target.py
@@ -60,27 +60,27 @@ def grant_target(target):
 
 ### Change-aware incremental rebuilds
 
-- **Query-change detection** -- Fingerprint-based tracking detects when model SQL has actually changed and triggers bounded or full rebuilds automatically.
-- **Backfill cascade** -- Upstream query or schema changes propagate rebuild signals downstream through the DAG, with per-model control over rebuild windows.
-- **Schema diffs in the plan** -- The plan shows column additions, removals, and type changes before anything executes, with configurable policies to block or adapt.
-- **Controlled rebuild windows** -- `query_change_backfill` and `schema_change_backfill` policies let you choose between full rebuild and bounded replay (e.g. `bounded(14d)`).
+- **Query-change detection:** Fingerprint-based tracking detects when model SQL has actually changed and triggers bounded or full rebuilds automatically.
+- **Backfill cascade:** Upstream query or schema changes propagate rebuild signals downstream through the DAG, with per-model control over rebuild windows.
+- **Schema diffs in the plan:** The plan shows column additions, removals, and type changes before anything executes, with configurable policies to block or adapt.
+- **Controlled rebuild windows:** `query_change_backfill` and `schema_change_backfill` policies let you choose between full rebuild and bounded replay (e.g. `bounded(14d)`).
 
 ### Incremental processing
 
-- **Cursor-based replay** -- SQLBuild tracks position using a timestamp or integer column and automatically detects where to resume. If a model fails for several runs, the next successful build replays from where it left off with no manual backfilling.
-- **Microbatch mode** -- Split large replay windows into configurable batches, each with its own audit cycle. Or process the full range in one pass -- the choice is per-model.
+- **Cursor-based replay:** SQLBuild tracks position using a timestamp or integer column and automatically detects where to resume. If a model fails for several runs, the next successful build replays from where it left off with no manual backfilling.
+- **Microbatch mode:** Split large replay windows into configurable batches, each with its own audit cycle. Or process the full range in one pass, the choice is per-model.
 
 ### Multi-environment workflows
 
-- **Environment diffs** -- Compare schemas and row-level data between environments with `sqb diff --from prod --to dev`.
-- **Zero-copy cloning** -- Branch environments instantly with `sqb clone` without duplicating data.
-- **Deferred references** -- Compile and plan against a production environment with `--defer-to` while building in dev.
+- **Environment diffs:** Compare schemas and row-level data between environments with `sqb diff --from prod --to dev`.
+- **Zero-copy cloning:** Branch environments instantly with `sqb clone` without duplicating data.
+- **Deferred references:** Compile and plan against a production environment with `--defer-to` while building in dev.
 
 ### Extensibility
 
-- **Custom materializations** -- Define materialization logic in Python for domain-specific patterns beyond `table`, `view`, and `incremental`.
-- **Path-between selectors** -- `--select fact_orders~daily_activity_rollup` selects every model on the shortest path between two nodes, with optional upstream/downstream expansion.
-- **Debug diagnostics** -- `--debug` shows every SQL statement executed; `--verbose` shows lifecycle SQL inline.
+- **Custom materializations:** Define materialization logic in Python for domain-specific patterns beyond `table`, `view`, and `incremental`.
+- **Path-between selectors:** `--select fact_orders~daily_activity_rollup` selects every model on the shortest path between two nodes, with optional upstream/downstream expansion.
+- **Debug diagnostics:** `--debug` shows every SQL statement executed; `--verbose` shows lifecycle SQL inline.
 
 ## Quick links
 
