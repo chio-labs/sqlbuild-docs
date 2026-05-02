@@ -1,49 +1,180 @@
 ---
 title: "Testing"
-description: "SQL-native unit tests for SQLBuild models."
+description: "SQL unit tests with model chaining, macro support, and multi-model integration testing."
 ---
 
 # Testing
 
-SQLBuild supports SQL-native unit tests that validate model logic by comparing actual query results against expected values.
+SQLBuild supports SQL-native unit tests that validate model logic by comparing actual query results against expected values. Tests can chain across multiple models, use macros for reusable mock data, and run as full integration tests across your pipeline.
 
 ## How tests work
 
-A test file defines mock inputs and expected outputs using CTEs. SQLBuild compares each expected CTE against the actual model output using `EXCEPT` queries.
+A test file defines mock inputs and expected outputs using CTEs. SQLBuild substitutes the mock data into the real model SQL, executes it, and compares the result against the expected CTE using `EXCEPT` queries. Zero mismatched rows means the test passes.
 
 ```sql
 -- tests/test_stg_orders.sql
-TEST ();
+TEST();
 
-WITH __ref__stg_orders AS (
-  SELECT 1 AS order_id, 10 AS customer_id
+WITH
+__source__raw_orders AS (
+  SELECT
+    1 AS id,
+    100 AS customer_id,
+    2 AS waffle_type_id,
+    3 AS quantity,
+    '2026-04-01 10:00:00' AS ordered_at,
+    'completed' AS status
 ),
 __expected__stg_orders AS (
-  SELECT 1 AS order_id, 10 AS customer_id
+  SELECT
+    1 AS order_id,
+    100 AS customer_id,
+    2 AS waffle_type_id,
+    3 AS quantity,
+    '2026-04-01 10:00:00' AS ordered_at,
+    'completed' AS status
 )
-SELECT 1;
+SELECT 1
 ```
 
-## Test execution
+The test:
+1. Mocks the `raw_orders` source with the `__source__raw_orders` CTE
+2. Runs the real `stg_orders` model SQL with the mock substituted in
+3. Compares the output against `__expected__stg_orders`
+4. Passes if row counts match and there are zero mismatched rows
 
-Tests run automatically during `sqb build` in DAG order, before their target model is materialized. If a test fails, the target model and its downstream dependents are blocked.
+The trailing `SELECT 1` is required as a ceremonial closing statement.
+
+## CTE conventions
+
+| Prefix | Purpose |
+|--------|---------|
+| `__source__<name>` | Mock a source. Replaces `__source("<name>")` in the model SQL. |
+| `__ref__<name>` | Mock a model or seed. Replaces `__ref("<name>")` in the model SQL. |
+| `__expected__<name>` | Define expected output for a model. SQLBuild resolves the model's real SQL and compares against this. |
+
+Any CTE without one of these prefixes is treated as a helper CTE, available to all mock and model SQL in the test.
+
+## Chaining across models
+
+Tests can span multiple models in a single file. Mock your sources, define an expected output for the model you care about, and SQLBuild automatically resolves every intermediate model using its real SQL.
+
+```sql
+-- Mock two sources, assert on the final mart.
+-- stg_orders and stg_payments resolve automatically from their real SQL.
+TEST();
+
+WITH
+__source__raw_orders AS (
+  SELECT 1 AS id, 100 AS customer_id, 2 AS waffle_type_id, 3 AS quantity,
+         '2026-04-01 10:00:00' AS ordered_at, 'completed' AS status
+),
+__source__raw_payments AS (
+  SELECT 1 AS payment_id, 1 AS order_id, 1500 AS amount_cents,
+         'credit_card' AS method, '2026-04-01 10:01:00' AS paid_at, 'success' AS status
+),
+__expected__fact_orders AS (
+  SELECT 1 AS order_id, 100 AS customer_id, 1500 AS payment_amount_cents,
+         'credit_card' AS payment_method
+)
+SELECT 1
+```
+
+SQLBuild topologically sorts the expected models, resolves each intermediate model's real SQL with mocks substituted, and chains the outputs forward. Every model between the mocked sources and the expected model is computed automatically.
+
+You can also mock at any level, not just sources. Use `__ref__<name>` to mock a model directly, skipping its real SQL. As long as every leaf dependency is satisfied (either by a mock or by being in the chain), the test resolves.
+
+## Multiple expected models
+
+A single test can assert on multiple models. SQLBuild resolves and compares each one independently:
+
+```sql
+TEST();
+
+WITH
+__source__raw_orders AS (
+  SELECT 1 AS id, 100 AS customer_id, 'completed' AS status
+),
+__expected__stg_orders AS (
+  SELECT 1 AS order_id, 100 AS customer_id, 'completed' AS status
+),
+__expected__dim_customers AS (
+  SELECT 100 AS customer_id, 1 AS total_orders
+)
+SELECT 1
+```
+
+If the expected models form a chain (e.g. `stg_orders` feeds into `dim_customers`), SQLBuild resolves them in dependency order, using the output of earlier steps as input to later ones.
+
+## Macro-powered mocks
+
+Because unit tests are written in SQL, they support macro calls. This lets you write reusable mock generators instead of copy-pasting mock data across test files:
+
+```sql
+TEST();
+
+WITH
+__source__raw_orders AS (
+  @mock_orders()
+),
+__source__raw_payments AS (
+  SELECT 1 AS payment_id, 1 AS order_id, 1500 AS amount_cents, 'credit_card' AS method
+),
+__expected__fact_orders AS (
+  SELECT 1 AS order_id, 100 AS customer_id, 1500 AS total_cents,
+         'credit_card' AS payment_method
+)
+SELECT 1
+```
+
+The `@mock_orders()` call expands at compile time to whatever SQL the Python macro function returns.
+
+## Multiple tests per file
+
+A single test file can contain multiple `TEST()` blocks. Each block must have a unique `name`:
+
+```sql
+TEST (name: "completed orders only");
+
+WITH
+__source__raw_orders AS (
+  SELECT 1 AS id, 100 AS customer_id, 'completed' AS status
+),
+__expected__stg_orders AS (
+  SELECT 1 AS order_id, 100 AS customer_id, 'completed' AS status
+)
+SELECT 1
+
+TEST (name: "cancelled orders excluded");
+
+WITH
+__source__raw_orders AS (
+  SELECT 1 AS id, 100 AS customer_id, 'cancelled' AS status
+),
+__expected__stg_orders AS (
+  SELECT 1 AS order_id, 100 AS customer_id, 'cancelled' AS status
+)
+SELECT 1
+```
+
+A file with a single test can omit the `name` field. Files with multiple tests require names on every block.
+
+## Test placement
+
+Place test files under `tests/` in your project directory. SQLBuild discovers all `.sql` files in this directory automatically.
+
+## Running tests
+
+Tests run automatically during `sqb build` in DAG order, before their target model is materialized.
 
 Run tests standalone:
 
 ```bash
-sqb test --project-dir examples/waffle_shop --no-color
+sqb --project-dir examples/waffle_shop test
 ```
 
-## Test placement
-
-Place test files under `tests/` in your project directory. SQLBuild discovers them automatically.
-
-## Selectors
-
-Tests can be scoped with selectors:
+Scope to specific models:
 
 ```bash
-sqb test --select stg_orders
+sqb --project-dir examples/waffle_shop test --select stg_orders
 ```
-
-This runs only the tests that target `stg_orders`.
