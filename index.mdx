@@ -5,16 +5,12 @@ description: "Typed, test-first SQL pipelines with change-aware incremental rebu
 
 Detect SQL changes, automatically trigger rebuilds, and control backfill windows - without fragile configs.
 
-## What is SQLBuild?
-
-SQLBuild is a framework for building batch SQL transformation pipelines where correctness is a first-class concern. You define models as SQL files, write macros in Python instead of Jinja, and SQLBuild handles compilation, change detection, incremental execution, and data quality auditing.
-
 ## How it works
 
 1. **Define** your models as SQL files with `MODEL()` headers and optional schema YAML
 2. **Compile** to resolve references, validate SQL (with SQLGlot), and expand Python macros
 3. **Plan** what needs to change based on fingerprints, schema diffs, and backfill policies
-4. **Build** by executing the plan - materializing models, validating data before promotion, and ensuring bad data never reaches production
+4. **Build** by executing the plan: materializing models, validating data before promotion, and ensuring bad data never reaches production
 5. **Iterate** with first-class support for chained unit tests, zero-copy cloning, and deferred builds - fast feedback without rebuilding the world
 
 ## Why SQLBuild?
@@ -79,6 +75,7 @@ def grant_target(target):
 </Frame>
 - **Zero-copy cloning:** Branch environments instantly with `sqb clone` without duplicating data.
 - **Deferred references:** Compile and plan against a production environment with `--defer-to` while building in dev.
+- **No manifest required:** Clone, diff, and defer work directly against live environments. No `manifest.json` generation, no artifact management, no stale state.
 
 ### Extensibility
 
