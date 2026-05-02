@@ -5,20 +5,31 @@ description: "Cursor-based incremental strategies, microbatch execution, and bac
 
 # Incremental Models
 
-Incremental models process only new or changed data instead of rebuilding the entire table. SQLBuild supports three incremental strategies and two execution modes.
+Incremental models process only new or changed data instead of rebuilding the entire table. SQLBuild tracks position using a cursor column (timestamp or integer) and automatically detects where to resume. If a model fails for several runs, the next successful build replays from where it left off with no manual backfilling.
 
 ## Strategies
 
 ### append
 
-Inserts new rows without modifying existing data.
+Inserts new rows without modifying existing data. Optionally uses a cursor to track position and avoid reprocessing the full source on every run.
 
 ```sql
 MODEL (
   materialized incremental,
   incremental_strategy append,
+  cursor created_at,
+  cursor_type timestamp,
+  cursor_grain second,
+  append_cursor_inclusive true,
 );
+
+SELECT id, customer_id, created_at
+FROM __source("raw_events")
 ```
+
+When `append_cursor_inclusive` is `true` (the default), the lower bound uses `>=`, which may duplicate the boundary row but avoids missing late-arriving data with the same cursor value. Set to `false` for an exclusive (`>`) lower bound if your cursor values are guaranteed unique.
+
+Append without a cursor is also valid -- the model simply inserts all rows from the source query on every run.
 
 ### delete_insert
 
@@ -28,10 +39,16 @@ Deletes rows in the cursor range, then inserts the new delta. Requires either `c
 MODEL (
   materialized incremental,
   incremental_strategy delete_insert,
+  unique_key [order_id],
   cursor order_id,
   cursor_type integer,
 );
+
+SELECT order_id, customer_id, order_status, ordered_at, line_total_cents
+FROM __ref("fact_orders")
 ```
+
+With a cursor, `delete_insert` removes rows where the cursor column falls within the replay window, then inserts the new delta. With a `unique_key` only, it deletes matching rows by key before inserting.
 
 ### merge
 
@@ -45,25 +62,37 @@ MODEL (
   cursor last_ordered_at,
   cursor_type timestamp,
   cursor_grain second,
+  cursor_inputs (
+    fact_orders ordered_at,
+  ),
 );
+
+SELECT
+  customer_id,
+  MAX(ordered_at) AS last_ordered_at,
+  COUNT(*) AS total_orders,
+  SUM(line_total_cents) AS total_revenue_cents
+FROM __ref("fact_orders")
+GROUP BY customer_id
 ```
 
-## Cursor configuration
+`merge` always requires `unique_key`. The cursor controls which upstream rows are scanned; the unique key determines how they're matched against the target.
 
-Cursors define the incremental replay boundary:
+## Cursors
+
+Cursors define the incremental replay boundary. SQLBuild queries `MAX(cursor)` from the target table and `MIN/MAX` from upstream inputs to compute the replay window automatically.
 
 | Field | Description |
 |-------|-------------|
 | `cursor` | Output column used to track incremental position |
 | `cursor_type` | `timestamp` or `integer` |
-| `cursor_grain` | Required for timestamp cursors: `second`, `minute`, `hour`, `day`, `month`, `year` |
+| `cursor_grain` | Time grain for timestamp cursors: `second`, `minute`, `hour`, `day`, `month`, `year` |
+| `cursor_start` | Lower bound floor -- the cursor will never replay before this value |
 | `cursor_inputs` | Map of upstream ref/source names to their cursor columns |
 
-When a model references multiple upstream inputs, `cursor_inputs` is required to specify which column on each input carries the cursor.
+### cursor_inputs
 
-## Microbatch execution
-
-For large incremental ranges, microbatch mode splits the replay into smaller windows:
+When a model references multiple upstream inputs, `cursor_inputs` is required to tell SQLBuild which column on each input carries the cursor:
 
 ```sql
 MODEL (
@@ -72,22 +101,101 @@ MODEL (
   cursor activity_hour,
   cursor_type timestamp,
   cursor_grain hour,
+  cursor_inputs (
+    fact_orders ordered_at,
+  ),
+);
+```
+
+SQLBuild uses these to compute `MIN/MAX` across all upstream inputs and determine the replay window.
+
+### Lookback
+
+Lookback extends the start of the replay window backwards to re-process recent data. This is useful for handling late-arriving records:
+
+```sql
+MODEL (
+  materialized incremental,
+  incremental_strategy delete_insert,
+  cursor event_date,
+  cursor_type timestamp,
+  cursor_grain day,
+  lookback 3d,
+);
+```
+
+With `lookback 3d`, the replay window starts 3 days before the normal cursor position, ensuring that any late-arriving data within that window is picked up.
+
+## Microbatch execution
+
+For large incremental ranges, microbatch mode splits the replay window into configurable batches. Each batch is processed serially with its own audit cycle: create delta, run delta audits, apply DML, clean up.
+
+```sql
+MODEL (
+  materialized incremental,
+  incremental_strategy delete_insert,
+  cursor activity_hour,
+  cursor_type timestamp,
+  cursor_grain hour,
+  cursor_inputs (
+    fact_orders ordered_at,
+  ),
   incremental_mode microbatch,
   batch_size 1d,
 );
 ```
 
-Each batch is processed serially: create delta, run delta audits, apply DML, clean up.
+Without microbatch mode, the entire replay range is processed in one pass.
+
+### Batch size
+
+`batch_size` controls the window size for each batch. For timestamp cursors, use duration strings like `1d`, `6h`, `1mo`. For integer cursors, use an integer value.
 
 ### Mixed-grain chains
 
-When a downstream microbatch model depends on an upstream model with a larger time bucket (e.g., hour downstream from day upstream), SQLBuild automatically widens the replay window to the largest participating time bucket. This prevents empty batch windows and ensures correctness.
+When a downstream microbatch model depends on an upstream model with a coarser time grain, SQLBuild automatically widens the replay window to the largest participating grain. For example, an hourly model downstream of a daily model will process in day-sized batches to prevent empty windows:
+
+```sql
+-- Upstream: daily grain, 2d batches
+MODEL (
+  materialized incremental,
+  incremental_strategy delete_insert,
+  cursor activity_day,
+  cursor_type timestamp,
+  cursor_grain day,
+  cursor_inputs (
+    hourly_order_activity activity_hour,
+  ),
+  incremental_mode microbatch,
+  batch_size 2d,
+);
+
+-- Downstream: hourly grain, but widens to day automatically
+MODEL (
+  materialized incremental,
+  incremental_strategy delete_insert,
+  cursor activity_hour,
+  cursor_type timestamp,
+  cursor_grain hour,
+  cursor_inputs (
+    daily_activity_rollup activity_day,
+  ),
+  incremental_mode microbatch,
+  batch_size 6h,
+);
+```
 
 ## Backfill policies
 
 ### query_change_backfill
 
-Controls what happens when the model SQL changes between runs:
+Controls what happens when the model SQL changes between runs. SQLBuild detects query changes via fingerprint-based tracking.
+
+| Value | Effect |
+|-------|--------|
+| `full` | Full table rebuild when query changes |
+| `bounded-14d` | Rebuild the last 14 days of data |
+| *(omitted)* | Warn only; no automatic rebuild |
 
 ```sql
 MODEL (
@@ -96,15 +204,9 @@ MODEL (
 );
 ```
 
-| Value | Effect |
-|-------|--------|
-| `full` | Full table rebuild when query changes |
-| `bounded-14d` | Rebuild the last 14 days of data |
-| *(omitted)* | Warn only; no automatic rebuild |
-
 ### schema_change_backfill
 
-Controls response to schema differences between expected and warehouse columns:
+Controls response to schema differences between expected and warehouse columns, with per-change-type policies:
 
 ```sql
 MODEL (
@@ -130,3 +232,5 @@ Controls how schema differences are handled at execution time:
 ## Cascade behavior
 
 When an upstream model has a non-warn backfill policy and its query or schema changes, the backfill signal cascades to downstream incremental models. The plan shows these as `Upstream changed` with the root cause and effective rebuild window.
+
+This means a query change in an upstream model can automatically trigger bounded or full rebuilds in downstream models, with per-model control over the rebuild window. You configure the policy on each model individually -- there's no global cascade setting.
