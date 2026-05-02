@@ -3,8 +3,6 @@ title: "Audits"
 description: "Data quality checks that run before data reaches the target table."
 ---
 
-# Audits
-
 Audits are SQL queries that verify data quality. If an audit returns rows, something is wrong. SQLBuild runs audits *before* data is promoted to the target table, so bad data never reaches production.
 
 ## How audits work
