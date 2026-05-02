@@ -10,31 +10,22 @@ Same as `build` but skips SQL unit tests and audits. Useful for fast iteration w
 ## Usage
 
 ```bash
-sqb run --project-dir <path> [flags]
+sqb --project-dir <path> run [flags]
 ```
 
 ## Flags
 
-Same as `build`:
-
 | Flag | Description |
 |------|-------------|
-| `--project-dir` | Path to the project directory |
-| `--no-color` | Disable ANSI color output |
 | `--no-sql-validation` | Skip compile-time SQL syntax validation |
-| `--fail-fast` | Stop on first failure |
-| `--full-refresh` | Full rebuild of selected models |
-| `--concurrency` | Number of worker connections |
-| `--select` | Select specific models |
+| `--defer-to` | Resolve unselected model references against another environment |
+| `--full-refresh` | Drop and rebuild all selected models from scratch |
+| `--fail-fast` | Stop on first failure and skip remaining nodes |
+| `--concurrency` | Number of worker connections (default: 1) |
+| `--verbose`, `-v` | Show lifecycle SQL inline after each model |
+| `--start-cursor-ts` | Override start cursor for timestamp incremental models (ISO format) |
+| `--end-cursor-ts` | Override end cursor for timestamp incremental models (ISO format) |
+| `--start-cursor-int` | Override start cursor for integer incremental models |
+| `--end-cursor-int` | Override end cursor for integer incremental models |
+| `--select`, `-s` | Select specific models |
 | `--exclude` | Exclude specific models |
-| `--verbose` | Show lifecycle SQL inline |
-| `--debug` | Enable debug diagnostics |
-
-## Differences from build
-
-| Feature | build | run |
-|---------|-------|-----|
-| Seeds | Yes | Yes |
-| SQL unit tests | Yes | No |
-| Model materialization | Yes | Yes |
-| Audits | Yes | No |

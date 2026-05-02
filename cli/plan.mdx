@@ -5,51 +5,69 @@ description: "Preview what SQLBuild will do before executing."
 
 # sqb plan
 
-Shows the execution plan without making any changes. Useful for inspecting change detection, backfill policies, and selector scope.
+Shows the execution plan without making any changes. Useful for inspecting change detection, backfill policies, and selector scope before building.
 
 ## Usage
 
 ```bash
-sqb plan --project-dir <path>
+sqb --project-dir <path> plan [flags]
 ```
 
 ## Flags
 
 | Flag | Description |
 |------|-------------|
-| `--project-dir` | Path to the project directory |
-| `--no-sql-validation` | Skip SQLGlot SQL syntax validation |
-| `--defer-to` | Defer unselected models to another environment |
-| `--json` | Output plan as JSON |
+| `--no-sql-validation` | Skip compile-time SQL syntax validation |
+| `--defer-to` | Resolve unselected model references against another environment |
+| `--json` | Output the plan as JSON |
 | `--full-refresh` | Plan a full rebuild of all selected models |
-| `--no-color` | Disable ANSI color output |
-| `--select` | Select specific models, paths, tags, or DAG subsets |
-| `--exclude` | Exclude specific models from the selection |
-| `--debug` | Enable debug diagnostics |
+| `--start-cursor-ts` | Override start cursor for timestamp incremental models (ISO format) |
+| `--end-cursor-ts` | Override end cursor for timestamp incremental models (ISO format) |
+| `--start-cursor-int` | Override start cursor for integer incremental models |
+| `--end-cursor-int` | Override end cursor for integer incremental models |
+| `--select`, `-s` | Select specific models |
+| `--exclude` | Exclude specific models |
 
-## Plan output
+## Output
 
-The human-readable plan groups models by reason:
+First run:
 
-- **Normal** -- no changes detected; models will run their normal incremental or rebuild behavior
-- **First run** -- model has never been built
-- **Query changed** -- model SQL has changed since last fingerprint
-- **Schema changed** -- column schema differences detected
-- **Upstream changed** -- an upstream model's backfill policy cascaded downstream
+```
+Plan ready (13 selected)
 
-Each section shows model names, materialization labels, and inline context like cursor columns, batch mode, query diffs, and policy details.
+First run (12)
+  stg_customers               view
+  stg_payments                view
+  stg_orders                  view
+  daily_order_partitioned     partition_tracked (custom)
+  daily_revenue               table
+  dim_customers               table
+  fact_orders                 table
+  customer_status_snapshot    merge (timestamp)
+  hourly_order_activity       delete_insert (timestamp, microbatch)
+  daily_activity_rollup       delete_insert (timestamp, microbatch)
+  hourly_activity_with_daily_context delete_insert (timestamp, microbatch)
+  order_status_index          delete_insert (integer)
 
-## JSON output
-
-```bash
-sqb plan --project-dir examples/waffle_shop --json
+Seeds (1)
+  waffle_types
 ```
 
-JSON output includes `reason`, `action`, `backfill`, and optional `cascade` metadata for each model. Cascaded models emit `reason: "upstream_changed"` to match the human-readable plan grouping.
+Steady state:
 
-## Warnings
+```
+Plan ready (13 selected)
 
-The plan surfaces warnings for:
-- Incremental models with query changes but no `query_change_backfill` policy
-- Schema changes under `on_schema_change: fail` or `ignore`
-- Enforced type mismatches between YAML declarations and warehouse state
+Normal (12)
+    3 view
+    3 table
+    3 delete_insert (timestamp, microbatch)
+    1 partition_tracked (custom)
+    1 merge (timestamp)
+    1 delete_insert (integer)
+
+Seeds (1)
+  waffle_types
+```
+
+When query or schema changes are detected, the plan shows the affected models with backfill actions and cascade information.

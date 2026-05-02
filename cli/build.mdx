@@ -10,46 +10,66 @@ Compiles, plans, and executes the full build lifecycle including seeds, SQL unit
 ## Usage
 
 ```bash
-sqb build --project-dir <path> [flags]
+sqb --project-dir <path> build [flags]
 ```
 
 ## Flags
 
 | Flag | Description |
 |------|-------------|
-| `--project-dir` | Path to the project directory |
-| `--no-color` | Disable ANSI color output |
 | `--no-sql-validation` | Skip compile-time SQL syntax validation |
-| `--fail-fast` | Stop on first failure and skip remaining nodes |
+| `--defer-to` | Resolve unselected model references against another environment |
 | `--full-refresh` | Drop and rebuild all selected models from scratch |
+| `--fail-fast` | Stop on first failure and skip remaining nodes |
 | `--concurrency` | Number of worker connections (default: 1) |
-| `--select` | Select specific models |
+| `--verbose`, `-v` | Show lifecycle SQL inline after each model |
+| `--start-cursor-ts` | Override start cursor for timestamp incremental models (ISO format) |
+| `--end-cursor-ts` | Override end cursor for timestamp incremental models (ISO format) |
+| `--start-cursor-int` | Override start cursor for integer incremental models |
+| `--end-cursor-int` | Override end cursor for integer incremental models |
+| `--select`, `-s` | Select specific models |
 | `--exclude` | Exclude specific models |
-| `--verbose` | Show lifecycle SQL inline after each model |
-| `--debug` | Show every executed SQL statement via debug diagnostics |
-| `--defer-to` | Defer unselected models to another environment |
 
 ## Execution order
 
 1. Seeds are loaded first
-2. SQL unit tests run before their target model
-3. Models are materialized in DAG topological order
-4. Audits run after their attached model completes
+2. Source audits run before their dependent models
+3. SQL unit tests run before their target model
+4. Models are materialized in DAG topological order
+5. Audits run after their attached model completes
 
 ## Output
 
 ```
-  1/13  seed      waffle_types                           OK     0.03s
-  2/13  view      stg_customers                          OK     0.02s
-          audit     not_null (customer_id)               PASS
-          audit     unique (customer_id)                 PASS
-  ...
-  8/13  table     fact_orders                            OK     0.04s
-          audit     not_null (order_id)                  PASS
+Execution  sqb build  (concurrency: 1)
+
+   1/13  seed      waffle_types                                          OK     0.09s
+   2/13  view      stg_customers                                         OK     0.05s
+           audit     not_null (customer_id)                              PASS
+           audit     unique (customer_id)                                PASS
+   3/13  view      stg_orders                                            OK     0.03s
+           test      test_stg_orders                                     PASS
+           audit     not_null (order_id)                                 PASS
+           audit     unique (order_id)                                   PASS
+  10/13  table     hourly_order_activity  (delete_insert)                OK     0.16s
+           audit (d) expression_is_true                                  PASS  4/4
+           audit (d) not_null (activity_hour)                            PASS  4/4
+           audit (f) expression_is_true                                  PASS
+           audit (f) not_null (activity_hour)                            PASS
 
 Completed successfully.
-PASS=66  WARN=0  FAIL=0  SKIP=0  TOTAL=66  (0.93s)
+PASS=66  WARN=0  FAIL=0  SKIP=0  TOTAL=66  (1.09s)
 ```
+
+## Deferred builds
+
+Use `--defer-to` to resolve unselected model references against another environment. This lets you build a subset of models in dev while referencing production tables for everything else:
+
+```bash
+sqb --project-dir examples/waffle_shop build --select fact_orders --defer-to prod
+```
+
+No `manifest.json` is required. Deferred references resolve directly against the live environment.
 
 ## Failure behavior
 
@@ -58,23 +78,10 @@ When a model fails:
 - Staging/delta tables are retained for inspection
 - Failure details show the model name, failed phase, and error message
 
-Example failure output:
-
-```
-Failures:
-
-  hourly_order_activity  (audit)
-    delta audit for 'hourly_order_activity' failed before target update
-    with severity level: error
-    delta table kept for inspection: main.hourly_order_activity__delta
-```
-
 ## Fingerprints
 
 After a successful build, SQLBuild writes query fingerprints to `_sqlbuild_fingerprints` in the target schema. These are used by `plan` to detect query changes on subsequent runs.
 
-Fingerprinting is controlled by `settings.query_change_tracking` in `sqlbuild_project.yml`. When disabled, no fingerprints are written and no query-change warnings are emitted.
-
 ## Runtime artifacts
 
-Build writes executed lifecycle SQL to `target/run/models/...`. These files contain the actual SQL that was executed, including resolved cursor bounds and runtime substitutions.
+Build writes executed lifecycle SQL to `target/run/models/`. These files contain the actual SQL that was executed, including resolved cursor bounds and runtime substitutions.

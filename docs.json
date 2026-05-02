@@ -45,7 +45,12 @@
           "cli/run",
           "cli/test",
           "cli/audit",
-          "cli/seed"
+          "cli/seed",
+          "cli/clone",
+          "cli/diff",
+          "cli/janitor",
+          "cli/clean",
+          "cli/init"
         ]
       },
       {

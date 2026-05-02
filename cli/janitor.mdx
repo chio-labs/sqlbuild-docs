@@ -1,0 +1,54 @@
+---
+title: "janitor"
+description: "Clean up stale warehouse relations."
+---
+
+# sqb janitor
+
+Identifies and removes stale warehouse relations that are no longer part of the project. Requires `janitor.enabled: true` in `sqlbuild_project.yml`.
+
+## Usage
+
+```bash
+sqb --project-dir <path> janitor [flags]
+```
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--auto-approve` | Skip the confirmation prompt and delete immediately |
+| `--retention-days` | Override the configured retention period (days) |
+
+## Configuration
+
+Configure janitor behavior in `sqlbuild_project.yml`:
+
+```yaml
+janitor:
+  enabled: true
+  retention_days: 30
+  delete_tracked_only: true
+  exclude_patterns:
+    - "audit_*"
+    - "tmp_*"
+```
+
+See [Project Configuration](/concepts/project-configuration) for details on janitor settings.
+
+## Examples
+
+```bash
+# Interactive mode (prompts for confirmation)
+sqb --project-dir examples/waffle_shop janitor
+
+# Auto-approve deletion
+sqb --project-dir examples/waffle_shop janitor --auto-approve
+
+# Override retention to 7 days
+sqb --project-dir examples/waffle_shop janitor --retention-days 7
+```
+
+## Safety
+
+Janitor prompts for confirmation before deleting. The confirmation requires typing an exact string to prevent accidental deletion. Use `--auto-approve` only in CI or when you're certain.
