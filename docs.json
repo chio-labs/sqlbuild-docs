@@ -49,6 +49,7 @@
           "cli/clone",
           "cli/diff",
           "cli/janitor",
+          "cli/query",
           "cli/clean",
           "cli/init"
         ]
