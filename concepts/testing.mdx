@@ -50,6 +50,7 @@ The trailing `SELECT 1` is required as a ceremonial closing statement.
 | `__source__<name>` | Mock a source. Replaces `__source("<name>")` in the model SQL. |
 | `__ref__<name>` | Mock a model or seed. Replaces `__ref("<name>")` in the model SQL. |
 | `__expected__<name>` | Define expected output for a model. SQLBuild resolves the model's real SQL and compares against this. |
+| `__macro__<name>` | Mock a macro. Replaces every `@<name>(...)` call with the mock value. |
 
 Any CTE without one of these prefixes is treated as a helper CTE, available to all mock and model SQL in the test.
 
@@ -160,6 +161,35 @@ SELECT 1
 ```
 
 The `@mock_orders()` call expands at compile time to whatever SQL the Python macro function returns.
+
+## Macro mocking
+
+When a model uses macros that you want to control in tests (e.g. environment-specific logic, dynamic SQL generation), you can override their output with `__macro__<name>` CTEs:
+
+```sql
+TEST();
+
+WITH
+__macro__country_filter AS (
+  SELECT 'country_code = ''US'''
+),
+__source__raw_orders AS (
+  SELECT 1 AS id, 100 AS customer_id, 'US' AS country_code, 'completed' AS status
+),
+__expected__stg_orders AS (
+  SELECT 1 AS order_id, 100 AS customer_id, 'completed' AS status
+)
+SELECT 1
+```
+
+When a `__macro__` mock is defined, every call to `@country_filter(...)` in any model SQL resolved by the test is replaced with the mock value (`country_code = 'US'`). The macro's actual Python function is not called, and the arguments are ignored.
+
+The mock value must be a single `SELECT` with one string literal. Use doubled single quotes for quotes within the value (standard SQL escaping).
+
+This is useful for:
+- Testing models that use environment-specific macros without depending on environment config
+- Controlling dynamic SQL generation to produce predictable test inputs
+- Isolating model logic from macro implementation details
 
 ## Multiple tests per file
 
