@@ -65,13 +65,13 @@
     "links": [
       {
         "label": "GitHub",
-        "url": "https://github.com/mimo-io/sqlbuild"
+        "url": "https://github.com/chio-labs/sqlbuild"
       }
     ]
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/mimo-io/sqlbuild"
+      "github": "https://github.com/chio-labs/sqlbuild"
     }
   }
 }
