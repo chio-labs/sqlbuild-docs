@@ -243,6 +243,13 @@ Local developer overrides. This file should be gitignored.
 ```yaml
 environment: dev
 
+connection:
+  database: my_local.duckdb
+
+settings:
+  sql_validation: false
+  max_concurrency: 4
+
 vars:
   debug_mode: "true"
 ```
@@ -250,6 +257,8 @@ vars:
 | Field | Description |
 |-------|-------------|
 | `environment` | Override which environment is active for this developer |
+| `connection` | Override connection config (merged on top of project + environment connection) |
+| `settings` | Override global settings (only explicitly set fields take effect) |
 | `vars` | Developer-specific variable overrides (merged on top of project + environment vars) |
 
-This replaces the common dbt pattern of switching profiles or setting environment variables to change targets. Each developer sets their environment once in `sqlbuild_local.yml` and it persists across sessions.
+This replaces the common dbt pattern of switching profiles or setting environment variables to change targets. Each developer sets their environment, connection, and preferences once in `sqlbuild_local.yml` and it persists across sessions.
