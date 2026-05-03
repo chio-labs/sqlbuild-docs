@@ -257,6 +257,7 @@ vars:
 | Field | Description |
 |-------|-------------|
 | `environment` | Override which environment is active for this developer |
+| `adapter` | Override the database adapter (e.g. use DuckDB locally while prod uses Snowflake) |
 | `connection` | Override connection config (merged on top of project + environment connection) |
 | `settings` | Override global settings (only explicitly set fields take effect) |
 | `vars` | Developer-specific variable overrides (merged on top of project + environment vars) |
