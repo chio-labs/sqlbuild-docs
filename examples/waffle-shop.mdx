@@ -54,7 +54,7 @@ raw_payments ──> stg_payments ──>  │              order_status_index
 - Cursor: `activity_day` (timestamp, day grain)
 - Microbatch with `batch_size: 2d`
 - Model-backed cursor input from `hourly_order_activity.activity_hour`
-- Backfill policy: `query_change_backfill: bounded(14d)`
+- Backfill policy: `query_change_backfill: bounded-14d`
 
 ### hourly_activity_with_daily_context
 

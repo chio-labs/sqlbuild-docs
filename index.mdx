@@ -59,7 +59,7 @@ def grant_target(target):
 - **Query-change detection:** Fingerprint-based tracking detects when model SQL has actually changed and triggers bounded or full rebuilds automatically.
 - **Backfill cascade:** Upstream query or schema changes propagate rebuild signals downstream through the DAG, with per-model control over rebuild windows.
 - **Schema diffs in the plan:** The plan shows column additions, removals, and type changes before anything executes, with configurable policies to block or adapt.
-- **Controlled rebuild windows:** `query_change_backfill` and `schema_change_backfill` policies let you choose between full rebuild and bounded replay (e.g. `bounded(14d)`).
+- **Controlled rebuild windows:** `query_change_backfill` and `schema_change_backfill` policies let you choose between full rebuild and bounded replay (e.g. `bounded-14d`).
 
 ### Incremental processing
 
