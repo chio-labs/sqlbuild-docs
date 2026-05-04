@@ -1,0 +1,132 @@
+---
+title: "Adapters"
+description: "Supported database engines and their connection configuration."
+---
+
+SQLBuild uses adapters to connect to different database engines. Set the adapter in `sqlbuild_project.yml`:
+
+```yaml
+name: my_project
+adapter: duckdb
+```
+
+Or override it per developer in `sqlbuild_local.yml`:
+
+```yaml
+adapter: duckdb
+```
+
+## DuckDB
+
+DuckDB is included as a core dependency. No extra installation needed.
+
+### Connection config
+
+```yaml
+connection:
+  database: my_project.duckdb
+```
+
+| Field | Description |
+|-------|-------------|
+| `database` | Path to the DuckDB database file. Use `:memory:` for in-memory databases. |
+| `extensions` | List of DuckDB extensions to install and load on connect. |
+| `settings` | Key-value pairs passed as `SET` statements on connect. |
+| `attach` | List of additional databases to attach. |
+
+### Extensions and settings
+
+```yaml
+connection:
+  database: my_project.duckdb
+  extensions:
+    - httpfs
+    - parquet
+  settings:
+    threads: 4
+    memory_limit: 4GB
+```
+
+### Attaching additional databases
+
+```yaml
+connection:
+  database: my_project.duckdb
+  attach:
+    - path: external_data.duckdb
+      alias: external
+      read_only: true
+```
+
+### Table promotion mode
+
+DuckDB defaults to `staged` promotion: tables are materialized into a staging table, audited, then swapped into the target. This is configurable in `settings`:
+
+```yaml
+settings:
+  table_promotion_mode: staged
+```
+
+## Snowflake
+
+Snowflake requires the optional `snowflake-connector-python` dependency:
+
+```bash
+pip install 'sqlbuild[snowflake]'
+# or
+uv add 'sqlbuild[snowflake]'
+```
+
+### Connection config
+
+```yaml
+adapter: snowflake
+
+connection:
+  account: my_org-my_account
+  user: my_user
+  password: my_password
+  role: TRANSFORM_ROLE
+  warehouse: TRANSFORM_WH
+  database: ANALYTICS
+  schema: RAW
+```
+
+All fields in `connection` are passed directly to `snowflake.connector.connect()`. See the [Snowflake Connector documentation](https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect) for all available options, including key-pair authentication, OAuth, and SSO.
+
+### Session initialization
+
+On connect, SQLBuild runs `USE ROLE`, `USE WAREHOUSE`, `USE DATABASE`, and `USE SCHEMA` statements based on the connection config. These ensure the session context is set correctly regardless of the user's default settings.
+
+### Per-environment connections
+
+Use environments to connect to different Snowflake databases or warehouses:
+
+```yaml
+adapter: snowflake
+
+connection:
+  account: my_org-my_account
+  user: my_user
+  password: my_password
+
+environments:
+  prod:
+    connection:
+      role: PROD_ROLE
+      warehouse: PROD_WH
+      database: PROD_DB
+    schema: prod
+  dev:
+    connection:
+      role: DEV_ROLE
+      warehouse: DEV_WH
+      database: DEV_DB
+    schema: dev
+```
+
+## Coming soon
+
+- **Databricks** - install with `sqlbuild[databricks]`
+- **BigQuery** - install with `sqlbuild[bigquery]`
+- **ClickHouse**
