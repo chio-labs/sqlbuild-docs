@@ -3,7 +3,18 @@ title: "Adapters"
 description: "Supported database engines and their connection configuration."
 ---
 
-SQLBuild uses adapters to connect to different database engines. Set the adapter in `sqlbuild_project.yml`:
+SQLBuild uses adapters to connect to different database engines.
+
+| Adapter | Status | Install |
+|---------|--------|---------|
+| [DuckDB](#duckdb) | Supported | included by default |
+| [Snowflake](#snowflake) | Supported | `sqlbuild[snowflake]` |
+| [BigQuery](#bigquery) | Supported | `sqlbuild[bigquery]` |
+| [Databricks](#databricks) | Supported | `sqlbuild[databricks]` |
+| PostgreSQL | Coming soon | |
+| ClickHouse | Coming soon | |
+
+Set the adapter in `sqlbuild_project.yml`:
 
 ```yaml
 name: my_project
