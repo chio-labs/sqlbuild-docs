@@ -25,6 +25,7 @@
         "group": "Concepts",
         "pages": [
           "concepts/project-configuration",
+          "concepts/adapters",
           "concepts/sources",
           "concepts/seeds",
           "concepts/models",
