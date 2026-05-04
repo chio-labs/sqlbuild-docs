@@ -124,8 +124,81 @@ environments:
     schema: dev
 ```
 
+## BigQuery
+
+BigQuery requires the optional `google-cloud-bigquery` dependency:
+
+```bash
+pip install 'sqlbuild[bigquery]'
+# or
+uv add 'sqlbuild[bigquery]'
+```
+
+### Connection config
+
+```yaml
+adapter: bigquery
+
+connection:
+  project: my-gcp-project
+  location: US
+```
+
+| Field | Description |
+|-------|-------------|
+| `project` | GCP project ID (required) |
+| `location` | BigQuery dataset location (e.g. `US`, `EU`, `us-east1`) |
+| `credentials_path` | Path to a service account JSON key file. If omitted, uses Application Default Credentials (ADC). |
+
+### Authentication
+
+BigQuery supports two authentication methods:
+
+**Application Default Credentials (default):** Uses the credentials from `gcloud auth application-default login` or the environment's service account. No config needed beyond `project`.
+
+**Service account file:**
+
+```yaml
+connection:
+  project: my-gcp-project
+  credentials_path: /path/to/service-account.json
+```
+
+## Databricks
+
+Databricks requires the optional `databricks-sql-connector` dependency:
+
+```bash
+pip install 'sqlbuild[databricks]'
+# or
+uv add 'sqlbuild[databricks]'
+```
+
+### Connection config
+
+```yaml
+adapter: databricks
+
+connection:
+  server_hostname: my-workspace.cloud.databricks.com
+  http_path: /sql/1.0/warehouses/abc123
+  token: dapi_my_access_token
+  catalog: my_catalog
+  schema: my_schema
+```
+
+| Field | Description |
+|-------|-------------|
+| `server_hostname` | Databricks workspace hostname (required) |
+| `http_path` | SQL warehouse or cluster HTTP path (required) |
+| `token` | Personal access token (required) |
+| `catalog` | Unity Catalog name (required) |
+| `schema` | Default schema (optional) |
+
+### Session initialization
+
+On connect, SQLBuild runs `USE CATALOG` and `USE SCHEMA` statements to set the session context.
+
 ## Coming soon
 
-- **Databricks** - install with `sqlbuild[databricks]`
-- **BigQuery** - install with `sqlbuild[bigquery]`
 - **ClickHouse**
