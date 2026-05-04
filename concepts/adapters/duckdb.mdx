@@ -1,0 +1,54 @@
+---
+title: "DuckDB"
+description: "DuckDB adapter configuration for SQLBuild."
+---
+
+DuckDB is included as a core dependency. No extra installation needed.
+
+## Connection config
+
+```yaml
+adapter: duckdb
+
+connection:
+  database: my_project.duckdb
+```
+
+| Field | Description |
+|-------|-------------|
+| `database` | Path to the DuckDB database file. Use `:memory:` for in-memory databases. |
+| `extensions` | List of DuckDB extensions to install and load on connect. |
+| `settings` | Key-value pairs passed as `SET` statements on connect. |
+| `attach` | List of additional databases to attach. |
+
+## Extensions and settings
+
+```yaml
+connection:
+  database: my_project.duckdb
+  extensions:
+    - httpfs
+    - parquet
+  settings:
+    memory_limit: 4GB
+```
+
+## Attaching additional databases
+
+```yaml
+connection:
+  database: my_project.duckdb
+  attach:
+    - path: external_data.duckdb
+      alias: external
+      read_only: true
+```
+
+## Table promotion mode
+
+DuckDB defaults to `staged` promotion: tables are materialized into a staging table, audited, then swapped into the target. This is configurable in `settings`:
+
+```yaml
+settings:
+  table_promotion_mode: staged
+```
