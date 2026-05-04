@@ -1,0 +1,42 @@
+---
+title: "BigQuery"
+description: "BigQuery adapter configuration for SQLBuild."
+---
+
+BigQuery requires the optional `google-cloud-bigquery` dependency:
+
+```bash
+pip install 'sqlbuild[bigquery]'
+# or
+uv add 'sqlbuild[bigquery]'
+```
+
+## Connection config
+
+```yaml
+adapter: bigquery
+
+connection:
+  project: my-gcp-project
+  location: europe-west2
+```
+
+| Field | Description |
+|-------|-------------|
+| `project` | GCP project ID (required) |
+| `location` | BigQuery dataset location - a region (`europe-west2`, `us-east1`) or multi-region (`US`, `EU`) |
+| `credentials_path` | Path to a service account JSON key file. If omitted, uses Application Default Credentials (ADC). |
+
+## Authentication
+
+BigQuery supports two authentication methods:
+
+**Application Default Credentials (default):** Uses the credentials from `gcloud auth application-default login` or the environment's service account. No config needed beyond `project`.
+
+**Service account file:**
+
+```yaml
+connection:
+  project: my-gcp-project
+  credentials_path: /path/to/service-account.json
+```
