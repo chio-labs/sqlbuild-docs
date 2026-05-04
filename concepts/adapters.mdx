@@ -141,13 +141,13 @@ adapter: bigquery
 
 connection:
   project: my-gcp-project
-  location: US
+  location: europe-west2
 ```
 
 | Field | Description |
 |-------|-------------|
 | `project` | GCP project ID (required) |
-| `location` | BigQuery dataset location (e.g. `US`, `EU`, `us-east1`) |
+| `location` | BigQuery dataset location - a region (`europe-west2`, `us-east1`) or multi-region (`US`, `EU`) |
 | `credentials_path` | Path to a service account JSON key file. If omitted, uses Application Default Credentials (ADC). |
 
 ### Authentication
