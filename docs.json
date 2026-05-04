@@ -25,11 +25,16 @@
         "group": "Concepts",
         "pages": [
           "concepts/project-configuration",
-          "concepts/adapters",
-          "concepts/adapters/duckdb",
-          "concepts/adapters/snowflake",
-          "concepts/adapters/bigquery",
-          "concepts/adapters/databricks",
+          {
+            "group": "Adapters",
+            "pages": [
+              "concepts/adapters",
+              "concepts/adapters/duckdb",
+              "concepts/adapters/snowflake",
+              "concepts/adapters/bigquery",
+              "concepts/adapters/databricks"
+            ]
+          },
           "concepts/sources",
           "concepts/seeds",
           "concepts/models",
