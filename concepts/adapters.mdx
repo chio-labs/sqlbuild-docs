@@ -31,15 +31,37 @@ adapter: duckdb
 
 You can write your own adapter for any database engine by placing Python files under `adapters/` in your project directory.
 
-### Defining an adapter
+### Extending a built-in adapter
 
-Create a class that subclasses `StrictAdapter` and sets an `adapter_name`:
+The most common case is extending an existing adapter with custom behavior. Subclass the built-in adapter, set a new `adapter_name`, and override what you need:
+
+```python
+# adapters/duckdb_plus.py
+from sqlbuild.integrations.duckdb.client import DuckDbAdapter
+
+class DuckDbPlusAdapter(DuckDbAdapter):
+    adapter_name = "duckdb_plus"
+
+    def connect(self, config):
+        connection = super().connect(config)
+        # custom setup - load extensions, set pragmas, etc.
+        self.execute(connection, "SET enable_progress_bar = true")
+        return connection
+```
+
+```yaml
+adapter: duckdb_plus
+```
+
+### Writing an adapter from scratch
+
+For a database engine with no built-in support, subclass `BaseAdapter`. It provides ANSI SQL defaults for most methods - you only need to implement `connect`, `execute`, `close`, and any methods where your engine differs from standard SQL:
 
 ```python
 # adapters/my_database.py
-from sqlbuild.adapter.strict.strict_adapter import StrictAdapter
+from sqlbuild.adapter.base.base_adapter import BaseAdapter
 
-class MyDatabaseAdapter(StrictAdapter):
+class MyDatabaseAdapter(BaseAdapter):
     adapter_name = "my_database"
 
     def connect(self, config):
@@ -48,27 +70,29 @@ class MyDatabaseAdapter(StrictAdapter):
     def execute(self, connection, sql):
         ...
 
-    # ... implement all required methods
+    def close(self, connection):
+        ...
 ```
 
-`StrictAdapter` is fully abstract - every method must be implemented. If any are missing, SQLBuild raises a clear error listing the unimplemented methods.
-
-### Using a custom adapter
-
-Reference it by name in your project config:
-
-```yaml
-adapter: my_database
-```
+For full control with no inherited defaults, subclass `StrictAdapter` instead. Every method is abstract and must be implemented explicitly. SQLBuild raises a clear error listing any unimplemented methods.
 
 ### Discovery rules
 
 - SQLBuild discovers all `.py` files under `adapters/` recursively (excluding `__init__.py` and files starting with `_`)
-- Each file is scanned for classes that subclass `StrictAdapter` and define a string `adapter_name`
+- Each file is scanned for classes that define a string `adapter_name` and subclass `StrictAdapter` (or any of its subclasses like `BaseAdapter` or a built-in adapter)
 - Adapter names must be unique across all adapter files - duplicates raise an error
 - Custom adapter names cannot shadow built-in names (`duckdb`, `snowflake`, `bigquery`, `databricks`)
 
-### Adapter interface
+### Adapter class hierarchy
+
+```
+StrictAdapter          (fully abstract - all methods must be implemented)
+  └── BaseAdapter      (ANSI SQL defaults - override only what differs)
+        ├── DuckDbAdapter
+        ├── SnowflakeAdapter
+        ├── BigQueryAdapter
+        └── DatabricksAdapter
+```
 
 `StrictAdapter` composes four mixins that define the full adapter contract:
 
@@ -76,5 +100,3 @@ adapter: my_database
 - **SchemaMixin** - `relation_exists`, `list_relations`, `describe_relation`, `ensure_schema`
 - **MaterializationMixin** - `create_table_as`, `create_view`, `drop`, `rename`, `swap`, `load_seed`
 - **DiffMixin** - `diff_schema`, `diff_rows`, `sample_unequal_rows`, `sample_side_only_rows`
-
-This is the same interface that the built-in adapters implement.
