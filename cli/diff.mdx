@@ -3,24 +3,20 @@ title: "diff"
 description: "Compare schemas and data between environments."
 ---
 
-# sqb diff
-
 Compares schemas and optionally row-level data between two environments. See [Environment Diffs](/concepts/environment-diffs) for detailed usage.
 
 ## Usage
 
 ```bash
-sqb --project-dir <path> diff --from <env> --to <env> <mode> [flags]
+sqb diff <FROM>:<TO> <mode> [flags]
 ```
 
-Exactly one mode is required: `--full`, `--schema-only`, or `--bounded <duration>`.
+The first argument is a positional environment range in `FROM:TO` format. Exactly one mode is required: `--full`, `--schema-only`, or `--bounded <duration>`.
 
 ## Flags
 
 | Flag | Description |
 |------|-------------|
-| `--from` | Source environment (required) |
-| `--to` | Target environment (required) |
 | `--full` | Compare both schema and all row data |
 | `--schema-only` | Compare column names and types only |
 | `--bounded` | Compare row data within a recent window (e.g. `14d`, `6h`) |
@@ -35,13 +31,13 @@ Exactly one mode is required: `--full`, `--schema-only`, or `--bounded <duration
 
 ```bash
 # Full diff of a specific model
-sqb --project-dir examples/waffle_shop diff --from prod --to dev --full --select customer_status_snapshot
+sqb --project-dir examples/waffle_shop diff prod:dev --full --select customer_status_snapshot
 
 # Schema-only diff of all marts
-sqb --project-dir examples/waffle_shop diff --from prod --to dev --schema-only --select path:marts
+sqb --project-dir examples/waffle_shop diff prod:dev --schema-only --select path:marts
 
 # Bounded diff of last 14 days
-sqb --project-dir examples/waffle_shop diff --from prod --to dev --bounded 14d --select hourly_order_activity
+sqb --project-dir examples/waffle_shop diff prod:dev --bounded 14d --select hourly_order_activity
 ```
 
 ## Exit codes

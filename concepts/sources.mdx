@@ -55,6 +55,28 @@ sources:
 
 If a source audit with `error` severity fails, all downstream models that depend on that source are blocked.
 
+## Type enforcement
+
+Type enforcement is implicit for sources, the same as for models. If any column declares a `type`, SQLBuild automatically casts that column and uses declared types for schema-change detection:
+
+```yaml
+sources:
+  - name: raw_customers
+    expression: |
+      SELECT 1 AS id, 'Leslie' AS first_name, 'Knope' AS last_name
+    columns:
+      - name: id
+        type: INTEGER
+      - name: first_name
+      - name: last_name
+```
+
+In this example, only `id` has a type declared, so only `id` is cast. Columns without a `type` are passed through unchanged.
+
+For expression sources, SQLBuild probes the expression's output columns and builds a projection that casts typed columns while preserving the rest. For table sources, it uses warehouse metadata to validate that declared column names exist and applies casts accordingly.
+
+You can explicitly set `type_enforcement: false` on a source to disable casting even when column types are declared.
+
 ## Config reference
 
 | Field | Description |
@@ -65,6 +87,6 @@ If a source audit with `error` severity fails, all downstream models that depend
 | `table` | Target table name (defaults to `name` if omitted) |
 | `expression` | Inline SQL expression (alternative to table reference) |
 | `description` | Human-readable description |
-| `type_enforcement` | Enable type casting based on declared column types |
+| `type_enforcement` | Override implicit type enforcement (`true`/`false`). Defaults to `true` when any column declares a type. |
 | `columns` | Column declarations with optional types and audits |
 | `audits` | Source-level audits |

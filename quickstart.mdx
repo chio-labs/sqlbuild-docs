@@ -169,13 +169,18 @@ examples/waffle_shop/
     raw.yml                     # source declarations (inline expression data)
   seeds/
     waffle_types.csv            # seed data
-    schema.yml                  # seed schema
+    lookups.yml                 # seed declarations
+  functions/
+    sql/
+      is_completed_order.sql    # scalar SQL UDF
+      customer_orders.sql       # table function
+    python/
+      is_completed_order_py.py  # scalar Python UDF
   models/
     staging/
-      stg_customers.sql         # view
+      stg_customers.sql         # view (audits declared in MODEL() header)
       stg_orders.sql            # view
       stg_payments.sql          # view
-      schema.yml                # audits for staging
     marts/
       fact_orders.sql           # table
       dim_customers.sql         # table
@@ -184,11 +189,9 @@ examples/waffle_shop/
       hourly_order_activity.sql # microbatch incremental
       hourly_activity_with_daily_context.sql # microbatch incremental
       daily_activity_rollup.sql # microbatch incremental
-      schema.yml                # audits for marts
     intermediate/
       customer_status_snapshot.sql  # merge incremental
       order_status_index.sql       # integer cursor incremental
-      schema.yml                   # audits for intermediate
   audits/
     generic/
       not_null.sql
@@ -204,6 +207,7 @@ examples/waffle_shop/
 ## Next steps
 
 - [Models](/concepts/models) - understand `MODEL()` headers and materialization types
+- [Functions](/concepts/functions) - SQL UDFs, Python UDFs, and table functions
 - [Incremental](/concepts/incremental) - learn about cursor-based incremental strategies
 - [Audits](/concepts/audits) - configure data quality checks
 - [Testing](/concepts/testing) - write SQL unit tests with chaining and macro support

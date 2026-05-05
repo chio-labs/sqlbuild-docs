@@ -58,31 +58,32 @@ FROM __ref("@model")
 WHERE NOT (@expression)
 ```
 
-The `@column` and `@model` parameters are substituted at compile time based on where the audit is attached. Custom parameters like `@expression` and `@'values'` are passed from the schema YAML.
+The `@column` and `@model` parameters are substituted at compile time based on where the audit is attached. Custom parameters like `@expression` and `@'values'` are passed from the audit declaration.
 
 ### Attaching generic audits
 
-Attach audits to models in `schema.yml`:
+Attach audits to models in the `MODEL()` header using the `columns` and `audits` fields:
 
-```yaml
-models:
-  - name: stg_orders
-    columns:
-      - name: order_id
-        audits:
-          - not_null
-          - unique
-      - name: customer_id
-        audits:
-          - not_null
-      - name: status
-        audits:
-          - accepted_values:
-              values: ["placed", "preparing", "ready", "completed", "cancelled"]
-    audits:
-      - expression_is_true:
-          name: revenue is non-negative
-          expression: "total_revenue_cents >= 0"
+```sql
+MODEL (
+  materialized view,
+  tags [staging],
+  columns (
+    order_id (audits [not_null, unique]),
+    customer_id (audits [not_null]),
+    status (
+      audits [
+        accepted_values (values ["placed", "preparing", "ready", "completed", "cancelled"]),
+      ],
+    ),
+  ),
+  audits [
+    expression_is_true (
+      name "revenue is non-negative",
+      expression "total_revenue_cents >= 0",
+    ),
+  ],
+);
 ```
 
 Column-level audits receive the column name as `@column`. Model-level audits use custom parameters like `@expression`.
@@ -138,14 +139,12 @@ settings:
   default_audit_severity: warn
 ```
 
-Override per audit instance:
+Override per audit instance in the `MODEL()` header:
 
-```yaml
-columns:
-  - name: order_id
-    audits:
-      - not_null:
-          severity: error
+```sql
+columns (
+  order_id (audits [not_null (severity error)]),
+),
 ```
 
 ## Run scope
@@ -157,17 +156,21 @@ Audits on incremental models can run at different lifecycle phases:
 | `final` | Run once after materialization against the target table (default). |
 | `delta_and_final` | Run against each delta batch before DML, then again against the target after all batches complete. |
 
-```yaml
-columns:
-  - name: activity_hour
-    audits:
-      - not_null:
-          run_scope: delta_and_final
-audits:
-  - expression_is_true:
-      name: orders placed is non-negative
-      expression: "orders_placed >= 0"
-      run_scope: delta_and_final
+```sql
+MODEL (
+  materialized incremental,
+  ...
+  columns (
+    activity_hour (audits [not_null (run_scope delta_and_final)]),
+  ),
+  audits [
+    expression_is_true (
+      name "orders placed is non-negative",
+      expression "orders_placed >= 0",
+      run_scope delta_and_final,
+    ),
+  ],
+);
 ```
 
 Delta-phase audits with `error` severity block DML before the target is updated. This is visible in the build output as `audit (d)` for delta-phase and `audit (f)` for final-phase:

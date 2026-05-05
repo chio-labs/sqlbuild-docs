@@ -48,7 +48,7 @@ The trailing `SELECT 1` is required as a ceremonial closing statement.
 | Prefix | Purpose |
 |--------|---------|
 | `__source__<name>` | Mock a source. Replaces `__source("<name>")` in the model SQL. |
-| `__ref__<name>` | Mock a model or seed. Replaces `__ref("<name>")` in the model SQL. |
+| `__ref__<name>` | Mock a model or seed. Replaces `__ref("<name>")` or `__seed("<name>")` in the model SQL. |
 | `__expected__<name>` | Define expected output for a model. SQLBuild resolves the model's real SQL and compares against this. |
 | `__macro__<name>` | Mock a macro. Replaces every `@<name>(...)` call with the mock value. |
 

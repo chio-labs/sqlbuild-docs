@@ -11,13 +11,14 @@ The waffle shop is a self-contained example project that demonstrates the core f
 
 The project models a fictional waffle shop's order data:
 
-- **Raw sources**: `raw_customers`, `raw_orders`, `raw_payments` (provisioned by `seed_raw_data.sql`)
+- **Raw sources**: `raw_customers`, `raw_orders`, `raw_payments` (inline expression sources, no external setup)
 - **Staging views**: `stg_customers`, `stg_orders`, `stg_payments`
 - **Fact/dimension tables**: `fact_orders`, `dim_customers`, `daily_revenue`
 - **Incremental models**: cursor-based and microbatch models with runtime-owned cursor resolution
 - **Custom materialization**: `daily_order_partitioned` using a Python partition-tracked strategy
+- **Functions**: `is_completed_order` (SQL UDF), `is_completed_order_py` (Python UDF), `customer_orders` (table function)
 - **Seed**: `waffle_types` CSV
-- **Audits**: `not_null`, `unique`, `accepted_values`, `expression_is_true`
+- **Audits**: `not_null`, `unique`, `accepted_values`, `expression_is_true` (declared in MODEL() headers)
 - **Test**: `test_stg_orders` SQL unit test
 
 ## Model DAG
@@ -72,29 +73,20 @@ raw_payments ──> stg_payments ──>  │              order_status_index
 
 ## Running the example
 
-```bash
-# Seed raw data
-python -c "
-from pathlib import Path
-import duckdb
-project_dir = Path('examples/waffle_shop')
-db_path = project_dir / 'waffle_shop.duckdb'
-con = duckdb.connect(str(db_path))
-con.execute((project_dir / 'seed_raw_data.sql').read_text(encoding='utf-8'))
-con.close()
-"
+No external data setup is required. Source data is defined as inline expressions in `sources/raw.yml`, so SQLBuild resolves everything at compile time.
 
+```bash
 # Build everything
-sqb build --project-dir examples/waffle_shop --no-color
+sqb --project-dir examples/waffle_shop build
 
 # Check the plan
-sqb plan --project-dir examples/waffle_shop --no-color
+sqb --project-dir examples/waffle_shop plan
 
 # Run a subset
-sqb build --project-dir examples/waffle_shop --select path:marts --no-color
+sqb --project-dir examples/waffle_shop build --select path:marts
 
 # Debug a specific model
-sqb build --project-dir examples/waffle_shop --debug --select hourly_order_activity
+sqb --project-dir examples/waffle_shop build --debug --select hourly_order_activity
 ```
 
 ## Project config
@@ -104,8 +96,10 @@ sqb build --project-dir examples/waffle_shop --debug --select hourly_order_activ
 name: waffle_shop
 adapter: duckdb
 
+default_environment: dev
+
 connection:
-  database: waffle_shop.duckdb
+  database: waffle_shop_control.duckdb
 
 settings:
   default_audit_severity: warn
@@ -113,7 +107,13 @@ settings:
 defaults:
   materialized: table
 
+environments:
+  prod:
+    schema: prod
+  dev:
+    schema: dev
+
 path_defaults:
-  models/staging:
+  staging:
     materialized: view
 ```

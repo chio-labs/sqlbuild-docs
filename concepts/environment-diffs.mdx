@@ -6,7 +6,7 @@ description: "Compare schemas and data between environments to validate changes 
 SQLBuild can compare schemas and row-level data between any two environments. This lets you validate that changes in dev produce the expected results before promoting to production.
 
 ```bash
-sqb --project-dir examples/waffle_shop diff --from prod --to dev --full --select customer_status_snapshot
+sqb --project-dir examples/waffle_shop diff prod:dev --full --select customer_status_snapshot
 ```
 
 <Frame>
@@ -22,7 +22,7 @@ Every diff requires exactly one mode:
 Compares both schema and row-level data for the selected models:
 
 ```bash
-sqb diff --from prod --to dev --full --select fact_orders
+sqb diff prod:dev --full --select fact_orders
 ```
 
 Rows are joined on the model's `unique_key` and compared column by column. The output shows:
@@ -36,7 +36,7 @@ Rows are joined on the model's `unique_key` and compared column by column. The o
 Compares column names and types without looking at row data:
 
 ```bash
-sqb diff --from prod --to dev --schema-only --select fact_orders
+sqb diff prod:dev --schema-only --select fact_orders
 ```
 
 Useful for quick structural checks or when row comparison would be too expensive.
@@ -46,7 +46,7 @@ Useful for quick structural checks or when row comparison would be too expensive
 Compares only a recent window of data using the model's cursor:
 
 ```bash
-sqb diff --from prod --to dev --bounded 14d --select hourly_order_activity
+sqb diff prod:dev --bounded 14d --select hourly_order_activity
 ```
 
 For timestamp cursors, the bound is a duration (`14d`, `6h`, `30m`). For integer cursors, the bound is an integer value. If the model has no cursor configured, the diff falls back to a full row comparison.
@@ -58,8 +58,8 @@ Rows are matched between environments using the model's `unique_key`. For models
 The diff output categorises rows as:
 - **Equal** - same key, same values in both environments
 - **Unequal** - same key, different values (with per-column breakdown)
-- **Left only** - exists in the `--from` environment but not `--to`
-- **Right only** - exists in the `--to` environment but not `--from`
+- **Left only** - exists in the FROM environment but not TO
+- **Right only** - exists in the TO environment but not FROM
 
 ## Tolerances
 
@@ -104,13 +104,13 @@ Excluded columns are still shown in the schema comparison but skipped during row
 Add `--verbose` or `-v` to see more example rows for mismatches and side-only rows:
 
 ```bash
-sqb diff --from prod --to dev --full --select customer_status_snapshot --verbose
+sqb diff prod:dev --full --select customer_status_snapshot --verbose
 ```
 
 Default sample limits are 3 per category. Verbose mode increases this to 10. You can also set exact limits:
 
 ```bash
-sqb diff --from prod --to dev --full --select customer_status_snapshot --max-column-examples 20 --max-row-only-examples 5
+sqb diff prod:dev --full --select customer_status_snapshot --max-column-examples 20 --max-row-only-examples 5
 ```
 
 ## Selectors
@@ -119,13 +119,13 @@ Diff requires `--select` in the current version. You can use any selector syntax
 
 ```bash
 # Diff a single model
-sqb diff --from prod --to dev --full --select customer_status_snapshot
+sqb diff prod:dev --full --select customer_status_snapshot
 
 # Diff all models in a path
-sqb diff --from prod --to dev --schema-only --select path:marts
+sqb diff prod:dev --schema-only --select path:marts
 
 # Diff models with a specific tag
-sqb diff --from prod --to dev --full --select tag:acceptance
+sqb diff prod:dev --full --select tag:acceptance
 ```
 
 ## Exit codes
