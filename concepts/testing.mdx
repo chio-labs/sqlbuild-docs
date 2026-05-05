@@ -48,7 +48,8 @@ The trailing `SELECT 1` is required as a ceremonial closing statement.
 | Prefix | Purpose |
 |--------|---------|
 | `__source__<name>` | Mock a source. Replaces `__source("<name>")` in the model SQL. |
-| `__ref__<name>` | Mock a model or seed. Replaces `__ref("<name>")` or `__seed("<name>")` in the model SQL. |
+| `__ref__<name>` | Mock a model. Replaces `__ref("<name>")` in the model SQL. |
+| `__seed__<name>` | Mock a seed. Replaces `__seed("<name>")` in the model SQL. |
 | `__expected__<name>` | Define expected output for a model. SQLBuild resolves the model's real SQL and compares against this. |
 | `__macro__<name>` | Mock a macro. Replaces every `@<name>(...)` call with the mock value. |
 
@@ -81,31 +82,60 @@ SELECT 1
 
 SQLBuild topologically sorts the expected models, resolves each intermediate model's real SQL with mocks substituted, and chains the outputs forward. Every model between the mocked sources and the expected model is computed automatically.
 
-## Mocking refs
+## Mocking refs and seeds
 
-You can mock models directly with `__ref__<name>`, not just sources. This skips the model's real SQL and provides controlled data instead:
+You can mock models directly with `__ref__<name>` and seeds with `__seed__<name>`, not just sources. This skips the model's real SQL (or the seed's real CSV data) and provides controlled data instead:
 
 ```sql
--- Mock stg_orders directly instead of mocking the raw source and resolving through it.
 TEST();
 
 WITH
 __ref__stg_orders AS (
-  SELECT 1 AS order_id, 100 AS customer_id, 2 AS waffle_type_id, 3 AS quantity,
-         '2026-04-01 10:00:00' AS ordered_at, 'completed' AS status
+  SELECT
+    1 AS order_id,
+    100 AS customer_id,
+    2 AS waffle_type_id,
+    3 AS quantity,
+    CAST('2026-04-01 10:00:00' AS TIMESTAMP) AS ordered_at,
+    'completed' AS status
 ),
 __ref__stg_payments AS (
-  SELECT 1 AS payment_id, 1 AS order_id, 1500 AS amount_cents,
-         'credit_card' AS payment_method, 'success' AS payment_status
+  SELECT
+    10 AS payment_id,
+    1 AS order_id,
+    2850 AS amount_cents,
+    'card' AS payment_method,
+    CAST('2026-04-01 10:05:00' AS TIMESTAMP) AS paid_at,
+    'success' AS payment_status
+),
+__seed__waffle_types AS (
+  SELECT
+    2 AS waffle_type_id,
+    'Liege' AS waffle_name,
+    'sweet' AS category,
+    950 AS price_cents
 ),
 __expected__fact_orders AS (
-  SELECT 1 AS order_id, 100 AS customer_id, 1500 AS payment_amount_cents,
-         'credit_card' AS payment_method
+  SELECT
+    1 AS order_id,
+    100 AS customer_id,
+    2 AS waffle_type_id,
+    'Liege' AS waffle_name,
+    'sweet' AS waffle_category,
+    3 AS quantity,
+    2850 AS line_total_cents,
+    CAST('2026-04-01 10:00:00' AS TIMESTAMP) AS ordered_at,
+    'completed' AS order_status,
+    TRUE AS is_completed_order,
+    TRUE AS is_completed_order_py,
+    'card' AS payment_method,
+    'success' AS payment_status,
+    2850 AS payment_amount_cents
 )
 SELECT 1
 ```
 
-You can mix `__source__` and `__ref__` mocks in the same test. As long as every leaf dependency is satisfied (either by a source mock, a ref mock, or by being in the expected chain), the test resolves.
+You can mix `__source__`, `__ref__`, and `__seed__` mocks in the same test. As long as every leaf dependency is satisfied (either by a source mock, a ref mock, a seed mock, or by being in the expected chain), the test resolves.
 
 ## Multiple expected models
 
