@@ -38,6 +38,7 @@
           "concepts/sources",
           "concepts/seeds",
           "concepts/models",
+          "concepts/functions",
           "concepts/incremental",
           "concepts/audits",
           "concepts/testing",

@@ -7,7 +7,7 @@ Detect SQL changes, automatically trigger rebuilds, and validate data before pro
 
 ## How it works
 
-1. **Define** your models as SQL files with `MODEL()` headers and optional schema YAML
+1. **Define** your models as SQL files with `MODEL()` headers that declare configuration, schema, and audits inline
 2. **Compile** to resolve references, validate SQL (with SQLGlot), and expand Python macros
 3. **Plan** what needs to change based on fingerprints, schema diffs, and backfill policies
 4. **Build** by executing the plan: materializing models, validating data before promotion, and ensuring bad data never reaches production
@@ -68,7 +68,7 @@ def grant_target(target):
 
 ### Multi-environment workflows
 
-- **Environment diffs:** Compare schemas and row-level data between environments with `sqb diff --from prod --to dev`.
+- **Environment diffs:** Compare schemas and row-level data between environments with `sqb diff prod:dev`.
 
 <Frame>
   <img src="/sqlbuild_diff.png" alt="SQLBuild diff output showing schema comparison, row-level differences, and changed column values between prod and dev environments" />
@@ -79,6 +79,7 @@ def grant_target(target):
 
 ### Extensibility
 
+- **User-defined functions:** SQL and Python UDFs managed as part of your project. Functions participate in the DAG - definition changes trigger rebuilds of dependent models. Table functions provide predicate-pushdown-friendly alternatives to final-layer views.
 - **Custom materializations:** Write materialization logic in Python with full framework integration - including audit hooks, schema change signals, and query change detection.
 
 ```python

@@ -1,0 +1,159 @@
+---
+title: "Functions"
+description: "User-defined functions and table functions managed as part of your project."
+---
+
+Functions are SQL or Python definitions under `functions/` that SQLBuild compiles and deploys to the warehouse alongside your models. They participate in the DAG - if a function definition changes, every model that uses it is rebuilt.
+
+## Scalar UDFs
+
+Scalar UDFs return a single value per row. They can be written in SQL or Python.
+
+### SQL UDFs
+
+Place SQL function files under `functions/sql/`. Each file has a `FUNCTION()` header declaring arguments and return type, followed by a SQL expression body:
+
+```sql
+-- functions/sql/is_completed_order.sql
+FUNCTION (
+  arguments (order_status STRING),
+  returns BOOLEAN,
+);
+
+order_status = 'completed'
+```
+
+### Python UDFs
+
+Place Python function files under `functions/python/`. Each file has exactly one function decorated with `@udf(...)`:
+
+```python
+# functions/python/is_completed_order_py.py
+from sqlbuild.functions import udf
+
+@udf(
+    arguments={"order_status": "STRING"},
+    returns="BOOLEAN",
+    runtime_version="3.11",
+)
+def main(order_status: str | None) -> bool:
+    return order_status == "completed"
+```
+
+Python UDFs are deployed as warehouse-native functions (Snowflake Python UDFs, BigQuery remote functions, etc.). The `@udf` decorator is used for static discovery only - SQLBuild parses the AST without importing your code.
+
+### Using scalar UDFs
+
+Reference scalar UDFs in models with `__udf("name")`:
+
+```sql
+SELECT
+  order_id,
+  __udf("is_completed_order")(status) AS is_completed,
+  __udf("is_completed_order_py")(status) AS is_completed_py
+FROM __ref("stg_orders")
+```
+
+The function name is the file stem (filename without extension). `__udf()` resolves to the adapter-native function call at compile time.
+
+## Table functions
+
+Table functions return multiple rows and columns. They are written in SQL under `functions/sql/` with a `returns table(...)` declaration:
+
+```sql
+-- functions/sql/customer_orders.sql
+FUNCTION (
+  arguments (p_customer_id INTEGER),
+  returns table (
+    order_id INTEGER,
+    ordered_at TIMESTAMP,
+    waffle_name VARCHAR,
+    line_total_cents INTEGER,
+    order_status VARCHAR,
+    is_completed_order BOOLEAN
+  )
+);
+
+SELECT
+  order_id,
+  ordered_at,
+  waffle_name,
+  line_total_cents,
+  order_status,
+  is_completed_order
+FROM __ref("fact_orders")
+WHERE customer_id = p_customer_id
+```
+
+### Why table functions exist
+
+Table functions are designed as an alternative to final-layer views for cases where views don't push predicates efficiently. A view over `fact_orders` with a `WHERE customer_id = ?` filter may scan the entire table if the engine doesn't push the predicate down. A table function accepts the filter as an argument and guarantees the predicate is applied at execution time.
+
+### Table functions are terminal
+
+Table functions sit at the edge of the DAG, facing the consumer. They can reference models, seeds, sources, and other functions - but models cannot reference table functions. This is enforced at compile time.
+
+The semantic reason: table functions are parameterized queries meant to be called by applications or analysts, not intermediate pipeline steps. Interleaving them into the model DAG would break the clean separation between pipeline computation and consumer-facing access patterns.
+
+### Using table functions
+
+Table functions are called directly in SQL contexts that support table-valued functions:
+
+```sql
+SELECT * FROM customer_orders(42)
+```
+
+Within other SQL functions, reference them with `__table_function("name")`.
+
+## References inside functions
+
+SQL functions can reference the same resources as models:
+
+| Reference | Syntax |
+|-----------|--------|
+| Model | `__ref("model_name")` |
+| Seed | `__seed("seed_name")` |
+| Source | `__source("source_name")` |
+| Scalar UDF | `__udf("function_name")` |
+| Table function | `__table_function("function_name")` |
+
+These references are resolved at compile time and create DAG edges. If a referenced model changes, the function is redeployed.
+
+## Change propagation
+
+Functions participate in fingerprint-based change detection. If a function's SQL body or Python source changes, SQLBuild redeploys the function and marks all dependent models as needing a rebuild.
+
+## Project layout
+
+```
+functions/
+  sql/
+    is_completed_order.sql        # scalar SQL UDF
+    customer_orders.sql           # table function (returns table)
+  python/
+    is_completed_order_py.py      # scalar Python UDF
+```
+
+## Python UDF options
+
+The `@udf` decorator accepts these keyword arguments:
+
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `arguments` | Yes | Dict mapping argument names to SQL types |
+| `returns` | Yes | SQL return type string |
+| `runtime_version` | No | Python runtime version (e.g. `"3.11"`) |
+| `entry_point` | No | Function name to use as the entry point (defaults to the decorated function name) |
+| `packages` | No | List of Python packages required at runtime |
+
+## Adapter support
+
+All four supported adapters implement SQL UDFs, Python UDFs, and table functions:
+
+| Feature | DuckDB | Snowflake | BigQuery | Databricks |
+|---------|--------|-----------|----------|------------|
+| SQL UDFs | Yes | Yes | Yes | Yes |
+| Python UDFs | Yes | Yes | Yes | Yes |
+| Table functions | Yes | Yes | Yes | Yes |
+
+Future adapters may not support all function types. SQLBuild raises a clear error if a function type is unsupported by the configured adapter.
