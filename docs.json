@@ -60,6 +60,7 @@
           "cli/clone",
           "cli/diff",
           "cli/lineage",
+          "cli/debug",
           "cli/janitor",
           "cli/query",
           "cli/clean",
