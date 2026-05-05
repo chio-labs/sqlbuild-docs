@@ -26,3 +26,55 @@ Or override it per developer in `sqlbuild_local.yml`:
 ```yaml
 adapter: duckdb
 ```
+
+## Custom adapters
+
+You can write your own adapter for any database engine by placing Python files under `adapters/` in your project directory.
+
+### Defining an adapter
+
+Create a class that subclasses `StrictAdapter` and sets an `adapter_name`:
+
+```python
+# adapters/my_database.py
+from sqlbuild.adapter.strict.strict_adapter import StrictAdapter
+
+class MyDatabaseAdapter(StrictAdapter):
+    adapter_name = "my_database"
+
+    def connect(self, config):
+        ...
+
+    def execute(self, connection, sql):
+        ...
+
+    # ... implement all required methods
+```
+
+`StrictAdapter` is fully abstract - every method must be implemented. If any are missing, SQLBuild raises a clear error listing the unimplemented methods.
+
+### Using a custom adapter
+
+Reference it by name in your project config:
+
+```yaml
+adapter: my_database
+```
+
+### Discovery rules
+
+- SQLBuild discovers all `.py` files under `adapters/` recursively (excluding `__init__.py` and files starting with `_`)
+- Each file is scanned for classes that subclass `StrictAdapter` and define a string `adapter_name`
+- Adapter names must be unique across all adapter files - duplicates raise an error
+- Custom adapter names cannot shadow built-in names (`duckdb`, `snowflake`, `bigquery`, `databricks`)
+
+### Adapter interface
+
+`StrictAdapter` composes four mixins that define the full adapter contract:
+
+- **ConnectionMixin** - `connect`, `close`, `begin`, `commit`, `rollback`
+- **SchemaMixin** - `relation_exists`, `list_relations`, `describe_relation`, `ensure_schema`
+- **MaterializationMixin** - `create_table_as`, `create_view`, `drop`, `rename`, `swap`, `load_seed`
+- **DiffMixin** - `diff_schema`, `diff_rows`, `sample_unequal_rows`, `sample_side_only_rows`
+
+This is the same interface that the built-in adapters implement.
