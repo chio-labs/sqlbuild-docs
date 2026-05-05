@@ -59,6 +59,7 @@
           "cli/seed",
           "cli/clone",
           "cli/diff",
+          "cli/lineage",
           "cli/janitor",
           "cli/query",
           "cli/clean",
