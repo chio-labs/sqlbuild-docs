@@ -140,11 +140,76 @@ def revenue_column(column, alias):
     return f"{dollars_expr} AS {alias}"
 ```
 
+## SQL interpolation
+
+SQLBuild provides several interpolation mechanisms for authored SQL. Each uses a distinct prefix to avoid ambiguity:
+
+| Syntax | Scope | Description |
+|--------|-------|-------------|
+| `@macro(args)` | SQL bodies, hooks, tests, audits | Macro call - expands to the macro's return value |
+| `@@name` | SQL bodies, hooks, tests, audits | Project variable substitution |
+| `@@ENV:NAME` | SQL bodies, hooks, tests, audits | Environment variable interpolation |
+| `@@@name` | SQL bodies | Deferred placeholder - preserved for runtime resolution (e.g. custom materializations) |
+| `@name` / `@'name'` | Generic audit SQL only | Audit parameter placeholder - resolved by the audit engine |
+| `${CTX:...}` | Config values, hooks, inline expressions | Context template - resolved during config compilation |
+
+### Project variables
+
+Project variables use `@@name` syntax in SQL and are defined in `sqlbuild_project.toml` or per-environment:
+
+```toml
+# sqlbuild_project.toml
+[vars]
+schema_prefix = "analytics"
+
+[environments.prod.vars]
+schema_prefix = "prod_analytics"
+```
+
+```sql
+SELECT * FROM @@schema_prefix.customers
+```
+
+Variables can also be set in `sqlbuild_local.toml` for developer-specific overrides.
+
+### Environment variables
+
+Environment variables use `@@ENV:NAME` syntax to inject values from the shell environment:
+
+```sql
+SELECT *
+FROM @@schema_prefix.customers
+WHERE source_system = '@@ENV:SOURCE_SYSTEM'
+```
+
+If the environment variable is not set, SQLBuild raises a compile error.
+
+### Deferred placeholders
+
+Custom materializations can define runtime placeholders using `@@@name` syntax. These are preserved through compilation and resolved by the materialization at execution time:
+
+```sql
+WHERE CAST(ordered_at AS DATE) >= CAST(@@@partition_start AS DATE)
+  AND CAST(ordered_at AS DATE) < CAST(@@@partition_end AS DATE)
+```
+
+### Audit parameters
+
+Generic audit SQL uses `@name` (single `@`, no parentheses) for audit-engine placeholders. These are resolved by the audit engine, not the compiler:
+
+```sql
+SELECT @column
+FROM @relation
+WHERE @column IS NULL
+```
+
+This is distinct from `@@name` (project variables) and `@macro()` (macro calls), so there is no ambiguity. See [Audits](/concepts/audits) for details on generic audit parameters.
+
 ## Compilation order
 
 SQLBuild processes SQL in this order:
 
-1. **Project variables** (`@name` without parentheses) are substituted first
+1. **Project variables** (`@@name`) and **environment variables** (`@@ENV:NAME`) are substituted first
 2. **Macro calls** (`@name(args)`) are expanded second
 3. **SQLGlot validation** runs against the fully expanded SQL
 4. **Context templates** (`${CTX:...}`) in hooks and config are resolved during config compilation
@@ -162,27 +227,6 @@ This means:
 - **Audit SQL** - singular audit queries
 
 Macros are **not allowed** in MODEL() config values (other than hooks). If a config field contains `@macro()`, SQLBuild raises a compile error.
-
-## Project variables
-
-Project variables are simple string substitutions defined in `sqlbuild_project.toml` or per-environment. They use the `@name` syntax (without parentheses) and are distinct from macros:
-
-```toml
-# sqlbuild_project.toml
-[vars]
-schema_prefix = "analytics"
-
-[environments.prod.vars]
-schema_prefix = "prod_analytics"
-```
-
-```sql
-SELECT * FROM @schema_prefix.customers
-```
-
-Variables and macros share the `@` namespace. If a variable name collides with a macro name, SQLBuild raises an error at compile time.
-
-Variables can also be set in `sqlbuild_local.toml` for developer-specific overrides.
 
 ## Context templates
 

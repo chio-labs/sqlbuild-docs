@@ -178,7 +178,7 @@ Global feature toggles:
 sqlglot = true
 query_change_tracking = true
 sql_validation = true
-max_concurrency = 1
+concurrency = 1
 table_promotion_mode = "staged"
 default_audit_severity = "warn"
 default_audit_run_scope = "final"
@@ -189,7 +189,7 @@ default_audit_run_scope = "final"
 | `sqlglot` | `true` | Enable SQLGlot-based SQL validation and static analysis at compile time |
 | `query_change_tracking` | `true` | Track query fingerprints for change detection |
 | `sql_validation` | `true` | Validate SQL syntax during compilation |
-| `max_concurrency` | `1` | Maximum parallel model execution (currently serial only) |
+| `concurrency` | `1` | Maximum parallel model execution (currently serial only) |
 | `table_promotion_mode` | adapter default | `staged` (CTAS to staging, audit, then promote) or `direct` (CTAS directly to target) |
 | `default_audit_severity` | `warn` | Default severity for audits: `warn` or `error` |
 | `default_audit_run_scope` | `final` | Default run scope for audits: `final` or `delta_and_final` |
@@ -201,7 +201,7 @@ default_audit_run_scope = "final"
 
 ## Project variables
 
-Variables are simple string substitutions available in model SQL via the `@name` syntax:
+Variables are simple string substitutions available in model SQL via the `@@name` syntax:
 
 ```toml
 [vars]
@@ -252,7 +252,7 @@ database = "my_local.duckdb"
 
 [settings]
 sql_validation = false
-max_concurrency = 4
+concurrency = 4
 
 [vars]
 debug_mode = "true"
