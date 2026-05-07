@@ -46,28 +46,18 @@ Each edge also carries a confidence level indicating how certain the analyzer is
 
 ## Analysis modes
 
-Column lineage supports two analysis modes, selectable via `--mode` on the lineage command or `--lineage-mode` on the compile command:
+Column lineage supports two analysis modes that trade off speed against depth of analysis.
 
-### Rich mode
+**Rich mode** uses SQLGlot's lineage module and optimizer to resolve columns through CTEs, subqueries, and multi-level nesting with full transform classification. Thorough, but slower because the optimizer runs per column per model.
 
-Full SQLGlot-based analysis that uses SQLGlot's lineage module and optimizer. This mode:
+**Fast mode** parses the SQL AST directly to extract column mappings, resolve CTE references, and classify transforms. It handles the same SQL patterns that most column lineage tools support and is fast enough to run on every compile.
 
-- Resolves columns through CTEs, subqueries, and multi-level nesting
-- Classifies transforms accurately using expression tree analysis
-- Produces the internal lineage graph (nodes and edges) for each column
-- Infers nullability from SQL expressions
+`sqb compile` defaults to fast mode because it runs frequently and analyzes the entire project. `sqb lineage` defaults to rich mode because it targets a specific column in a scoped slice of the DAG, where the deeper analysis is worth the cost. Both are overridable:
 
-Rich mode is the default for `sqb lineage`. It is more thorough but slower on large projects because it invokes the SQLGlot optimizer per column.
-
-### Fast mode
-
-A lightweight analyzer that extracts column mappings from the SQL AST directly. This mode:
-
-- Resolves top-level `SELECT` columns and simple CTE references
-- Produces transform classifications and cross-model edges
-- Skips the SQLGlot optimizer, making it significantly faster on large projects
-
-Fast mode is the default for `sqb compile`, where column lineage runs on every compile and speed matters. For interactive exploration, rich mode gives better results.
+```bash
+sqb compile --lineage-mode rich
+sqb lineage fact_orders.total_cents --mode fast
+```
 
 ## Using column lineage
 
