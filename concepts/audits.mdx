@@ -132,11 +132,11 @@ If a source audit with `error` severity fails, all downstream models that depend
 | `error` | Blocks the build. Staging table is not promoted, DML is not applied. |
 | `warn` | Reports a warning but allows the build to continue. |
 
-Set the default severity in `sqlbuild_project.yml`:
+Set the default severity in `sqlbuild_project.toml`:
 
-```yaml
-settings:
-  default_audit_severity: warn
+```toml
+[settings]
+default_audit_severity = "warn"
 ```
 
 Override per audit instance in the `MODEL()` header:

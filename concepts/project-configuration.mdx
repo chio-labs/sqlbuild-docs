@@ -1,41 +1,39 @@
 ---
 title: "Project Configuration"
-description: "Configure your SQLBuild project with sqlbuild_project.yml and sqlbuild_local.yml."
+description: "Configure your SQLBuild project with sqlbuild_project.toml and sqlbuild_local.toml."
 ---
 
 SQLBuild projects are configured with two files in the project root:
 
-- **`sqlbuild_project.yml`** - shared project configuration, committed to version control
-- **`sqlbuild_local.yml`** - local developer overrides, gitignored
+- **`sqlbuild_project.toml`** - shared project configuration, committed to version control
+- **`sqlbuild_local.toml`** - local developer overrides, gitignored
 
-## sqlbuild_project.yml
+## sqlbuild_project.toml
 
 A complete example:
 
-```yaml
-name: waffle_shop
-adapter: duckdb
+```toml
+name = "waffle_shop"
+adapter = "duckdb"
+default_environment = "dev"
 
-default_environment: dev
+[connection]
+database = "waffle_shop_control.duckdb"
 
-connection:
-  database: waffle_shop_control.duckdb
+[settings]
+default_audit_severity = "warn"
 
-settings:
-  default_audit_severity: warn
+[defaults]
+materialized = "table"
 
-defaults:
-  materialized: table
+[environments.prod]
+schema = "prod"
 
-environments:
-  prod:
-    schema: prod
-  dev:
-    schema: dev
+[environments.dev]
+schema = "dev"
 
-path_defaults:
-  models/staging:
-    materialized: view
+[path_defaults."models/staging"]
+materialized = "view"
 ```
 
 ### Required fields
@@ -49,21 +47,25 @@ path_defaults:
 
 The `connection` block is passed directly to the adapter. For DuckDB:
 
-```yaml
-connection:
-  database: my_project.duckdb
+```toml
+[connection]
+database = "my_project.duckdb"
 ```
 
 Environments can override the connection:
 
-```yaml
-environments:
-  prod:
-    connection:
-      database: prod.duckdb
-  dev:
-    connection:
-      database: dev.duckdb
+```toml
+[environments.prod]
+schema = "prod"
+
+[environments.prod.connection]
+database = "prod.duckdb"
+
+[environments.dev]
+schema = "dev"
+
+[environments.dev.connection]
+database = "dev.duckdb"
 ```
 
 ## Environments
@@ -78,58 +80,64 @@ Environments let you build to different schemas, databases, or connections from 
 | `vars` | Environment-specific project variables |
 | `clone` | Clone policy (see below) |
 
-```yaml
-environments:
-  prod:
-    schema: prod
-    vars:
-      source_schema: raw_prod
-  dev:
-    schema: dev
-    vars:
-      source_schema: raw_dev
-  staging:
-    schema: staging
-    connection:
-      database: staging.duckdb
+```toml
+[environments.prod]
+schema = "prod"
+
+[environments.prod.vars]
+source_schema = "raw_prod"
+
+[environments.dev]
+schema = "dev"
+
+[environments.dev.vars]
+source_schema = "raw_dev"
+
+[environments.staging]
+schema = "staging"
+
+[environments.staging.connection]
+database = "staging.duckdb"
 ```
 
 ### Selecting an environment
 
 The active environment is determined by (in order of precedence):
 
-1. `sqlbuild_local.yml` `environment` field (highest priority)
-2. `default_environment` in `sqlbuild_project.yml`
+1. `sqlbuild_local.toml` `environment` field (highest priority)
+2. `default_environment` in `sqlbuild_project.toml`
 3. No environment (models build to default schema)
 
 ### Clone policies
 
 Environments can declare whether they allow cloning to or from:
 
-```yaml
-environments:
-  prod:
-    schema: prod
-    clone:
-      allow_as_source: true
-      allow_as_target: false
-  dev:
-    schema: dev
-    clone:
-      allow_as_source: false
-      allow_as_target: true
+```toml
+[environments.prod]
+schema = "prod"
+
+[environments.prod.clone]
+allow_as_source = true
+allow_as_target = false
+
+[environments.dev]
+schema = "dev"
+
+[environments.dev.clone]
+allow_as_source = false
+allow_as_target = true
 ```
 
 ## Defaults
 
 Project-wide model defaults. Any field you can set in a `MODEL()` header can be set here as a default:
 
-```yaml
-defaults:
-  materialized: table
-  incremental_strategy: delete_insert
-  query_change_backfill: full
-  tags: [managed]
+```toml
+[defaults]
+materialized = "table"
+incremental_strategy = "delete_insert"
+query_change_backfill = "full"
+tags = ["managed"]
 ```
 
 These apply to all models unless overridden by path defaults or the model's own `MODEL()` header.
@@ -138,15 +146,15 @@ These apply to all models unless overridden by path defaults or the model's own 
 
 Per-directory model defaults. Useful for applying different config to different parts of your project:
 
-```yaml
-path_defaults:
-  models/staging:
-    materialized: view
-    tags: [staging]
-  models/marts:
-    materialized: table
-    tags: [marts]
-    query_change_backfill: full
+```toml
+[path_defaults."models/staging"]
+materialized = "view"
+tags = ["staging"]
+
+[path_defaults."models/marts"]
+materialized = "table"
+tags = ["marts"]
+query_change_backfill = "full"
 ```
 
 Path matching uses the model's relative file path. A model at `models/staging/stg_orders.sql` matches the `models/staging` path default.
@@ -165,20 +173,20 @@ Tags are special: they are *unioned* across layers rather than overridden. A mod
 
 Global feature toggles:
 
-```yaml
-settings:
-  sqlglot: true
-  query_change_tracking: true
-  sql_validation: true
-  max_concurrency: 1
-  table_promotion_mode: staged
-  default_audit_severity: warn
-  default_audit_run_scope: final
+```toml
+[settings]
+sqlglot = true
+query_change_tracking = true
+sql_validation = true
+max_concurrency = 1
+table_promotion_mode = "staged"
+default_audit_severity = "warn"
+default_audit_run_scope = "final"
 ```
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `sqlglot` | `true` | Enable SQLGlot-based SQL validation at compile time |
+| `sqlglot` | `true` | Enable SQLGlot-based SQL validation and static analysis at compile time |
 | `query_change_tracking` | `true` | Track query fingerprints for change detection |
 | `sql_validation` | `true` | Validate SQL syntax during compilation |
 | `max_concurrency` | `1` | Maximum parallel model execution (currently serial only) |
@@ -195,22 +203,20 @@ settings:
 
 Variables are simple string substitutions available in model SQL via the `@name` syntax:
 
-```yaml
-vars:
-  schema_prefix: analytics
-  retention_days: "90"
+```toml
+[vars]
+schema_prefix = "analytics"
+retention_days = "90"
 ```
 
 Environment-specific variables override project-level ones:
 
-```yaml
-vars:
-  schema_prefix: analytics
+```toml
+[vars]
+schema_prefix = "analytics"
 
-environments:
-  prod:
-    vars:
-      schema_prefix: prod_analytics
+[environments.prod.vars]
+schema_prefix = "prod_analytics"
 ```
 
 See [Macros](/concepts/macros) for details on variable substitution and how variables interact with macros.
@@ -219,14 +225,12 @@ See [Macros](/concepts/macros) for details on variable substitution and how vari
 
 Configuration for the `sqb janitor` command, which cleans up stale warehouse relations:
 
-```yaml
-janitor:
-  enabled: false
-  retention_days: 30
-  delete_tracked_only: true
-  exclude_patterns:
-    - "audit_*"
-    - "tmp_*"
+```toml
+[janitor]
+enabled = false
+retention_days = 30
+delete_tracked_only = true
+exclude_patterns = ["audit_*", "tmp_*"]
 ```
 
 | Field | Default | Description |
@@ -236,22 +240,22 @@ janitor:
 | `delete_tracked_only` | `true` | Only clean relations that appear in fingerprint tracking |
 | `exclude_patterns` | `[]` | Glob patterns for relations to skip |
 
-## sqlbuild_local.yml
+## sqlbuild_local.toml
 
 Local developer overrides. This file should be gitignored.
 
-```yaml
-environment: dev
+```toml
+environment = "dev"
 
-connection:
-  database: my_local.duckdb
+[connection]
+database = "my_local.duckdb"
 
-settings:
-  sql_validation: false
-  max_concurrency: 4
+[settings]
+sql_validation = false
+max_concurrency = 4
 
-vars:
-  debug_mode: "true"
+[vars]
+debug_mode = "true"
 ```
 
 | Field | Description |
@@ -262,4 +266,4 @@ vars:
 | `settings` | Override global settings (only explicitly set fields take effect) |
 | `vars` | Developer-specific variable overrides (merged on top of project + environment vars) |
 
-This replaces the common dbt pattern of switching profiles or setting environment variables to change targets. Each developer sets their environment, connection, and preferences once in `sqlbuild_local.yml` and it persists across sessions.
+This replaces the common dbt pattern of switching profiles or setting environment variables to change targets. Each developer sets their environment, connection, and preferences once in `sqlbuild_local.toml` and it persists across sessions.

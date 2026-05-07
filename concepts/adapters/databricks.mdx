@@ -13,15 +13,15 @@ uv add 'sqlbuild[databricks]'
 
 ## Connection config
 
-```yaml
-adapter: databricks
+```toml
+adapter = "databricks"
 
-connection:
-  server_hostname: my-workspace.cloud.databricks.com
-  http_path: /sql/1.0/warehouses/abc123
-  token: dapi_my_access_token
-  catalog: my_catalog
-  schema: my_schema
+[connection]
+server_hostname = "my-workspace.cloud.databricks.com"
+http_path = "/sql/1.0/warehouses/abc123"
+token = "dapi_my_access_token"
+catalog = "my_catalog"
+schema = "my_schema"
 ```
 
 | Field | Description |

@@ -1,15 +1,18 @@
 ---
 title: "lineage"
-description: "Explore the dependency graph from the command line."
+description: "Explore model and column-level dependency graphs from the command line."
 ---
 
-Inspect upstream and downstream dependencies for any model, source, seed, or function in your project. Outputs as a tree, edge list, or structured JSON.
+Inspect upstream and downstream dependencies for any model, source, seed, or function in your project. Supports both model-level lineage (dependency graph) and column-level lineage (tracing individual columns through transformations). Outputs as a tree, edge list, or structured JSON.
 
 ## Usage
 
 ```bash
-# Target mode: lineage around a single resource
+# Model lineage: dependency graph around a single resource
 sqb lineage <target> [flags]
+
+# Column lineage: trace a specific column
+sqb lineage <model>.<column> [flags]
 
 # Selector mode: lineage for a selected scope
 sqb lineage --select <selector> [flags]
@@ -21,14 +24,17 @@ Exactly one of a positional target or `--select` is required.
 
 | Flag | Description |
 |------|-------------|
-| `--direction` | `upstream` (default), `downstream`, or `both`. Only applies in target mode. |
+| `--direction` | `upstream` (default), `downstream`, or `both`. `both` is only available for model lineage. |
 | `--depth` | How many hops to traverse. An integer or `all` (default: `all`). |
 | `--format` | Output format: `tree` (default), `list`, or `json`. |
+| `--mode` | Column lineage analysis mode: `rich` (default) or `fast`. |
 | `--no-sql-validation` | Skip compile-time SQL syntax validation. |
 | `--select`, `-s` | Select resources using standard selector syntax. |
 | `--exclude` | Exclude resources from the selection. |
 
-## Output formats
+## Model lineage
+
+When the target is a plain resource name, lineage shows the model-level dependency graph.
 
 ### Tree
 
@@ -110,6 +116,101 @@ sqb --project-dir examples/waffle_shop lineage fact_orders --format json
 }
 ```
 
+## Column lineage
+
+When the target uses `model.column` syntax, lineage traces the specific column through upstream or downstream transformations. Column lineage requires SQLGlot to be enabled.
+
+```bash
+# Where does fact_orders.total_cents come from?
+sqb lineage fact_orders.total_cents
+
+# What consumes fact_orders.order_id downstream?
+sqb lineage fact_orders.order_id --direction downstream
+```
+
+### Column lineage tree
+
+```bash
+sqb --project-dir examples/waffle_shop lineage fact_orders.total_cents
+```
+
+```
+Column trace  fact_orders.total_cents  upstream
+
+  <- stg_payments.amount_cents (expression)
+       <- raw_payments.amount_cents (direct)
+```
+
+Each edge is annotated with its transform type:
+
+| Transform | Meaning |
+|-----------|---------|
+| `direct` | Column is passed through unchanged |
+| `cast` | Column is cast to a different type |
+| `expression` | Column is used in a computed expression |
+| `star` | Column comes from `SELECT *` |
+
+### Column lineage list
+
+```bash
+sqb lineage fact_orders.total_cents --format list
+```
+
+```
+Column dependencies
+
+stg_payments.amount_cents -> fact_orders.total_cents  expression
+raw_payments.amount_cents -> stg_payments.amount_cents  direct
+```
+
+### Column lineage JSON
+
+```bash
+sqb lineage fact_orders.total_cents --format json
+```
+
+```json
+{
+  "target": {
+    "resource_type": "model",
+    "resource_name": "fact_orders",
+    "column_name": "total_cents"
+  },
+  "direction": "upstream",
+  "metadata": {
+    "mode": "rich",
+    "max_depth": null,
+    "analyzed_models": 5,
+    "truncated": false
+  },
+  "trace": [
+    {
+      "source": {
+        "resource_type": "model",
+        "resource_name": "stg_payments",
+        "column_name": "amount_cents"
+      },
+      "target": {
+        "resource_type": "model",
+        "resource_name": "fact_orders",
+        "column_name": "total_cents"
+      },
+      "transform": "expression",
+      "confidence": "high"
+    }
+  ]
+}
+```
+
+### Column lineage modes
+
+The `--mode` flag controls how column lineage is analyzed:
+
+| Mode | Description |
+|------|-------------|
+| `rich` | Default for `sqb lineage`. Full SQLGlot-based analysis with transform classification. |
+| `fast` | Lightweight extraction. Faster but less detailed. |
+
 ## Examples
 
 ```bash
@@ -121,6 +222,15 @@ sqb lineage fact_orders --direction downstream
 
 # Both directions, limited to 1 hop
 sqb lineage fact_orders --direction both --depth 1
+
+# Column lineage: trace a specific column upstream
+sqb lineage fact_orders.total_cents
+
+# Column lineage: trace downstream consumers
+sqb lineage fact_orders.order_id --direction downstream
+
+# Column lineage with depth limit
+sqb lineage fact_orders.total_cents --depth 1
 
 # Lineage for all models in a path
 sqb lineage --select path:marts
@@ -145,4 +255,7 @@ sqb lineage fact_orders --depth 1
 
 # Parents and grandparents
 sqb lineage fact_orders --depth 2
+
+# Only direct column dependencies
+sqb lineage fact_orders.total_cents --depth 1
 ```

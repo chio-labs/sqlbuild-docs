@@ -13,12 +13,12 @@ uv add 'sqlbuild[bigquery]'
 
 ## Connection config
 
-```yaml
-adapter: bigquery
+```toml
+adapter = "bigquery"
 
-connection:
-  project: my-gcp-project
-  location: europe-west2
+[connection]
+project = "my-gcp-project"
+location = "europe-west2"
 ```
 
 | Field | Description |
@@ -35,8 +35,8 @@ BigQuery supports two authentication methods:
 
 **Service account file:**
 
-```yaml
-connection:
-  project: my-gcp-project
-  credentials_path: /path/to/service-account.json
+```toml
+[connection]
+project = "my-gcp-project"
+credentials_path = "/path/to/service-account.json"
 ```
