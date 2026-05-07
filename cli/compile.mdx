@@ -38,7 +38,7 @@ When SQLGlot is enabled (default), compile performs static analysis on your mode
 
 - **Column inference**: Infers output columns from each model's SQL, including through CTEs, subqueries, and JOINs
 - **Column contract validation**: If a model declares columns in its `MODEL()` header, compile checks that every declared column exists in the query output. If a column declares a type and `type_enforcement` is enabled, compile also verifies the inferred type matches the declared type
-- **Column lineage**: Traces which source columns flow into each output column, including transform classification (direct, cast, expression, star)
+- **Column lineage**: Traces which source columns flow into each output column, including transform classification. See [Column Lineage](/concepts/column-lineage) for details
 
 ### Contract diagnostics
 
@@ -113,7 +113,7 @@ The `--lineage-mode` flag controls how column lineage is computed during compile
 | `rich` | Full SQLGlot-based analysis with transform classification and deeper tracing. Slower on large projects. |
 | `none` | Skip column lineage entirely. |
 
-Column lineage results are included in the JSON compile report under each model's `lineage` field.
+Column lineage results are included in the JSON compile report under each model's `lineage` field. See [Column Lineage](/concepts/column-lineage) for details on analysis modes and transform types.
 
 ## Examples
 

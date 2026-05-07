@@ -44,6 +44,7 @@
           "concepts/testing",
           "concepts/macros",
           "concepts/selectors",
+          "concepts/column-lineage",
           "concepts/environment-diffs"
         ]
       },
