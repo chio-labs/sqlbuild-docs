@@ -1,0 +1,132 @@
+---
+title: "Column Lineage"
+description: "Trace individual columns through your SQL pipeline - understand where data comes from and where it goes."
+---
+
+Column lineage tracks how individual columns flow through your SQL models. Where model-level lineage tells you that `fact_orders` depends on `stg_orders`, column lineage tells you that `fact_orders.total_cents` is derived from `stg_payments.amount_cents` via an expression, and that `fact_orders.order_id` passes through directly from `stg_orders.order_id`.
+
+## Why column lineage matters
+
+**Impact analysis** - Before changing a source column, see exactly which downstream models and columns are affected. A rename or type change in `raw_orders.id` can be traced through every model that consumes it, even indirectly.
+
+**Debugging data issues** - When a column has unexpected values, trace it upstream to find where the data originates and what transformations it passes through. Instead of reading SQL files and mentally joining dependencies, ask SQLBuild to show the path.
+
+**Documentation** - Column lineage provides machine-readable metadata about your pipeline. The JSON output can feed data catalogs, governance tools, or custom dashboards.
+
+## How it works
+
+SQLBuild analyzes column lineage statically at compile time using [SQLGlot](https://github.com/tobymao/sqlglot). No warehouse connection is needed. The analyzer parses each model's SQL, resolves `ref()` and `source()` calls, and traces columns through `SELECT` lists, CTEs, JOINs, subqueries, and expressions.
+
+Column lineage requires SQLGlot to be enabled in project settings (it is by default).
+
+## Transform types
+
+Each lineage edge is classified by how the column is transformed:
+
+| Transform | Description | Example |
+|-----------|-------------|---------|
+| `direct` | Column passes through unchanged | `SELECT order_id FROM ...` |
+| `cast` | Column is explicitly cast to a different type | `SELECT CAST(id AS BIGINT)` |
+| `expression` | Column is used in a computed expression | `SELECT amount * 100 AS amount_cents` |
+| `aggregation` | Column is used inside an aggregate function | `SELECT SUM(amount) AS total` |
+| `star` | Column is included via `SELECT *` | `SELECT * FROM ...` |
+| `constant` | Output column is a literal value with no upstream dependency | `SELECT 'active' AS status` |
+
+Transform classification helps you understand the nature of each dependency. A `direct` edge means the column is a simple passthrough - safe to rename if you rename the source. An `expression` or `aggregation` edge means the column is computed - the upstream value is an input to a calculation, not a 1:1 mapping.
+
+## Confidence levels
+
+Each edge also carries a confidence level indicating how certain the analyzer is about the traced dependency:
+
+| Confidence | Meaning |
+|------------|---------|
+| `high` | The lineage path is fully resolved through known SQL constructs |
+| `medium` | The path is likely correct but involves constructs the analyzer handles with heuristics |
+| `low` | The path is best-effort - complex SQL patterns or unsupported constructs may reduce accuracy |
+
+## Analysis modes
+
+Column lineage supports two analysis modes, selectable via `--mode` on the lineage command or `--lineage-mode` on the compile command:
+
+### Rich mode
+
+Full SQLGlot-based analysis that uses SQLGlot's lineage module and optimizer. This mode:
+
+- Resolves columns through CTEs, subqueries, and multi-level nesting
+- Classifies transforms accurately using expression tree analysis
+- Produces the internal lineage graph (nodes and edges) for each column
+- Infers nullability from SQL expressions
+
+Rich mode is the default for `sqb lineage`. It is more thorough but slower on large projects because it invokes the SQLGlot optimizer per column.
+
+### Fast mode
+
+A lightweight analyzer that extracts column mappings from the SQL AST directly. This mode:
+
+- Resolves top-level `SELECT` columns and simple CTE references
+- Produces transform classifications and cross-model edges
+- Skips the SQLGlot optimizer, making it significantly faster on large projects
+
+Fast mode is the default for `sqb compile`, where column lineage runs on every compile and speed matters. For interactive exploration, rich mode gives better results.
+
+## Using column lineage
+
+### Interactive tracing with `sqb lineage`
+
+Trace a specific column upstream or downstream:
+
+```bash
+# Where does this column come from?
+sqb lineage fact_orders.total_cents
+
+# What consumes this column?
+sqb lineage fact_orders.order_id --direction downstream
+
+# Limit to 1 hop
+sqb lineage fact_orders.total_cents --depth 1
+
+# JSON output
+sqb lineage fact_orders.total_cents --format json
+```
+
+The target syntax is `model_name.column_name`. Column lineage supports `upstream` and `downstream` directions (not `both` - model lineage supports `both`).
+
+See the [lineage CLI reference](/cli/lineage) for full flag documentation and output format examples.
+
+### Batch analysis with `sqb compile`
+
+Every compile run includes column lineage in the output:
+
+```bash
+# Default: fast column lineage
+sqb compile
+
+# Rich column lineage in compile
+sqb compile --lineage-mode rich
+
+# Skip column lineage
+sqb compile --lineage-mode none
+
+# JSON report includes per-model lineage summary
+sqb compile --json
+```
+
+In the JSON compile report, each model includes a `lineage` field with `column_count`, `edge_count`, and `has_star` metadata.
+
+See the [compile CLI reference](/cli/compile) for details on the compile report format.
+
+### Integration with contract validation
+
+Column lineage feeds into compile-time contract validation. When a model declares columns in its `MODEL()` header, the compiler uses inferred column information to check that:
+
+- Every declared column exists in the query output
+- Column types match the declared types (when `type_enforcement` is enabled)
+
+These checks run automatically during `sqb compile` and report diagnostics with source-annotated error messages.
+
+## Limitations
+
+- Column lineage requires SQLGlot to be enabled (`sqlglot = true` in settings, which is the default)
+- Complex SQL patterns (deeply nested correlated subqueries, dynamic SQL, adapter-specific functions) may reduce accuracy or confidence
+- `SELECT *` is tracked as a `star` transform - the analyzer knows the column passes through but the mapping is less precise than explicit column references
+- Column lineage is computed statically from SQL text. Runtime-only column additions (e.g. from dynamic UDFs) are not tracked

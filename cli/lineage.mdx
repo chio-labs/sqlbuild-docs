@@ -118,7 +118,7 @@ sqb --project-dir examples/waffle_shop lineage fact_orders --format json
 
 ## Column lineage
 
-When the target uses `model.column` syntax, lineage traces the specific column through upstream or downstream transformations. Column lineage requires SQLGlot to be enabled.
+When the target uses `model.column` syntax, lineage traces the specific column through upstream or downstream transformations. Each edge is annotated with a transform type (`direct`, `expression`, `aggregation`, `cast`, `star`, `constant`) and a confidence level. See [Column Lineage](/concepts/column-lineage) for a full explanation of transform types, confidence levels, and analysis modes.
 
 ```bash
 # Where does fact_orders.total_cents come from?
@@ -128,7 +128,9 @@ sqb lineage fact_orders.total_cents
 sqb lineage fact_orders.order_id --direction downstream
 ```
 
-### Column lineage tree
+Column lineage supports `upstream` and `downstream` directions (not `both`). The `--mode` flag selects the analysis mode: `rich` (default, full SQLGlot analysis) or `fast` (lightweight, faster on large projects).
+
+### Tree
 
 ```bash
 sqb --project-dir examples/waffle_shop lineage fact_orders.total_cents
@@ -141,16 +143,7 @@ Column trace  fact_orders.total_cents  upstream
        <- raw_payments.amount_cents (direct)
 ```
 
-Each edge is annotated with its transform type:
-
-| Transform | Meaning |
-|-----------|---------|
-| `direct` | Column is passed through unchanged |
-| `cast` | Column is cast to a different type |
-| `expression` | Column is used in a computed expression |
-| `star` | Column comes from `SELECT *` |
-
-### Column lineage list
+### List
 
 ```bash
 sqb lineage fact_orders.total_cents --format list
@@ -163,7 +156,7 @@ stg_payments.amount_cents -> fact_orders.total_cents  expression
 raw_payments.amount_cents -> stg_payments.amount_cents  direct
 ```
 
-### Column lineage JSON
+### JSON
 
 ```bash
 sqb lineage fact_orders.total_cents --format json
@@ -201,15 +194,6 @@ sqb lineage fact_orders.total_cents --format json
   ]
 }
 ```
-
-### Column lineage modes
-
-The `--mode` flag controls how column lineage is analyzed:
-
-| Mode | Description |
-|------|-------------|
-| `rich` | Default for `sqb lineage`. Full SQLGlot-based analysis with transform classification. |
-| `fast` | Lightweight extraction. Faster but less detailed. |
 
 ## Examples
 
