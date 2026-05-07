@@ -91,29 +91,27 @@ sqb --project-dir examples/waffle_shop build --debug --select hourly_order_activ
 
 ## Project config
 
-```yaml
-# sqlbuild_project.yml
-name: waffle_shop
-adapter: duckdb
+```toml
+# sqlbuild_project.toml
+name = "waffle_shop"
+adapter = "duckdb"
+default_environment = "dev"
 
-default_environment: dev
+[connection]
+database = "waffle_shop_control.duckdb"
 
-connection:
-  database: waffle_shop_control.duckdb
+[settings]
+default_audit_severity = "warn"
 
-settings:
-  default_audit_severity: warn
+[defaults]
+materialized = "table"
 
-defaults:
-  materialized: table
+[environments.prod]
+schema = "prod"
 
-environments:
-  prod:
-    schema: prod
-  dev:
-    schema: dev
+[environments.dev]
+schema = "dev"
 
-path_defaults:
-  staging:
-    materialized: view
+[path_defaults.staging]
+materialized = "view"
 ```

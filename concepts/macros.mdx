@@ -165,17 +165,15 @@ Macros are **not allowed** in MODEL() config values (other than hooks). If a con
 
 ## Project variables
 
-Project variables are simple string substitutions defined in `sqlbuild_project.yml` or per-environment. They use the `@name` syntax (without parentheses) and are distinct from macros:
+Project variables are simple string substitutions defined in `sqlbuild_project.toml` or per-environment. They use the `@name` syntax (without parentheses) and are distinct from macros:
 
-```yaml
-# sqlbuild_project.yml
-vars:
-  schema_prefix: analytics
+```toml
+# sqlbuild_project.toml
+[vars]
+schema_prefix = "analytics"
 
-environments:
-  prod:
-    vars:
-      schema_prefix: prod_analytics
+[environments.prod.vars]
+schema_prefix = "prod_analytics"
 ```
 
 ```sql
@@ -184,7 +182,7 @@ SELECT * FROM @schema_prefix.customers
 
 Variables and macros share the `@` namespace. If a variable name collides with a macro name, SQLBuild raises an error at compile time.
 
-Variables can also be set in `sqlbuild_local.yml` for developer-specific overrides.
+Variables can also be set in `sqlbuild_local.toml` for developer-specific overrides.
 
 ## Context templates
 

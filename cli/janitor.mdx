@@ -5,7 +5,7 @@ description: "Clean up stale warehouse relations."
 
 # sqb janitor
 
-Identifies and removes stale warehouse relations that are no longer part of the project. Requires `janitor.enabled: true` in `sqlbuild_project.yml`.
+Identifies and removes stale warehouse relations that are no longer part of the project. Requires `janitor.enabled = true` in `sqlbuild_project.toml`.
 
 ## Usage
 
@@ -22,16 +22,14 @@ sqb --project-dir <path> janitor [flags]
 
 ## Configuration
 
-Configure janitor behavior in `sqlbuild_project.yml`:
+Configure janitor behavior in `sqlbuild_project.toml`:
 
-```yaml
-janitor:
-  enabled: true
-  retention_days: 30
-  delete_tracked_only: true
-  exclude_patterns:
-    - "audit_*"
-    - "tmp_*"
+```toml
+[janitor]
+enabled = true
+retention_days = 30
+delete_tracked_only = true
+exclude_patterns = ["audit_*", "tmp_*"]
 ```
 
 See [Project Configuration](/concepts/project-configuration) for details on janitor settings.

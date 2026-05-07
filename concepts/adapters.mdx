@@ -14,17 +14,17 @@ SQLBuild uses adapters to connect to different database engines.
 | PostgreSQL | Coming soon | |
 | ClickHouse | Coming soon | |
 
-Set the adapter in `sqlbuild_project.yml`:
+Set the adapter in `sqlbuild_project.toml`:
 
-```yaml
-name: my_project
-adapter: duckdb
+```toml
+name = "my_project"
+adapter = "duckdb"
 ```
 
-Or override it per developer in `sqlbuild_local.yml`:
+Or override it per developer in `sqlbuild_local.toml`:
 
-```yaml
-adapter: duckdb
+```toml
+adapter = "duckdb"
 ```
 
 ## Custom adapters
@@ -49,8 +49,8 @@ class DuckDbPlusAdapter(DuckDbAdapter):
         return connection
 ```
 
-```yaml
-adapter: duckdb_plus
+```toml
+adapter = "duckdb_plus"
 ```
 
 ### Writing an adapter from scratch
