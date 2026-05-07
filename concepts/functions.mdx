@@ -103,8 +103,6 @@ Table functions are called directly in SQL contexts that support table-valued fu
 SELECT * FROM customer_orders(42)
 ```
 
-Within other SQL functions, reference them with `__table_function("name")`.
-
 ## References inside functions
 
 SQL functions can reference the same resources as models:
@@ -115,7 +113,6 @@ SQL functions can reference the same resources as models:
 | Seed | `__seed("seed_name")` |
 | Source | `__source("source_name")` |
 | Scalar UDF | `__udf("function_name")` |
-| Table function | `__table_function("function_name")` |
 
 These references are resolved at compile time and create DAG edges. If a referenced model changes, the function is redeployed.
 

@@ -18,7 +18,7 @@ The project models a fictional waffle shop's order data:
 - **Custom materialization**: `daily_order_partitioned` using a Python partition-tracked strategy
 - **Functions**: `is_completed_order` (SQL UDF), `is_completed_order_py` (Python UDF), `customer_orders` (table function)
 - **Seed**: `waffle_types` CSV
-- **Audits**: `not_null`, `unique`, `accepted_values`, `expression_is_true` (declared in MODEL() headers)
+- **Audits**: `not_null`, `unique`, `accepted_values`, `expression_is_true` (declared in MODEL() headers; the first three are built-in)
 - **Test**: `test_stg_orders` SQL unit test
 
 ## Model DAG

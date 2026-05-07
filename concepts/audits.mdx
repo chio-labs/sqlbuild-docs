@@ -15,54 +15,20 @@ For `error` severity audits:
 
 For `warn` severity audits, the build continues and the failure is reported in the output.
 
-## Generic audits
+## Built-in audits
 
-Generic audits are reusable SQL templates defined under `audits/generic/`. They use parameter substitution to work across any model or column.
+SQLBuild includes four generic audits out of the box. You do not need to define these in `audits/generic/` - they are available automatically:
 
-### Defining generic audits
+| Audit | Description | Parameters |
+|-------|-------------|------------|
+| `not_null` | Fails if any row has a NULL value in the column | Column-level only |
+| `unique` | Fails if any non-NULL value appears more than once | Column-level only |
+| `accepted_values` | Fails if any non-NULL value is not in the allowed list | `values` - list of allowed values |
+| `relationships` | Fails if any non-NULL value does not exist in the referenced column | `to` - target relation, `field` - target column |
 
-```sql
--- audits/generic/not_null.sql
-AUDIT ();
+### Using built-in audits
 
-SELECT @column
-FROM __ref("@model")
-WHERE @column IS NULL
-```
-
-```sql
--- audits/generic/unique.sql
-AUDIT ();
-
-SELECT @column
-FROM __ref("@model")
-GROUP BY @column
-HAVING COUNT(*) > 1
-```
-
-```sql
--- audits/generic/accepted_values.sql
-AUDIT ();
-
-SELECT @column
-FROM __ref("@model")
-WHERE @column NOT IN (@'values')
-```
-
-```sql
--- audits/generic/expression_is_true.sql
-AUDIT ();
-
-SELECT *
-FROM __ref("@model")
-WHERE NOT (@expression)
-```
-
-The `@column` and `@model` parameters are substituted at compile time based on where the audit is attached. Custom parameters like `@expression` and `@'values'` are passed from the audit declaration.
-
-### Attaching generic audits
-
-Attach audits to models in the `MODEL()` header using the `columns` and `audits` fields:
+Attach them in the `MODEL()` header like any generic audit:
 
 ```sql
 MODEL (
@@ -76,7 +42,52 @@ MODEL (
         accepted_values (values ["placed", "preparing", "ready", "completed", "cancelled"]),
       ],
     ),
+    payment_method (
+      audits [
+        relationships (to "stg_payments", field "method"),
+      ],
+    ),
   ),
+);
+```
+
+### Overriding built-in audits
+
+If you define a generic audit with the same name as a built-in (e.g. `audits/generic/not_null.sql`), your definition takes precedence. SQLBuild emits a warning so you're aware of the override:
+
+```
+warning[P003]: project audit 'not_null' overrides built-in audit 'not_null'
+```
+
+## Custom generic audits
+
+Beyond the built-ins, you can define reusable SQL templates under `audits/generic/`. They use `@parameter` placeholders that are resolved by the audit engine at compile time.
+
+```sql
+-- audits/generic/expression_is_true.sql
+AUDIT ();
+
+SELECT *
+FROM @relation
+WHERE NOT (@expression)
+```
+
+### Audit parameters
+
+Generic audit SQL uses `@name` for parameter placeholders. These are resolved by the audit engine, not the general SQL interpolation system:
+
+| Parameter | Description |
+|-----------|-------------|
+| `@column` | The column name (auto-populated for column-level audits) |
+| `@relation` | The target relation (auto-populated from the attached model or source) |
+| `@'name'` | A quoted parameter passed from the audit declaration (e.g. `@'values'`) |
+| `@name` | An unquoted parameter passed from the audit declaration (e.g. `@expression`) |
+
+### Attaching custom generic audits
+
+```sql
+MODEL (
+  materialized table,
   audits [
     expression_is_true (
       name "revenue is non-negative",
@@ -85,8 +96,6 @@ MODEL (
   ],
 );
 ```
-
-Column-level audits receive the column name as `@column`. Model-level audits use custom parameters like `@expression`.
 
 ## Singular audits
 
