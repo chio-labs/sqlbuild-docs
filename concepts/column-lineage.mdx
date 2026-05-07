@@ -3,8 +3,6 @@ title: "Column Lineage"
 description: "Trace individual columns through your SQL pipeline - understand where data comes from and where it goes."
 ---
 
-Column lineage tracks how individual columns flow through your SQL models. Where model-level lineage tells you that `fact_orders` depends on `stg_orders`, column lineage tells you that `fact_orders.total_cents` is derived from `stg_payments.amount_cents` via an expression, and that `fact_orders.order_id` passes through directly from `stg_orders.order_id`.
-
 ## Why column lineage matters
 
 **Impact analysis** - Before changing a source column, see exactly which downstream models and columns are affected. A rename or type change in `raw_orders.id` can be traced through every model that consumes it, even indirectly.
