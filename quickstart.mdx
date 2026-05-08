@@ -3,27 +3,28 @@ title: "Quickstart"
 description: "Get a SQLBuild project running locally with DuckDB in under a minute."
 ---
 
-This guide walks you through running the waffle shop example - a complete transformation project with views, tables, incremental models, audits, tests, and a custom materialization - all running locally against DuckDB. No external data setup required.
+This guide walks you through creating and running a complete transformation project - views, tables, incremental models, audits, tests, and a custom materialization - all running locally against DuckDB. No external data setup or warehouse credentials required.
 
 ## Prerequisites
 
 - Python 3.12+
 - SQLBuild installed: `uv add sqlbuild` or `pip install sqlbuild`
 
-## 1. Clone and set up
+## 1. Create the playground
 
 ```bash
-git clone https://github.com/chio-labs/sqlbuild.git
-cd sqlbuild
-uv sync
+sqb playground waffle-shop
+cd waffle-shop
 ```
+
+This creates a self-contained waffle shop project with everything you need to explore SQLBuild.
 
 ## 2. Plan
 
 Preview what SQLBuild will do:
 
 ```bash
-sqb --project-dir examples/waffle_shop plan
+sqb plan
 ```
 
 ```
@@ -47,14 +48,14 @@ Seeds (1)
   waffle_types
 ```
 
-No seeding step needed. Source data is defined as inline expressions in `sources/raw.yml`, so SQLBuild resolves everything at compile time.
+Source data is defined as inline expressions in `sources/raw.yml`, so SQLBuild resolves everything at compile time - no seeding step needed.
 
 ## 3. Build
 
 Execute the full build:
 
 ```bash
-sqb --project-dir examples/waffle_shop --no-color build
+sqb --no-color build
 ```
 
 SQLBuild materializes all models in DAG order, runs SQL unit tests before their target models, and executes audits after each model completes:
@@ -120,7 +121,7 @@ Notice `audit (d)` and `audit (f)` on incremental models - these are delta-phase
 Run the plan again to see the steady-state:
 
 ```bash
-sqb --project-dir examples/waffle_shop plan
+sqb plan
 ```
 
 ```
@@ -144,27 +145,59 @@ All models now show `Normal` instead of `First run`.
 
 ```bash
 # Rebuild a specific model
-sqb --project-dir examples/waffle_shop build --select daily_revenue
+sqb build --select daily_revenue
 
 # Rebuild models under a path
-sqb --project-dir examples/waffle_shop build --select path:marts
+sqb build --select path:marts
 
 # Full refresh of everything
-sqb --project-dir examples/waffle_shop build --full-refresh
+sqb build --full-refresh
 
 # Run tests only
-sqb --project-dir examples/waffle_shop test
+sqb test
 
 # Run audits only
-sqb --project-dir examples/waffle_shop audit
+sqb audit
+
+# Inspect lineage
+sqb lineage fact_orders --direction both
+
+# Compile and check contracts
+sqb compile
 ```
 
-## 6. Project structure
+## What you just built
+
+### Model DAG
 
 ```
-examples/waffle_shop/
+raw_customers ──> stg_customers ──> dim_customers
+raw_orders ────> stg_orders ────> fact_orders ──> customer_status_snapshot
+raw_payments ──> stg_payments ──>  │              order_status_index
+                                   │              hourly_order_activity ──> daily_activity_rollup
+                                   │                                       hourly_activity_with_daily_context
+                                   └──> daily_revenue
+                                   └──> daily_order_partitioned
+```
+
+### Materialization types
+
+The project demonstrates several materialization strategies:
+
+- **Views** (`stg_customers`, `stg_orders`, `stg_payments`) - lightweight staging layer
+- **Tables** (`fact_orders`, `dim_customers`, `daily_revenue`) - full table rebuilds
+- **Merge incremental** (`customer_status_snapshot`) - upsert with timestamp cursor
+- **Delete/insert incremental** (`hourly_order_activity`, `daily_activity_rollup`, `hourly_activity_with_daily_context`) - microbatch processing with configurable batch sizes
+- **Integer cursor incremental** (`order_status_index`) - non-timestamp incremental
+- **Custom materialization** (`daily_order_partitioned`) - Python-defined partition-tracked strategy
+
+See [Incremental](/concepts/incremental) for details on cursor-based strategies and microbatch processing.
+
+### Project structure
+
+```
+waffle-shop/
   sqlbuild_project.toml         # project config
-  sqlbuild_local.toml           # local environment override (gitignored)
   sources/
     raw.yml                     # source declarations (inline expression data)
   seeds/
@@ -174,8 +207,6 @@ examples/waffle_shop/
     sql/
       is_completed_order.sql    # scalar SQL UDF
       customer_orders.sql       # table function
-    python/
-      is_completed_order_py.py  # scalar Python UDF
   models/
     staging/
       stg_customers.sql         # view (audits declared in MODEL() header)
@@ -194,9 +225,14 @@ examples/waffle_shop/
       order_status_index.sql       # integer cursor incremental
   audits/
     generic/
-      expression_is_true.sql
+      expression_is_true.sql    # custom generic audit
   tests/
     test_stg_orders.sql         # SQL unit test
+    test_fact_orders.sql        # multi-model unit test
+    test_daily_revenue_chain.sql # chain test across multiple models
+  macros/
+    currency.py                 # cents_to_dollars macro
+    datetime.py                 # adapter-portable timestamp_trunc
   materializations/
     partition_tracked.py        # custom materialization
 ```
@@ -208,4 +244,5 @@ examples/waffle_shop/
 - [Incremental](/concepts/incremental) - learn about cursor-based incremental strategies
 - [Audits](/concepts/audits) - configure data quality checks
 - [Testing](/concepts/testing) - write SQL unit tests with chaining and macro support
+- [Column Lineage](/concepts/column-lineage) - trace individual columns through your pipeline
 - [CLI Reference](/cli/build) - full command reference
