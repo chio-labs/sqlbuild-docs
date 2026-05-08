@@ -1,0 +1,43 @@
+---
+title: "playground"
+description: "Create a self-contained SQLBuild project to explore locally."
+---
+
+# sqb playground
+
+Creates a self-contained waffle shop project with DuckDB. No warehouse credentials, no git clone, no external data - just a working project you can compile, build, test, and explore immediately.
+
+## Usage
+
+```bash
+sqb playground [path]
+```
+
+If `path` is omitted, the project is created at `sqlbuild-playground` in the current directory.
+
+## What it creates
+
+A complete DuckDB-backed project with:
+
+- Staging views, fact/dimension tables, and incremental models
+- Sources with inline expression data (no external setup)
+- Seeds, SQL functions, and a custom materialization
+- Built-in and custom audits
+- SQL unit tests including chain tests
+- Python macros
+
+## Example
+
+```bash
+sqb playground my-project
+cd my-project
+sqb compile
+sqb build
+sqb test
+```
+
+## Notes
+
+- The target directory must not already exist
+- DuckDB is included as a core dependency - no extra installation needed
+- The local DuckDB database file is created on the first build
