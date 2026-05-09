@@ -36,7 +36,7 @@ sqb --project-dir <path> build [flags]
 2. Source audits run before their dependent models
 3. SQL unit tests run before their target model
 4. Models are materialized in DAG topological order
-5. Audits run after their attached model completes
+5. Error-severity audits run against the staging table before promotion to the target
 
 ## Output
 
