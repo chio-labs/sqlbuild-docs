@@ -58,7 +58,7 @@ Execute the full build:
 sqb --no-color build
 ```
 
-SQLBuild materializes all models in DAG order, runs SQL unit tests before their target models, and executes audits after each model completes:
+SQLBuild materializes all models in DAG order. SQL unit tests run before their target models. Error-severity audits run against a staging table before promotion - if any fail, the production table is untouched:
 
 ```
 Execution  sqb build  (concurrency: 1)
