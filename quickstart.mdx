@@ -227,9 +227,13 @@ waffle-shop/
     generic/
       expression_is_true.sql    # custom generic audit
   tests/
-    test_stg_orders.sql         # SQL unit test
-    test_fact_orders.sql        # multi-model unit test
-    test_daily_revenue_chain.sql # chain test across multiple models
+    unit/
+      test_stg_orders.sql         # SQL unit test
+      test_fact_orders.sql        # multi-model unit test
+      test_daily_revenue_chain.sql # chain test across multiple models
+    scenarios/
+      daily_revenue_minimal.sql   # E2E scenario test
+      daily_revenue_multi_order.sql # E2E scenario test
   macros/
     currency.py                 # cents_to_dollars macro
     datetime.py                 # adapter-portable timestamp_trunc

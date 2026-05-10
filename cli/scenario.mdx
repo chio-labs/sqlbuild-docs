@@ -1,0 +1,144 @@
+---
+title: "scenario"
+description: "Run end-to-end scenario tests against the warehouse or locally with DuckDB."
+---
+
+# sqb scenario
+
+Run end-to-end scenario tests. Scenarios materialize fixture inputs as physical relations, build the real project graph against them, and evaluate expected outputs and assertions. See [Scenarios](/concepts/scenarios) for concepts and authoring details.
+
+## sqb scenario test
+
+Run scenario tests against the warehouse.
+
+```bash
+sqb scenario test [selectors...] [flags]
+```
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--retain` | Keep scenario-owned warehouse artifacts for inspection |
+| `--local` | Run locally against DuckDB using captured JSONL snapshots |
+| `--strict` | Treat missing/stale local snapshots as errors instead of skips |
+| `--sync-snapshots` | Capture missing/stale snapshots before local run (requires `--local`) |
+| `--refresh` | Recapture all selected snapshots before local run (requires `--local`) |
+| `--no-sql-validation` | Skip compile-time SQL syntax validation |
+
+### Selectors
+
+Zero or more selectors can be provided. Without selectors, all discovered scenarios run.
+
+| Selector | Example |
+|----------|---------|
+| Scenario name | `sqb scenario test daily_revenue_minimal` |
+| Multiple names | `sqb scenario test daily_revenue_minimal daily_revenue_multi_order` |
+| `.sql` file path | `sqb scenario test tests/scenarios/revenue/daily_revenue_minimal.sql` |
+| Folder | `sqb scenario test tests/scenarios/revenue` |
+| Scenario-root-relative folder | `sqb scenario test revenue` |
+
+Mixed selector types are supported and de-duplicated by scenario name.
+
+### Remote examples
+
+```bash
+# Run all scenarios
+sqb scenario test
+
+# Run one scenario
+sqb scenario test daily_revenue_minimal
+
+# Run and retain warehouse artifacts
+sqb scenario test daily_revenue_minimal --retain
+
+# Run all scenarios in a folder
+sqb scenario test revenue
+```
+
+### Local examples
+
+```bash
+# Run locally (requires prior capture)
+sqb scenario test --local
+
+# Run locally, capture missing/stale snapshots first
+sqb scenario test --local --sync-snapshots
+
+# Run locally, recapture everything first
+sqb scenario test --local --refresh
+
+# Fail on missing/stale snapshots instead of skipping
+sqb scenario test --local --strict
+```
+
+### Output
+
+Remote scenarios report per-scenario PASS/FAIL with nested check rows:
+
+```
+daily_revenue_minimal                                            PASS
+    check     expected daily_revenue                             PASS
+    check     assertion no_negative_revenue                      PASS
+
+PASS=1  FAIL=0  TOTAL=1
+```
+
+Local scenarios add ERROR and SKIP statuses:
+
+```
+PASS=2  FAIL=0  ERROR=0  SKIP=1  TOTAL=3
+```
+
+Failed scenarios suggest rerunning with `--retain` for inspection. Local runs always keep the DuckDB file at `target/run/scenarios/<scenario_name>/local.duckdb`.
+
+## sqb scenario capture
+
+Capture scenario input fixtures from the warehouse as JSONL snapshots for local replay.
+
+```bash
+sqb scenario capture [selectors...] [flags]
+```
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--retain` | Keep warehouse fixture artifacts after capture |
+| `--no-sql-validation` | Skip compile-time SQL syntax validation |
+
+### Examples
+
+```bash
+# Capture all scenarios
+sqb scenario capture
+
+# Capture one scenario
+sqb scenario capture daily_revenue_minimal
+
+# Capture and retain warehouse artifacts
+sqb scenario capture daily_revenue_minimal --retain
+```
+
+Snapshots are written to `tests/_scenario_snapshots/<scenario_name>/` with a `scenario.json` manifest and JSONL files for each fixture relation. These files can be committed to version control.
+
+## Runtime artifacts
+
+Both remote and local scenario runs write runtime artifacts to `target/run/scenarios/<scenario_name>/`:
+
+```
+target/run/scenarios/daily_revenue_minimal/
+  cleanup/
+    prepare.sql
+    final.sql
+  fixtures/
+    ref__stg_orders.sql
+    ref__stg_payments.sql
+  models/
+    marts/daily_revenue.sql
+  checks/
+    expected__daily_revenue.sql
+    assertion__no_negative_revenue.sql
+```
+
+Local runs additionally write to a `local/` subdirectory and create `local.duckdb`.
