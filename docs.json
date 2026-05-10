@@ -42,6 +42,7 @@
           "concepts/incremental",
           "concepts/audits",
           "concepts/testing",
+          "concepts/scenarios",
           "concepts/macros",
           "concepts/selectors",
           "concepts/column-lineage",
@@ -64,6 +65,7 @@
           "cli/debug",
           "cli/janitor",
           "cli/query",
+          "cli/scenario",
           "cli/clean",
           "cli/init",
           "cli/playground"

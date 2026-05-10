@@ -1,16 +1,18 @@
 ---
 title: "Testing"
-description: "SQL unit tests with model chaining, macro support, and multi-model integration testing."
+description: "SQL unit tests with model chaining, macro support, assertions, and multi-model integration testing."
 ---
 
-SQLBuild supports SQL-native unit tests that validate model logic by comparing actual query results against expected values. Tests can chain across multiple models, use macros for reusable mock data, and run as full integration tests across your pipeline.
+SQLBuild supports SQL-native unit tests that validate model logic by comparing actual query results against expected values. Tests can chain across multiple models, use macros for reusable mock data, include zero-row assertions, and run as full integration tests across your pipeline.
+
+For end-to-end testing across many models with physical warehouse relations, see [Scenarios](/concepts/scenarios).
 
 ## How tests work
 
 A test file defines mock inputs and expected outputs using CTEs. SQLBuild substitutes the mock data into the real model SQL, executes it, and compares the result against the expected CTE using `EXCEPT` queries. Zero mismatched rows means the test passes.
 
 ```sql
--- tests/test_stg_orders.sql
+-- tests/unit/test_stg_orders.sql
 TEST();
 
 WITH
@@ -51,6 +53,7 @@ The trailing `SELECT 1` is required as a ceremonial closing statement.
 | `__ref__<name>` | Mock a model. Replaces `__ref("<name>")` in the model SQL. |
 | `__seed__<name>` | Mock a seed. Replaces `__seed("<name>")` in the model SQL. |
 | `__expected__<name>` | Define expected output for a model. SQLBuild resolves the model's real SQL and compares against this. |
+| `__assert__<name>` | Zero-row assertion. Passes if the query returns no rows; fails with the returned rows as diagnostics. |
 | `__macro__<name>` | Mock a macro. Replaces every `@<name>(...)` call with the mock value. |
 
 Any CTE without one of these prefixes is treated as a helper CTE, available to all mock and model SQL in the test.
@@ -221,6 +224,28 @@ This is useful for:
 - Controlling dynamic SQL generation to produce predictable test inputs
 - Isolating model logic from macro implementation details
 
+## Assertions
+
+Unit tests can include `__assert__<name>` CTEs for property-based checks. An assertion passes if the query returns zero rows - any returned rows are failing examples.
+
+```sql
+TEST();
+
+WITH
+__ref__stg_orders AS (
+  SELECT 1 AS order_id, 100 AS customer_id, 3 AS quantity,
+         CAST('2026-04-01 10:00:00' AS TIMESTAMP) AS ordered_at, 'completed' AS status
+),
+__assert__order_ids_are_not_null AS (
+  SELECT * FROM __ref("stg_orders") WHERE order_id IS NULL
+)
+SELECT 1
+```
+
+Assertions can be mixed with `__expected__` CTEs in the same test, or used on their own. They are useful when the natural check is "no rows should violate this rule" rather than "the output should exactly equal these rows" - for example, duplicate checks, negative-value constraints, or conditional business rules.
+
+During `sqb test` and `sqb build`, assertion results appear as nested check rows alongside expected comparisons.
+
 ## Multiple tests per file
 
 A single test file can contain multiple `TEST()` blocks. Each block must have a unique `name`:
@@ -253,7 +278,17 @@ A file with a single test can omit the `name` field. Files with multiple tests r
 
 ## Test placement
 
-Place test files under `tests/` in your project directory. SQLBuild discovers all `.sql` files in this directory automatically.
+Place unit test files under `tests/unit/` in your project directory. SQLBuild discovers all `.sql` files in this directory recursively.
+
+```
+tests/
+  unit/
+    test_stg_orders.sql
+    test_fact_orders.sql
+    test_daily_revenue_chain.sql
+  scenarios/
+    ...
+```
 
 ## Running tests
 
@@ -262,11 +297,11 @@ Tests run automatically during `sqb build` in DAG order, before their target mod
 Run tests standalone:
 
 ```bash
-sqb --project-dir examples/waffle_shop test
+sqb test
 ```
 
 Scope to specific models:
 
 ```bash
-sqb --project-dir examples/waffle_shop test --select stg_orders
+sqb test --select stg_orders
 ```
