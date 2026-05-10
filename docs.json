@@ -38,12 +38,12 @@
           "concepts/sources",
           "concepts/seeds",
           "concepts/models",
+          "concepts/macros",
           "concepts/functions",
           "concepts/incremental",
           "concepts/audits",
           "concepts/testing",
           "concepts/scenarios",
-          "concepts/macros",
           "concepts/selectors",
           "concepts/column-lineage",
           "concepts/environment-diffs"
