@@ -237,3 +237,8 @@ sqb janitor
 ```
 
 See the [CLI reference](/cli/scenario) for full command documentation.
+
+## Limitations
+
+- Custom materializations are not supported in scenarios yet. Scenario models using custom materializations will fail with a clear error.
+- Local replay transpiles SQL from the project adapter dialect to DuckDB via SQLGlot. Adapter-specific SQL that SQLGlot cannot translate will produce a clear error with the failing resource name and reason.
