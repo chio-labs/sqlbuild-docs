@@ -24,6 +24,11 @@ sqb scenario test [selectors...] [flags]
 | `--strict` | Treat missing/stale local snapshots as errors instead of skips |
 | `--sync-snapshots` | Capture missing/stale snapshots before local run (requires `--local`) |
 | `--refresh` | Recapture all selected snapshots before local run (requires `--local`) |
+| `--force` | Bypass snapshot capture safety limits |
+| `--max-snapshot-rows` | Override per-relation row limit for capture |
+| `--max-snapshot-total-rows` | Override total row limit for capture |
+| `--max-snapshot-bytes` | Override per-relation byte limit for capture |
+| `--max-snapshot-total-bytes` | Override total byte limit for capture |
 | `--no-sql-validation` | Skip compile-time SQL syntax validation |
 
 ### Selectors
@@ -105,6 +110,11 @@ sqb scenario capture [selectors...] [flags]
 | Flag | Description |
 |------|-------------|
 | `--retain` | Keep warehouse fixture artifacts after capture |
+| `--force` | Bypass snapshot capture safety limits |
+| `--max-snapshot-rows` | Override per-relation row limit |
+| `--max-snapshot-total-rows` | Override total row limit |
+| `--max-snapshot-bytes` | Override per-relation byte limit |
+| `--max-snapshot-total-bytes` | Override total byte limit |
 | `--no-sql-validation` | Skip compile-time SQL syntax validation |
 
 ### Examples
