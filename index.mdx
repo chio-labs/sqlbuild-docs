@@ -8,10 +8,10 @@ Validate SQL at compile time, block bad data before promotion, and run full E2E 
 ## How it works
 
 1. **Define** your models as SQL files with `MODEL()` headers that declare configuration, schema, and audits inline
-2. **Compile** to resolve references, validate SQL (with SQLGlot), and expand Python macros
+2. **Compile** to resolve references, validate SQL, infer column types, check contracts, and compute column lineage - all offline
 3. **Plan** what needs to change based on fingerprints, schema diffs, and backfill policies
 4. **Build** by executing the plan: materializing models, validating data before promotion, and ensuring bad data never reaches production
-5. **Iterate** with first-class support for chained unit tests, zero-copy cloning, and deferred builds - fast feedback without rebuilding the world
+5. **Test** with chained unit tests, E2E scenario tests, and local replay through DuckDB - no warehouse required
 
 ## Why SQLBuild?
 
@@ -35,6 +35,34 @@ __source__raw_payments AS (
 __expected__fact_orders AS (
   SELECT 1 AS order_id, 100 AS customer_id, 1500 AS total_cents,
          'credit_card' AS payment_method
+)
+SELECT 1
+```
+
+### E2E scenario tests with local replay
+
+- **Real graph execution:** Define coherent fixture inputs, and SQLBuild builds the real model graph against them in isolated warehouse relations. Test end-to-end business logic across your entire pipeline, not just one model at a time.
+- **Local replay without a warehouse:** Capture scenario fixtures as JSONL snapshots, then replay them locally through DuckDB. CI pipelines run full E2E tests with zero warehouse credentials or compute cost.
+- **Zero-row assertions:** Write property checks that pass when no rows violate a condition. Useful for invariants like "no negative revenue" or "no duplicate customer IDs" alongside full expected-output comparisons.
+
+```sql
+SCENARIO (
+  description: "Daily revenue includes only successful payments",
+  tags: ["revenue"]
+);
+
+WITH
+__ref__stg_orders AS (
+  SELECT 1 AS order_id, 10 AS customer_id, 'completed' AS status
+),
+__ref__stg_payments AS (
+  SELECT 1 AS payment_id, 1 AS order_id, 1700 AS amount_cents, 'success' AS payment_status
+),
+__expected__daily_revenue AS (
+  SELECT CAST('2026-04-01' AS DATE) AS revenue_date, 1700 AS total_revenue_cents
+),
+__assert__no_negative_revenue AS (
+  SELECT * FROM __ref("daily_revenue") WHERE total_revenue_cents < 0
 )
 SELECT 1
 ```
@@ -107,7 +135,7 @@ def materialize(ctx: MaterializationContext) -> MaterializationResult:
   <Card title="Concepts" icon="book" href="/concepts/models">
     Understand models, incremental strategies, audits, and selectors.
   </Card>
-  <Card title="Column Lineage" icon="diagram-project" href="/concepts/column-lineage">
-    Trace columns through your pipeline.
+  <Card title="Scenarios" icon="flask-vial" href="/concepts/scenarios">
+    E2E tests with local DuckDB replay.
   </Card>
 </CardGroup>
