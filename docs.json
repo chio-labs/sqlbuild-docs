@@ -76,6 +76,10 @@
   "topbar": {
     "links": [
       {
+        "label": "Discord",
+        "url": "https://discord.gg/tYU4nXdsT"
+      },
+      {
         "label": "GitHub",
         "url": "https://github.com/chio-labs/sqlbuild"
       }
@@ -83,6 +87,7 @@
   },
   "footer": {
     "socials": {
+      "discord": "https://discord.gg/tYU4nXdsT",
       "github": "https://github.com/chio-labs/sqlbuild"
     }
   }
