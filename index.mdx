@@ -61,8 +61,8 @@ __ref__stg_payments AS (
 __expected__daily_revenue AS (
   SELECT CAST('2026-04-01' AS DATE) AS revenue_date, 1700 AS total_revenue_cents
 ),
-__assert__no_negative_revenue AS (
-  SELECT * FROM __ref("daily_revenue") WHERE total_revenue_cents < 0
+__assert__all_orders_have_payments AS (
+  SELECT * FROM __ref("fact_orders") WHERE payment_amount_cents IS NULL
 )
 SELECT 1
 ```
