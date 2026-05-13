@@ -7,12 +7,12 @@ SQLBuild can run alongside an existing dbt project. Your dbt models stay in dbt.
 
 ## How it works
 
-1. dbt compiles and produces a `manifest.json` with model metadata
+1. SQLBuild runs `dbt compile` to produce a `manifest.json` with model metadata
 2. SQLBuild reads the manifest to understand dbt model names and their qualified warehouse tables
 3. SQLBuild models reference dbt models using `__dbt_ref("package", "model")`
 4. `sqb dbt plan/run/build/test` orchestrates both sides: dbt runs first, then SQLBuild runs against the dbt outputs
 
-dbt is invoked as a subprocess - SQLBuild does not reimplement Jinja, profiles, or any dbt internals. It reads the manifest for resolution and calls the `dbt` CLI for execution.
+dbt is always invoked as a subprocess - SQLBuild does not reimplement Jinja, profiles, or any dbt internals. It calls the `dbt` CLI for compilation, selection, and execution.
 
 ## Setup
 
