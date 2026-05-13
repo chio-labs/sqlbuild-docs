@@ -149,9 +149,8 @@ sqb dbt build --select path:marts
 
 For `sqb dbt run` and `sqb dbt build`:
 
-1. **dbt runs first** - the primary `dbt run/build` command executes with the user's original selectors
-2. **Supplemental dbt run** - if SQLBuild models require dbt models that weren't in the primary selection, a second dbt run targets those specific models
-3. **SQLBuild runs second** - selected SQLBuild models execute against the now-built dbt tables
+1. **dbt runs first** - a single `dbt run/build` command executes with the user's selectors merged with any additional dbt models required by selected SQLBuild models
+2. **SQLBuild runs second** - selected SQLBuild models execute against the now-built dbt tables
 
 For `sqb dbt test`:
 
