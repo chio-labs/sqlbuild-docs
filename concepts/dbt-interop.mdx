@@ -162,14 +162,14 @@ The `test_type:data` and `test_type:unit` selectors from dbt are mapped to SQLBu
 
 ## Unit tests with dbt refs
 
-SQLBuild unit tests work normally with dbt interop models. Mock the SQLBuild model as usual:
+SQLBuild unit tests can mock dbt model dependencies using `__dbt_ref__` fixture CTEs. When a model has a package, use `__dbt_ref__package__model`. When there is no package, use `__dbt_ref__model`:
 
 ```sql
 TEST();
 
 WITH
-__ref__downstream_orders AS (
-  SELECT 1 AS order_id
+__dbt_ref__analytics__fact_orders AS (
+  SELECT 1 AS order_id, 100 AS customer_id, 2500 AS amount_cents
 ),
 __expected__downstream_orders AS (
   SELECT 1 AS order_id
@@ -177,7 +177,7 @@ __expected__downstream_orders AS (
 SELECT 1
 ```
 
-The dbt dependency is resolved at compile time from the manifest, so tests run without a warehouse connection.
+This mocks the dbt model `analytics.fact_orders` with controlled data, allowing you to test your SQLBuild model without a warehouse connection or a compiled dbt manifest.
 
 ## Debug
 
