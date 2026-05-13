@@ -18,7 +18,8 @@
         "group": "Getting Started",
         "pages": [
           "index",
-          "quickstart"
+          "quickstart",
+          "concepts/dbt-interop"
         ]
       },
       {
@@ -46,8 +47,7 @@
           "concepts/scenarios",
           "concepts/selectors",
           "concepts/column-lineage",
-          "concepts/environment-diffs",
-          "concepts/dbt-interop"
+          "concepts/environment-diffs"
         ]
       },
       {
