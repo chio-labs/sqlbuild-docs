@@ -192,5 +192,6 @@ This runs `dbt debug` (verifying dbt project config and warehouse connection) fo
 ## Prerequisites
 
 - dbt must be installed and available on `PATH`
-- The dbt project must be compiled (`dbt compile` or `dbt run`) so that `manifest.json` exists in the target path
 - Both projects must target the same warehouse and schema/database context
+
+SQLBuild runs `dbt compile` automatically as part of `sqb dbt plan/run/build/test` to produce the manifest. You do not need to compile the dbt project manually.
