@@ -46,7 +46,8 @@
           "concepts/scenarios",
           "concepts/selectors",
           "concepts/column-lineage",
-          "concepts/environment-diffs"
+          "concepts/environment-diffs",
+          "concepts/dbt-interop"
         ]
       },
       {
@@ -66,6 +67,7 @@
           "cli/janitor",
           "cli/query",
           "cli/scenario",
+          "cli/dbt",
           "cli/clean",
           "cli/init",
           "cli/playground"

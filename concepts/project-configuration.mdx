@@ -269,6 +269,27 @@ Local type overrides for DuckDB replay are configured per adapter dialect:
 
 See [Scenarios](/concepts/scenarios) for details on local type overrides and capture limits.
 
+## dbt
+
+Configuration for running SQLBuild alongside an existing dbt project:
+
+```toml
+[dbt]
+project_dir = "../dbt_project"
+profiles_dir = "../profiles"
+target_path = "../dbt_project/target"
+target = "dev"
+```
+
+| Field | Description |
+|-------|-------------|
+| `project_dir` | Path to the dbt project root (where `dbt_project.yml` lives) |
+| `profiles_dir` | Path to the directory containing `profiles.yml` |
+| `target_path` | Path to dbt's `target/` directory (where `manifest.json` is written) |
+| `target` | dbt target name override (optional) |
+
+Paths can be absolute or relative to the SQLBuild project root. See [dbt Interop](/concepts/dbt-interop) for setup and usage details.
+
 ## sqlbuild_local.toml
 
 Local developer overrides. This file should be gitignored.

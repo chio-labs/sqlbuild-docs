@@ -1,0 +1,197 @@
+---
+title: "dbt Interop"
+description: "Run SQLBuild models downstream of an existing dbt project without migrating."
+---
+
+SQLBuild can run alongside an existing dbt project. Your dbt models stay in dbt. New models, tests, audits, and scenarios are written in SQLBuild and can reference dbt model outputs directly. No migration required.
+
+## How it works
+
+1. dbt compiles and produces a `manifest.json` with model metadata
+2. SQLBuild reads the manifest to understand dbt model names and their qualified warehouse tables
+3. SQLBuild models reference dbt models using `__dbt_ref("package", "model")`
+4. `sqb dbt plan/run/build/test` orchestrates both sides: dbt runs first, then SQLBuild runs against the dbt outputs
+
+dbt is invoked as a subprocess - SQLBuild does not reimplement Jinja, profiles, or any dbt internals. It reads the manifest for resolution and calls the `dbt` CLI for execution.
+
+## Setup
+
+### Project layout
+
+A typical layout has both projects side by side:
+
+```
+my-workspace/
+  dbt_project/
+    dbt_project.yml
+    models/
+      staging/stg_orders.sql
+      marts/fact_orders.sql
+    target/
+      manifest.json
+  profiles/
+    profiles.yml
+  sqlbuild_project/
+    sqlbuild_project.toml
+    models/
+      marts/downstream_orders.sql
+    tests/
+      unit/test_downstream_orders.sql
+```
+
+### Configuration
+
+Point SQLBuild at the dbt project in `sqlbuild_project.toml`:
+
+```toml
+[dbt]
+project_dir = "../dbt_project"
+profiles_dir = "../profiles"
+target_path = "../dbt_project/target"
+```
+
+| Field | Description |
+|-------|-------------|
+| `project_dir` | Path to the dbt project root (where `dbt_project.yml` lives) |
+| `profiles_dir` | Path to the directory containing `profiles.yml` |
+| `target_path` | Path to dbt's `target/` directory (where `manifest.json` is written) |
+| `target` | dbt target name override (optional) |
+
+Paths can be absolute or relative to the SQLBuild project root.
+
+### Referencing dbt models
+
+SQLBuild models use `__dbt_ref("package", "model")` to reference dbt model outputs:
+
+```sql
+MODEL (
+  tags [finance],
+  columns (order_id (audits [not_null])),
+);
+
+SELECT order_id FROM __dbt_ref("analytics", "fact_orders")
+```
+
+This resolves to the qualified warehouse table name from the dbt manifest (e.g. `analytics.fact_orders`). The dbt model becomes an upstream dependency in the combined graph.
+
+SQLBuild models can also reference other SQLBuild models with `__ref()` as usual:
+
+```sql
+MODEL (tags [marts]);
+
+SELECT order_id FROM __ref("downstream_orders")
+```
+
+## Selection behavior
+
+The `sqb dbt` commands use `--select` and `--exclude` to scope what runs. Selectors work across both dbt and SQLBuild, with the system determining which side owns each selector and how to route work.
+
+### SQLBuild-recognized selectors
+
+These selectors match SQLBuild models directly:
+
+| Selector | Example | Behavior |
+|----------|---------|----------|
+| Model name | `fact_orders` | Selects that SQLBuild model. Auto-includes its immediate dbt upstream dependencies. |
+| Leading `+` | `+fact_orders` | Selects the model plus walks upstream through both SQLBuild and dbt models. |
+| Trailing `+` | `fact_orders+` | Selects the model plus all downstream SQLBuild models. |
+| Both `+` | `+fact_orders+` | Full upstream (including dbt) and downstream expansion. |
+| Tag | `tag:nightly` | Selects all SQLBuild models with that tag. Auto-includes dbt dependencies. |
+| Tag with `+` | `+tag:nightly` | Tag match plus upstream expansion through the combined graph. |
+| Path | `path:marts` | Selects SQLBuild models under that directory. dbt-style `path:models/marts` is translated automatically. |
+| Path with `+` | `+path:marts` | Path match plus upstream/downstream expansion. |
+
+When a SQLBuild model is selected, its immediate dbt upstream dependencies are always included so dbt can build the tables that SQLBuild models read from.
+
+### dbt-only selectors
+
+Selectors that SQLBuild does not recognize (like `state:modified`, `package:stripe`, `source:stripe.charges`) are passed to `dbt ls` to resolve:
+
+| Selector | Example | Behavior |
+|----------|---------|----------|
+| Without `+` | `state:modified` | dbt-only work. No SQLBuild models selected. |
+| With trailing `+` | `state:modified+` | SQLBuild runs `dbt ls` to find which dbt models match, then walks downstream into SQLBuild territory. |
+| With both `+` | `+state:modified+` | Same downstream expansion, plus upstream dbt expansion. |
+
+This means you can use dbt-native selectors like `state:modified+` to trigger rebuilds of SQLBuild models that depend on changed dbt models. If `dbt ls` returns no matching models, no SQLBuild work is triggered.
+
+### Exclude
+
+`--exclude` removes matching SQLBuild models from the final selection:
+
+```bash
+sqb dbt build --select fact_orders+ --exclude tag:nightly
+```
+
+### Examples
+
+```bash
+# Build a specific SQLBuild model and its dbt dependencies
+sqb dbt build --select downstream_orders
+
+# Build everything downstream of a SQLBuild model
+sqb dbt build --select downstream_orders+
+
+# Build a SQLBuild model with full upstream dbt chain
+sqb dbt build --select +downstream_orders
+
+# Build SQLBuild models downstream of modified dbt models
+sqb dbt build --select state:modified+
+
+# Build all SQLBuild models tagged "nightly" with their dbt dependencies
+sqb dbt build --select tag:nightly
+
+# Build SQLBuild models under a path
+sqb dbt build --select path:marts
+```
+
+## Execution order
+
+For `sqb dbt run` and `sqb dbt build`:
+
+1. **dbt runs first** - the primary `dbt run/build` command executes with the user's original selectors
+2. **Supplemental dbt run** - if SQLBuild models require dbt models that weren't in the primary selection, a second dbt run targets those specific models
+3. **SQLBuild runs second** - selected SQLBuild models execute against the now-built dbt tables
+
+For `sqb dbt test`:
+
+1. **dbt test runs first** - with the user's original selectors
+2. **SQLBuild test runs** - unit tests for selected SQLBuild models
+3. **SQLBuild audit runs** - audits for selected SQLBuild models
+
+The `test_type:data` and `test_type:unit` selectors from dbt are mapped to SQLBuild equivalents: `test_type:data` runs SQLBuild audits, `test_type:unit` runs SQLBuild unit tests.
+
+## Unit tests with dbt refs
+
+SQLBuild unit tests work normally with dbt interop models. Mock the SQLBuild model as usual:
+
+```sql
+TEST();
+
+WITH
+__ref__downstream_orders AS (
+  SELECT 1 AS order_id
+),
+__expected__downstream_orders AS (
+  SELECT 1 AS order_id
+)
+SELECT 1
+```
+
+The dbt dependency is resolved at compile time from the manifest, so tests run without a warehouse connection.
+
+## Debug
+
+`sqb dbt debug` runs both dbt's and SQLBuild's diagnostics:
+
+```bash
+sqb dbt debug
+```
+
+This runs `dbt debug` (verifying dbt project config and warehouse connection) followed by `sqb debug` (verifying SQLBuild project config and connection).
+
+## Prerequisites
+
+- dbt must be installed and available on `PATH`
+- The dbt project must be compiled (`dbt compile` or `dbt run`) so that `manifest.json` exists in the target path
+- Both projects must target the same warehouse and schema/database context
