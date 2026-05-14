@@ -95,8 +95,8 @@ MODEL (
   materialized partition_tracked,
   tags [marts],
   placeholders (
-    partition_start '\'2026-04-01\'',
-    partition_end '\'2026-04-05\'',
+    partition_start "'2026-04-01'",
+    partition_end "'2026-04-05'",
   ),
   config (
     tracking_table partition_state,
@@ -261,25 +261,27 @@ MODEL (
 
 ## Hooks
 
-Pre-hooks and post-hooks execute SQL before and after materialization. They support macro expansion and context templates:
+Pre-hooks and post-hooks execute SQL before and after materialization. They support macro expansion and context variable interpolation:
 
 ```sql
 MODEL (
   materialized table,
-  post_hook ['@grant_target(${CTX:target.qualified})'],
+  post_hook ['GRANT SELECT ON @@CTX:target.qualified TO analyst_role'],
 );
 ```
 
-Available context templates:
+Available context variables in hooks:
 
-| Template | Value |
+| Variable | Value |
 |----------|-------|
-| `${CTX:target.qualified}` | Fully qualified target relation name |
-| `${CTX:target.schema}` | Target schema |
-| `${CTX:target.name}` | Target relation name |
-| `${CTX:model_name}` | Model name |
-| `${CTX:environment}` | Current environment name |
-| `${CTX:run_id}` | Current run ID |
+| `@@CTX:target.qualified` | Fully qualified target relation name |
+| `@@CTX:target.schema` | Target schema |
+| `@@CTX:target.name` | Target relation name |
+| `@@CTX:model_name` | Model name |
+| `@@CTX:environment` | Current environment name |
+| `@@CTX:run_id` | Current run ID |
+
+Hooks also support macro calls and project variable interpolation (`@@name`, `@@ENV:NAME`).
 
 ## Config reference
 

@@ -85,13 +85,13 @@ def grant_target(target):
 ```sql
 MODEL (
   materialized table,
-  post_hook ['@grant_target(${CTX:target.qualified})'],
+  post_hook ['@grant_target(@@CTX:target.qualified)'],
 );
 
 SELECT 1 AS id
 ```
 
-Hook SQL is validated at compile time using SQLGlot, so invalid hook SQL is caught before execution.
+Hook SQL is validated at compile time using SQLGlot, so invalid hook SQL is caught before execution. Hooks also support `@@CTX:` context variables, `@@name` project variables, and `@@ENV:NAME` environment variables directly without needing a macro wrapper.
 
 ## Macro arguments
 
@@ -149,9 +149,10 @@ SQLBuild provides several interpolation mechanisms for authored SQL. Each uses a
 | `@macro(args)` | SQL bodies, hooks, tests, audits | Macro call - expands to the macro's return value |
 | `@@name` | SQL bodies, hooks, tests, audits | Project variable substitution |
 | `@@ENV:NAME` | SQL bodies, hooks, tests, audits | Environment variable interpolation |
+| `@@CTX:name` | Hooks | Context variable - target relation, environment, run ID |
 | `@@@name` | SQL bodies | Deferred placeholder - preserved for runtime resolution (e.g. custom materializations) |
 | `@name` / `@'name'` | Generic audit SQL only | Audit parameter placeholder - resolved by the audit engine |
-| `${CTX:...}` | Config values, hooks, inline expressions | Context template - resolved during config compilation |
+| `${CTX:...}` | TOML/YAML config values, inline source expressions | Context template - resolved during config compilation |
 
 ### Project variables
 
@@ -209,14 +210,13 @@ This is distinct from `@@name` (project variables) and `@macro()` (macro calls),
 
 SQLBuild processes SQL in this order:
 
-1. **Project variables** (`@@name`) and **environment variables** (`@@ENV:NAME`) are substituted first
+1. **Project variables** (`@@name`), **environment variables** (`@@ENV:NAME`), and **context variables** (`@@CTX:name` in hooks) are substituted first
 2. **Macro calls** (`@name(args)`) are expanded second
 3. **SQLGlot validation** runs against the fully expanded SQL
-4. **Context templates** (`${CTX:...}`) in hooks and config are resolved during config compilation
+4. **Config templates** (`${CTX:...}`) in TOML/YAML config values and inline source expressions are resolved during config compilation
 
 This means:
 - Macros see already-substituted variable values in the SQL
-- Macros can emit `${CTX:...}` references that will be resolved later
 - SQLGlot validates the final expanded SQL, catching syntax errors from both vars and macros
 
 ## Where macros are allowed
@@ -228,20 +228,44 @@ This means:
 
 Macros are **not allowed** in MODEL() config values (other than hooks). If a config field contains `@macro()`, SQLBuild raises a compile error.
 
-## Context templates
+## Context variables
 
-Hooks and config can reference context variables using `${CTX:...}` templates:
+Context variables provide access to the current model's target relation, environment, and run metadata.
 
-| Template | Value |
+**In hooks** (`@@CTX:` syntax):
+
+```sql
+post_hook ['GRANT SELECT ON @@CTX:target.qualified TO analyst_role'],
+```
+
+**In TOML/YAML config and inline source expressions** (`${CTX:...}` syntax):
+
+```toml
+[environments.prod]
+schema = "${CTX:target.schema}"
+```
+
+Available context variables:
+
+| Variable | Value |
 |----------|-------|
-| `${CTX:target.qualified}` | Fully qualified target relation name |
-| `${CTX:target.schema}` | Target schema |
-| `${CTX:target.name}` | Target relation name |
-| `${CTX:model_name}` | Model name |
-| `${CTX:environment}` | Current environment name |
-| `${CTX:run_id}` | Current run ID |
+| `target.qualified` | Fully qualified target relation name |
+| `target.schema` | Target schema |
+| `target.name` | Target relation name |
+| `model_name` | Model name |
+| `environment` | Current environment name |
+| `run_id` | Current run ID |
 
-Context templates are resolved during config compilation, after macro expansion. Macros can emit `${CTX:...}` references in hook strings that will be resolved at that stage.
+**In macros**, the `MacroContext` object is passed as the first argument when a macro function accepts a `ctx` parameter:
+
+```python
+def timestamp_trunc(ctx, grain: str, expr: str) -> str:
+    if ctx.adapter_name == "bigquery":
+        return f"TIMESTAMP_TRUNC({expr}, {grain.upper()})"
+    return f"DATE_TRUNC('{grain}', {expr})"
+```
+
+The macro context provides `adapter_name`, `sqlglot_enabled`, `environment_name`, and `vars`.
 
 ## Discovery rules
 
