@@ -1,0 +1,132 @@
+---
+title: "Interpolation"
+description: "How SQLBuild processes variables, context, and dynamic content in SQL and config."
+---
+
+SQLBuild uses two syntax layers for dynamic content:
+
+- **`@` syntax** is for SQL - macros, variables, and context in authored SQL text (model queries, hooks, tests, audits)
+- **`${...}` syntax** is for config - context templates in TOML/YAML config values and inline source expressions
+
+These are separate layers resolved at different compilation stages. They never mix: `@` syntax does not appear in config files, and `${...}` syntax does not appear in SQL.
+
+## Syntax reference
+
+| Syntax | Where | Resolved |
+|--------|-------|----------|
+| `@macro(args)` | Model SQL, hooks, tests, audits | Compile time - expands to macro return value |
+| `@@name` | Model SQL, hooks, tests, audits | Compile time - project variable substitution |
+| `@@ENV:NAME` | Model SQL, hooks, tests, audits | Compile time - environment variable |
+| `@@CTX:name` | Hooks only | Compile time - target relation, environment, run ID |
+| `@@@name` | Model SQL | Preserved for runtime (custom materializations) |
+| `@name` / `@'name'` | Generic audit SQL only | Audit engine parameter |
+| `${CTX:...}` | TOML/YAML config, inline source expressions | Config compilation |
+| `${ENV:...}` | TOML/YAML config | Config compilation |
+
+`@@CTX:` is intentionally hook-only. Model SQL describes a relation's data and should not reference its own target identity. Hooks are the operational SQL layer where target context is useful - grants, logging, post-materialization DDL.
+
+## Project variables
+
+Project variables use `@@name` syntax in SQL and are defined in `sqlbuild_project.toml` or per-environment:
+
+```toml
+# sqlbuild_project.toml
+[vars]
+schema_prefix = "analytics"
+
+[environments.prod.vars]
+schema_prefix = "prod_analytics"
+```
+
+```sql
+SELECT * FROM @@schema_prefix.customers
+```
+
+Variables can also be set in `sqlbuild_local.toml` for developer-specific overrides.
+
+## Environment variables
+
+Environment variables use `@@ENV:NAME` syntax to inject values from the shell environment:
+
+```sql
+SELECT *
+FROM @@schema_prefix.customers
+WHERE source_system = '@@ENV:SOURCE_SYSTEM'
+```
+
+If the environment variable is not set, SQLBuild raises a compile error.
+
+## Context variables
+
+Context variables provide access to the current model's target relation, environment, and run metadata.
+
+**In hooks** (`@@CTX:` syntax):
+
+```sql
+post_hook ['GRANT SELECT ON @@CTX:target.qualified TO analyst_role'],
+```
+
+**In TOML/YAML config and inline source expressions** (`${CTX:...}` syntax):
+
+```toml
+[environments.prod]
+schema = "${CTX:target.schema}"
+```
+
+Available context variables:
+
+| Variable | Value |
+|----------|-------|
+| `target.qualified` | Fully qualified target relation name |
+| `target.schema` | Target schema |
+| `target.name` | Target relation name |
+| `model_name` | Model name |
+| `environment` | Current environment name |
+| `run_id` | Current run ID |
+
+**In macros**, the `MacroContext` object is passed as the first argument when a macro function accepts a `ctx` parameter:
+
+```python
+def timestamp_trunc(ctx, grain: str, expr: str) -> str:
+    if ctx.adapter_name == "bigquery":
+        return f"TIMESTAMP_TRUNC({expr}, {grain.upper()})"
+    return f"DATE_TRUNC('{grain}', {expr})"
+```
+
+The macro context provides `adapter_name`, `sqlglot_enabled`, `environment_name`, and `vars`.
+
+## Deferred placeholders
+
+Custom materializations can define runtime placeholders using `@@@name` syntax. These are preserved through compilation and resolved by the materialization at execution time:
+
+```sql
+WHERE CAST(ordered_at AS DATE) >= CAST(@@@partition_start AS DATE)
+  AND CAST(ordered_at AS DATE) < CAST(@@@partition_end AS DATE)
+```
+
+## Audit parameters
+
+Generic audit SQL uses `@name` (single `@`, no parentheses) for audit-engine placeholders. These are resolved by the audit engine, not the compiler:
+
+```sql
+SELECT @column
+FROM @relation
+WHERE @column IS NULL
+```
+
+This is distinct from `@@name` (project variables) and `@macro()` (macro calls), so there is no ambiguity. See [Audits](/concepts/audits) for details on generic audit parameters.
+
+## Compilation order
+
+SQLBuild processes authored SQL in this order:
+
+1. **Config templates** (`${CTX:...}`, `${ENV:...}`) in TOML/YAML config and inline source expressions are resolved during config compilation
+2. **Project variables** (`@@name`), **environment variables** (`@@ENV:NAME`), and **context variables** (`@@CTX:name` in hooks) are substituted
+3. **Macro calls** (`@name(args)`) are expanded
+4. **SQLGlot validation** runs against the fully expanded SQL
+
+This means:
+- Config templates resolve first, before any SQL processing
+- Macros see already-substituted variable values in the SQL
+- `@@CTX:target.qualified` in hooks sees the final environment-overridden target name because hooks are expanded after target naming is fully resolved
+- SQLGlot validates the final expanded SQL, catching syntax errors from both vars and macros
