@@ -116,6 +116,12 @@ The macro context provides:
 | `environment_name` | The active environment name, if any |
 | `vars` | Effective project variables as a dict (merged from project config, environment, local config, and CLI `--vars`) |
 
+```python
+def schema_qualified(ctx, table: str) -> str:
+    schema = ctx.vars.get("schema_prefix", "public")
+    return f"{schema}.{table}"
+```
+
 ## Macro arguments
 
 Macro arguments use Python literal syntax. Supported types:
