@@ -42,7 +42,13 @@ schema_prefix = "prod_analytics"
 SELECT * FROM @@schema_prefix.customers
 ```
 
-Variables can also be set in `sqlbuild_local.toml` for developer-specific overrides.
+Variables can also be set in `sqlbuild_local.toml` for developer-specific overrides, or passed via the CLI using `--vars` with a JSON string:
+
+```bash
+sqb build --vars '{"schema_prefix": "staging_analytics"}'
+```
+
+CLI vars take precedence over local and project config vars.
 
 ## Environment variables
 
