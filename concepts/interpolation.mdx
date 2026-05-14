@@ -42,13 +42,32 @@ schema_prefix = "prod_analytics"
 SELECT * FROM @@schema_prefix.customers
 ```
 
-Variables can also be set in `sqlbuild_local.toml` for developer-specific overrides, or passed via the CLI using `--vars` with a JSON string:
+Variables can also be set in `sqlbuild_local.toml` for developer-specific overrides, or passed via the CLI using `--vars` with a JSON object:
 
 ```bash
 sqb build --vars '{"schema_prefix": "staging_analytics"}'
 ```
 
 CLI vars take precedence over local and project config vars.
+
+### JSON vars and nested values
+
+`--vars` accepts full JSON objects. Values can be strings, numbers, booleans, null, arrays, or nested objects:
+
+```bash
+sqb build --vars '{"schema_prefix": "staging", "grants": {"primary_role": "analyst"}, "enabled": true}'
+```
+
+In SQL interpolation (`@@name`), only top-level scalar values can be used directly. `null` renders as an empty string. If a variable resolves to an array or object, SQLBuild raises a clear error suggesting you use a macro instead.
+
+For nested or complex values, use `ctx.vars` in a macro:
+
+```python
+def grant_role(ctx):
+    return ctx.vars["grants"]["primary_role"]
+```
+
+The macro context receives the full native JSON structure including nested dicts, lists, booleans, numbers, and `None`.
 
 ## Environment variables
 
