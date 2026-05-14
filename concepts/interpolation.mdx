@@ -5,23 +5,23 @@ description: "How SQLBuild processes variables, context, and dynamic content in 
 
 SQLBuild uses two syntax layers for dynamic content:
 
-- **`@` syntax** is for SQL - macros, variables, and context in authored SQL text (model queries, hooks, tests, audits)
-- **`${...}` syntax** is for config - context templates in TOML/YAML config values and inline source expressions
+- **`@` syntax** is for any executable SQL - model queries, hooks, tests, audits, and inline source expressions
+- **`${...}` syntax** is for config values - TOML/YAML project config, MODEL() header fields (excluding hooks), and source/seed YAML declarations
 
-These are separate layers resolved at different compilation stages. They never mix: `@` syntax does not appear in config files, and `${...}` syntax does not appear in SQL.
+The rule is simple: if it's any SQL that will be executed, it uses `@`. If it's a config value, it uses `${...}`. These layers never mix.
 
 ## Syntax reference
 
 | Syntax | Where | Resolved |
 |--------|-------|----------|
-| `@macro(args)` | Model SQL, hooks, tests, audits | Compile time - expands to macro return value |
-| `@@name` | Model SQL, hooks, tests, audits | Compile time - project variable substitution |
-| `@@ENV:NAME` | Model SQL, hooks, tests, audits | Compile time - environment variable |
+| `@macro(args)` | Model SQL, hooks, tests, audits, inline source expressions | Compile time - expands to macro return value |
+| `@@name` | Model SQL, hooks, tests, audits, inline source expressions | Compile time - project variable substitution |
+| `@@ENV:NAME` | Model SQL, hooks, tests, audits, inline source expressions | Compile time - environment variable |
 | `@@CTX:name` | Hooks only | Compile time - target relation, environment, run ID |
 | `@@@name` | Model SQL | Preserved for runtime (custom materializations) |
 | `@name` / `@'name'` | Generic audit SQL only | Audit engine parameter |
-| `${CTX:...}` | TOML/YAML config, inline source expressions | Config compilation |
-| `${ENV:...}` | TOML/YAML config | Config compilation |
+| `${CTX:...}` | TOML/YAML config values | Config compilation |
+| `${ENV:...}` | TOML/YAML config values | Config compilation |
 
 `@@CTX:` is intentionally hook-only. Model SQL describes a relation's data and should not reference its own target identity. Hooks are the operational SQL layer where target context is useful - grants, logging, post-materialization DDL.
 
@@ -66,7 +66,7 @@ Context variables provide access to the current model's target relation, environ
 post_hook ['GRANT SELECT ON @@CTX:target.qualified TO analyst_role'],
 ```
 
-**In TOML/YAML config and inline source expressions** (`${CTX:...}` syntax):
+**In TOML/YAML config values** (`${CTX:...}` syntax):
 
 ```toml
 [environments.prod]
@@ -120,7 +120,7 @@ This is distinct from `@@name` (project variables) and `@macro()` (macro calls),
 
 SQLBuild processes authored SQL in this order:
 
-1. **Config templates** (`${CTX:...}`, `${ENV:...}`) in TOML/YAML config and inline source expressions are resolved during config compilation
+1. **Config templates** (`${CTX:...}`, `${ENV:...}`) in TOML/YAML config values are resolved during config compilation
 2. **Project variables** (`@@name`), **environment variables** (`@@ENV:NAME`), and **context variables** (`@@CTX:name` in hooks) are substituted
 3. **Macro calls** (`@name(args)`) are expanded
 4. **SQLGlot validation** runs against the fully expanded SQL
