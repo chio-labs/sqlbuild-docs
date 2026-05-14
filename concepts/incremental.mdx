@@ -195,6 +195,8 @@ Controls what happens when the model SQL changes between runs. SQLBuild detects 
 | `bounded-14d` | Rebuild the last 14 days of data |
 | *(omitted)* | Warn only; no automatic rebuild |
 
+The bounded duration supports `d` (days), `h` (hours), `m` (minutes), and `s` (seconds). For example: `bounded-7d`, `bounded-24h`, `bounded-30m`.
+
 ```sql
 MODEL (
   ...
@@ -229,6 +231,6 @@ Controls how schema differences are handled at execution time:
 
 ## Cascade behavior
 
-When an upstream model has a non-warn backfill policy and its query or schema changes, the backfill signal cascades to downstream incremental models. The plan shows these as `Upstream changed` with the root cause and effective rebuild window.
+When an upstream model has a backfill policy and its query or schema changes, the backfill signal cascades to all downstream incremental models. The plan shows these as `Upstream changed` with the root cause and effective rebuild window.
 
-This means a query change in an upstream model can automatically trigger bounded or full rebuilds in downstream models, with per-model control over the rebuild window. You configure the policy on each model individually -- there's no global cascade setting.
+Downstream models can override the cascaded behavior by setting their own `query_change_backfill` or `schema_change_backfill` policies. If a downstream model has its own policy, that takes precedence over the cascaded signal. If it has no policy, it inherits the upstream's rebuild scope.
