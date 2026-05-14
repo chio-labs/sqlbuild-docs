@@ -114,7 +114,7 @@ The macro context provides:
 | `adapter_name` | The active adapter (e.g. `duckdb`, `snowflake`) |
 | `sqlglot_enabled` | Whether SQLGlot analysis is enabled |
 | `environment_name` | The active environment name, if any |
-| `vars` | Project variables as a dict |
+| `vars` | Effective project variables as a dict (merged from project config, environment, local config, and CLI `--vars`) |
 
 ## Macro arguments
 
