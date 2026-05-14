@@ -69,6 +69,7 @@
           "cli/query",
           "cli/scenario",
           "cli/dbt",
+          "cli/skills",
           "cli/clean",
           "cli/init",
           "cli/playground"
