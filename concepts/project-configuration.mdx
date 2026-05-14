@@ -290,6 +290,21 @@ target = "dev"
 
 Paths can be absolute or relative to the SQLBuild project root. See [dbt Interop](/concepts/dbt-interop) for setup and usage details.
 
+## Skills
+
+Configuration for AI agent skill file installation:
+
+```toml
+[skills]
+targets = ["opencode", "claude"]
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `targets` | all targets | Which agent targets to install skill files for: `opencode`, `claude`, `agents` |
+
+See [skills CLI reference](/cli/skills) for usage details.
+
 ## sqlbuild_local.toml
 
 Local developer overrides. This file should be gitignored.
