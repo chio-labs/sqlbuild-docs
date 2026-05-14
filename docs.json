@@ -39,6 +39,7 @@
           "concepts/sources",
           "concepts/seeds",
           "concepts/models",
+          "concepts/interpolation",
           "concepts/macros",
           "concepts/functions",
           "concepts/incremental",
