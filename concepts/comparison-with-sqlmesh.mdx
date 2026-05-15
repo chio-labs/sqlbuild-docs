@@ -1,0 +1,64 @@
+---
+title: "Feature Comparison"
+description: "Feature comparison between SQLBuild, dbt, and SQLMesh."
+---
+
+SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common ground but differ in design philosophy and feature focus.
+
+## Feature comparison
+
+| Feature | SQLBuild | dbt | SQLMesh |
+|---------|----------|-----|---------|
+| **Testing** | | | |
+| Unit tests with model chaining | Chain across multiple models | YAML-stub, single model | CTE-based, single model |
+| E2E scenario tests | Fixture worlds with real graph execution | No | No |
+| Local E2E replay | Capture from warehouse, replay in DuckDB | No | No |
+| Macro / UDF / table function tests | `TEST(mode: macro/udf/table_fn)` | No | No |
+| Zero-row assertions | `__assert__` CTEs in tests and scenarios | No | No |
+| **Audits** | | | |
+| Built-in audits | not_null, unique, accepted_values, relationships | not_null, unique, accepted_values, relationships | Extensive (statistical, string pattern, etc.) |
+| Blocking audits | Block promotion from staging table | Tests run after materialization | Block during plan (production untouched); during run, data already written |
+| Delta/interval-scoped audits | Per-microbatch audit cycle before DML | No | Audit query filtered to processed intervals for time-range models |
+| **Compilation** | | | |
+| SQL validation | SQLGlot-based, offline | dbt Fusion (proprietary license) | SQLGlot-based |
+| Column-level lineage | Compile-time, fast and rich modes | Post-hoc via docs | Compile-time |
+| Column contract validation | Infer columns, check types offline | YAML schema contracts at runtime | Schema contracts via plan |
+| SQL transpilation | For local E2E replay into DuckDB | No | For cross-dialect model execution |
+| Python macros | `@macro()` syntax | No (Jinja only) | SQLMesh macro syntax |
+| Jinja support | No (Python macros instead) | Yes (core templating) | Yes |
+| **Incremental** | | | |
+| Incremental strategies | append, delete_insert, merge | append, delete+insert, merge | time-range, unique-key, partition, SCD Type 2, append |
+| Microbatch execution | Configurable batch sizes with per-batch audits | Microbatch (recent addition) | Batch size support |
+| Stateful interval tracking | No - cursor-based (no external state) | No | Yes - tracks which intervals ran |
+| SCD Type 2 models | Coming soon | Snapshots (limited) | Built-in |
+| **Environments** | | | |
+| Virtual environments | No | No | Pointer swaps, no compute cost |
+| Environment diffs | Full row-level data comparison | No | Table diff |
+| Zero-copy cloning | `sqb clone` | No | No |
+| **Models** | | | |
+| SQL models | `MODEL()` header with inline config | Jinja-templated SQL + YAML sidecar | `MODEL` DDL |
+| Python models | Coming soon | Limited (remote only) | Pandas, PySpark, Snowpark, BigFrames |
+| Custom materializations | Python with full framework hooks | Jinja-based | Python-based custom model kinds |
+| **dbt** | | | |
+| dbt interop | Run alongside dbt - reads manifest, no migration | N/A | Jinja compatibility layer plus own macro system |
+| **Other** | | | |
+| Reference syntax | `__ref()` - parses as valid SQL | `{{ ref() }}` - Jinja template | `model_name` with dependency tracking |
+| Adapters | DuckDB, Snowflake, BigQuery, Databricks | 30+ (community adapters) | DuckDB, Snowflake, BigQuery, Databricks, Spark, Redshift, Postgres, Trino, MySQL |
+| State requirements | Stateless by default | manifest.json + target/ | Requires state store (local database or PostgreSQL for production) |
+| Playground | `sqb playground` | Clone example repo | Example project |
+| AI agent skills | `sqb skills update` | No | No |
+
+## Where each tool fits
+
+| Tool | Best for |
+|------|----------|
+| **SQLBuild** | Test-first SQL pipelines. Chained unit tests, local E2E scenario replay in DuckDB, pre-promotion audit gating, offline compile-time validation, and stateless operation. |
+| **dbt** | The most widely adopted SQL transformation framework with the largest adapter and community ecosystem. |
+| **SQLMesh** | State-managed pipelines with virtual environments, interval tracking, and cross-dialect transpilation. |
+
+## Not yet in SQLBuild
+
+- **SCD Type 2 models** - slowly changing dimension support (in active development)
+- **Python models** - Pandas, PySpark, Snowpark, BigFrames (in active development)
+- **First-party partition state tracking** - opt-in stateful partition tracking (currently possible via custom materializations, first-party support coming soon)
+- **Broader adapter support** - PostgreSQL, ClickHouse, and Microsoft SQL Server are coming soon
