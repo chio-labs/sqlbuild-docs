@@ -19,7 +19,8 @@
         "pages": [
           "index",
           "quickstart",
-          "concepts/dbt-interop"
+          "concepts/dbt-interop",
+          "concepts/comparison-with-sqlmesh"
         ]
       },
       {
