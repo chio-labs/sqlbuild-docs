@@ -228,9 +228,10 @@ waffle-shop/
       expression_is_true.sql    # custom generic audit
   tests/
     unit/
-      test_stg_orders.sql         # SQL unit test
-      test_fact_orders.sql        # multi-model unit test
-      test_daily_revenue_chain.sql # chain test across multiple models
+      test_stg_orders.sql              # model unit test
+      test_fact_orders.sql             # multi-model unit test
+      test_daily_revenue_chain.sql     # chain test across multiple models
+      test_line_total_cents_macro.sql  # macro test
     scenarios/
       daily_revenue_minimal.sql   # E2E scenario test
       daily_revenue_multi_order.sql # E2E scenario test
