@@ -246,6 +246,97 @@ Assertions can be mixed with `__expected__` CTEs in the same test, or used on th
 
 During `sqb test` and `sqb build`, assertion results appear as nested check rows alongside expected comparisons.
 
+## Test modes
+
+By default, `TEST()` runs in model mode - mocking sources/refs and comparing model outputs. Three additional modes let you test reusable logic directly without needing a model chain.
+
+### Macro tests
+
+Test macro output by calling the macro in `__macro_actual__` and comparing against `__macro_expected__`:
+
+```sql
+TEST (mode: macro, name: "calculates line total cents");
+
+WITH
+input_values AS (
+  SELECT 950 AS price_cents, 3 AS quantity
+),
+__macro_actual__ AS (
+  SELECT @line_total_cents("price_cents", "quantity") AS line_total_cents
+  FROM input_values
+),
+__macro_expected__ AS (
+  SELECT 2850 AS line_total_cents
+)
+SELECT 1
+```
+
+Macros are compile-time code, so macro tests expand the macro at compile time and compare the results. During `sqb build`, macro tests run before any model that uses the tested macro.
+
+### UDF tests
+
+Test scalar UDFs by calling them in `__udf_actual__` and comparing against `__udf_expected__`:
+
+```sql
+TEST (mode: udf, name: "detects completed orders");
+
+WITH
+input_values AS (
+  SELECT 'completed' AS order_status
+  UNION ALL
+  SELECT 'pending' AS order_status
+),
+__udf_actual__ AS (
+  SELECT
+    order_status,
+    __udf("is_completed_order")(order_status) AS is_completed_order
+  FROM input_values
+),
+__udf_expected__ AS (
+  SELECT 'completed' AS order_status, TRUE AS is_completed_order
+  UNION ALL
+  SELECT 'pending' AS order_status, FALSE AS is_completed_order
+)
+SELECT 1
+```
+
+UDFs are warehouse objects, so the function is created before the test runs. During `sqb build`, UDF tests run after the function is created but before any model that uses it.
+
+### Table function tests
+
+Test table functions by calling them in `__table_fn_actual__` and comparing against `__table_fn_expected__`:
+
+```sql
+TEST (mode: table_fn, name: "returns customer orders");
+
+WITH
+__table_fn_actual__ AS (
+  SELECT order_id, order_status, is_completed_order
+  FROM __table_fn("customer_orders")(1)
+),
+__table_fn_expected__ AS (
+  SELECT 1 AS order_id, 'completed' AS order_status, TRUE AS is_completed_order
+  UNION ALL
+  SELECT 2 AS order_id, 'completed' AS order_status, TRUE AS is_completed_order
+)
+SELECT 1
+```
+
+Table function tests run after the function is created. Since table functions are terminal (models cannot depend on them), these tests validate the function independently.
+
+### Mode rules
+
+Each mode has strict CTE validation:
+
+| Mode | Actual CTE | Expected CTE | Allowed |
+|------|-----------|--------------|---------|
+| `model` (default) | existing model-chain syntax | `__expected__<model>` | `__source__`, `__ref__`, `__seed__`, `__assert__`, `__macro__` |
+| `macro` | `__macro_actual__` | `__macro_expected__` | Helper CTEs, `@macro()` calls in actual |
+| `udf` | `__udf_actual__` | `__udf_expected__` | Helper CTEs, `__udf()` calls in actual |
+| `table_fn` | `__table_fn_actual__` | `__table_fn_expected__` | Helper CTEs, `__table_fn()` calls in actual |
+
+CTE prefixes from other modes are not allowed. For example, `__source__` in a macro test or `__macro_actual__` in a model test will produce a clear error pointing you to the right mode. Expected CTEs must not call macros, UDFs, or table functions - they should be independent, inspectable expected data.
+
 ## Multiple tests per file
 
 A single test file can contain multiple `TEST()` blocks. Each block must have a unique `name`:
@@ -283,9 +374,12 @@ Place unit test files under `tests/unit/` in your project directory. SQLBuild di
 ```
 tests/
   unit/
-    test_stg_orders.sql
-    test_fact_orders.sql
-    test_daily_revenue_chain.sql
+    test_stg_orders.sql              # model test
+    test_fact_orders.sql              # model test with assertion
+    test_daily_revenue_chain.sql      # chain test across multiple models
+    test_line_total_cents_macro.sql   # macro test
+    test_is_completed_order_udf.sql   # UDF test
+    test_customer_orders_table_fn.sql # table function test
   scenarios/
     ...
 ```
