@@ -6,7 +6,7 @@ description: "How SQLBuild processes variables, context, and dynamic content in 
 SQLBuild uses two syntax layers for dynamic content:
 
 - **`@` syntax** is for any executable SQL - model queries, hooks, tests, audits, and inline source expressions
-- **`${...}` syntax** is for config values - TOML/YAML project config, MODEL() header fields (excluding hooks), and source/seed YAML declarations
+- **`${...}` syntax** is for config values - project TOML config, MODEL() header fields (excluding hooks), and source/seed YAML declarations
 
 The rule is simple: if it's any SQL that will be executed, it uses `@`. If it's a config value, it uses `${...}`. These layers never mix.
 
