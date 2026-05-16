@@ -16,7 +16,7 @@ A test file defines mock inputs and expected outputs using CTEs. SQLBuild substi
 TEST();
 
 WITH
-__source__raw_orders AS (
+__source__raw__orders AS (
   SELECT
     1 AS id,
     100 AS customer_id,
@@ -38,7 +38,7 @@ SELECT 1
 ```
 
 The test:
-1. Mocks the `raw_orders` source with the `__source__raw_orders` CTE
+1. Mocks the `raw__orders` source with the `__source__raw__orders` CTE
 2. Runs the real `stg_orders` model SQL with the mock substituted in
 3. Compares the output against `__expected__stg_orders`
 4. Passes if row counts match and there are zero mismatched rows
@@ -68,11 +68,11 @@ Tests can span multiple models in a single file. Mock your sources, define an ex
 TEST();
 
 WITH
-__source__raw_orders AS (
+__source__raw__orders AS (
   SELECT 1 AS id, 100 AS customer_id, 2 AS waffle_type_id, 3 AS quantity,
          '2026-04-01 10:00:00' AS ordered_at, 'completed' AS status
 ),
-__source__raw_payments AS (
+__source__raw__payments AS (
   SELECT 1 AS payment_id, 1 AS order_id, 1500 AS amount_cents,
          'credit_card' AS method, '2026-04-01 10:01:00' AS paid_at, 'success' AS status
 ),
@@ -130,7 +130,6 @@ __expected__fact_orders AS (
     CAST('2026-04-01 10:00:00' AS TIMESTAMP) AS ordered_at,
     'completed' AS order_status,
     TRUE AS is_completed_order,
-    TRUE AS is_completed_order_py,
     'card' AS payment_method,
     'success' AS payment_status,
     2850 AS payment_amount_cents
@@ -148,15 +147,15 @@ A single test can assert on multiple models. SQLBuild resolves and compares each
 TEST();
 
 WITH
-__source__raw_orders AS (
+__source__raw__orders AS (
   SELECT 1 AS id, 100 AS customer_id, 2 AS waffle_type_id, 3 AS quantity,
          '2026-04-01 10:00:00' AS ordered_at, 'completed' AS status
 ),
-__source__raw_payments AS (
+__source__raw__payments AS (
   SELECT 1 AS payment_id, 1 AS order_id, 1500 AS amount_cents,
          'credit_card' AS method, '2026-04-01 10:01:00' AS paid_at, 'success' AS status
 ),
-__source__raw_customers AS (
+__source__raw__customers AS (
   SELECT 100 AS id, 'Leslie' AS first_name, 'Knope' AS last_name,
          'leslie@pawnee.gov' AS email, '2026-01-15 09:00:00' AS created_at
 ),
@@ -180,10 +179,10 @@ Because unit tests are written in SQL, they support macro calls. This lets you w
 TEST();
 
 WITH
-__source__raw_orders AS (
+__source__raw__orders AS (
   @mock_orders()
 ),
-__source__raw_payments AS (
+__source__raw__payments AS (
   SELECT 1 AS payment_id, 1 AS order_id, 1500 AS amount_cents, 'credit_card' AS method
 ),
 __expected__fact_orders AS (
@@ -206,7 +205,7 @@ WITH
 __macro__country_filter AS (
   SELECT 'country_code = ''US'''
 ),
-__source__raw_orders AS (
+__source__raw__orders AS (
   SELECT 1 AS id, 100 AS customer_id, 'US' AS country_code, 'completed' AS status
 ),
 __expected__stg_orders AS (
@@ -289,7 +288,7 @@ input_values AS (
 __udf_actual__ AS (
   SELECT
     order_status,
-    __udf("is_completed_order")(order_status) AS is_completed_order
+    __udf("udf__is_completed_order")(order_status) AS is_completed_order
   FROM input_values
 ),
 __udf_expected__ AS (
@@ -312,7 +311,7 @@ TEST (mode: table_fn, name: "returns customer orders");
 WITH
 __table_fn_actual__ AS (
   SELECT order_id, order_status, is_completed_order
-  FROM __table_fn("customer_orders")(1)
+  FROM __table_fn("table_fn__customer_orders")(1)
 ),
 __table_fn_expected__ AS (
   SELECT 1 AS order_id, 'completed' AS order_status, TRUE AS is_completed_order
@@ -345,7 +344,7 @@ A single test file can contain multiple `TEST()` blocks. Each block must have a 
 TEST (name: "completed orders only");
 
 WITH
-__source__raw_orders AS (
+__source__raw__orders AS (
   SELECT 1 AS id, 100 AS customer_id, 'completed' AS status
 ),
 __expected__stg_orders AS (
@@ -356,7 +355,7 @@ SELECT 1
 TEST (name: "cancelled orders excluded");
 
 WITH
-__source__raw_orders AS (
+__source__raw__orders AS (
   SELECT 1 AS id, 100 AS customer_id, 'cancelled' AS status
 ),
 __expected__stg_orders AS (

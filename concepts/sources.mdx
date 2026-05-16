@@ -25,12 +25,12 @@ Define source data inline as a SQL expression. No external tables or setup scrip
 
 ```yaml
 sources:
-  - name: raw_customers
+  - name: raw__customers
     expression: |
       SELECT * FROM (VALUES
         (1, 'Leslie', 'Knope', 'leslie@pawnee.gov', TIMESTAMP '2026-01-15 09:00:00'),
         (2, 'Ron', 'Swanson', 'ron@pawnee.gov', TIMESTAMP '2026-02-01 08:00:00')
-      ) AS raw_customers(id, first_name, last_name, email, created_at)
+      ) AS raw__customers(id, first_name, last_name, email, created_at)
 ```
 
 Expression sources are resolved at compile time. They're the escape hatch for anything the framework doesn't natively model: external tables, warehouse-specific syntax, function calls, or any other relation type that doesn't fit a standard table reference.
@@ -61,7 +61,7 @@ Type enforcement is implicit for sources, the same as for models. If any column 
 
 ```yaml
 sources:
-  - name: raw_customers
+  - name: raw__customers
     expression: |
       SELECT 1 AS id, 'Leslie' AS first_name, 'Knope' AS last_name
     columns:

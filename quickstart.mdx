@@ -171,9 +171,9 @@ sqb compile
 ### Model DAG
 
 ```
-raw_customers ──> stg_customers ──> dim_customers
-raw_orders ────> stg_orders ────> fact_orders ──> customer_status_snapshot
-raw_payments ──> stg_payments ──>  │              order_status_index
+raw__customers ──> stg_customers ──> dim_customers
+raw__orders ────> stg_orders ────> fact_orders ──> customer_status_snapshot
+raw__payments ──> stg_payments ──>  │              order_status_index
                                    │              hourly_order_activity ──> daily_activity_rollup
                                    │                                       hourly_activity_with_daily_context
                                    └──> daily_revenue
@@ -205,8 +205,8 @@ waffle-shop/
     lookups.yml                 # seed declarations
   functions/
     sql/
-      is_completed_order.sql    # scalar SQL UDF
-      customer_orders.sql       # table function
+      udf__is_completed_order.sql    # scalar SQL UDF
+      table_fn__customer_orders.sql  # table function
   models/
     staging/
       stg_customers.sql         # view (audits declared in MODEL() header)

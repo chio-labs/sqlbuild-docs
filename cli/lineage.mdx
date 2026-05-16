@@ -48,12 +48,11 @@ sqb --project-dir examples/waffle_shop lineage fact_orders --direction both
 Lineage  model  fact_orders  models/marts/fact_orders.sql  both
 upstream
 ├── model  stg_orders  models/staging/stg_orders.sql
-│   └── source  raw_orders  sources/raw.yml
+│   └── source  raw__orders  sources/raw.yml
 ├── model  stg_payments  models/staging/stg_payments.sql
-│   └── source  raw_payments  sources/raw.yml
+│   └── source  raw__payments  sources/raw.yml
 ├── seed  waffle_types  seeds/waffle_types.csv
-├── function  is_completed_order  functions/sql/is_completed_order.sql
-└── function  is_completed_order_py  functions/python/is_completed_order_py.py
+└── function  udf__is_completed_order  functions/sql/udf__is_completed_order.sql
 downstream
 ├── model  customer_status_snapshot  models/intermediate/customer_status_snapshot.sql
 ├── model  hourly_order_activity  models/marts/hourly_order_activity.sql
@@ -75,8 +74,8 @@ sqb --project-dir examples/waffle_shop lineage fact_orders --format list
 ```
 
 ```
-source:raw_orders    -> model:stg_orders
-source:raw_payments  -> model:stg_payments
+source:raw__orders    -> model:stg_orders
+source:raw__payments  -> model:stg_payments
 model:stg_orders     -> model:fact_orders
 model:stg_payments   -> model:fact_orders
 seed:waffle_types    -> model:fact_orders
@@ -101,14 +100,14 @@ sqb --project-dir examples/waffle_shop lineage fact_orders --format json
       "qualified_name": "dev.fact_orders"
     },
     {
-      "id": "source:raw_orders",
-      "name": "raw_orders",
+      "id": "source:raw__orders",
+      "name": "raw__orders",
       "resource_type": "source",
       "relative_path": "sources/raw.yml"
     }
   ],
   "edges": [
-    {"from": "source:raw_orders", "to": "model:stg_orders"},
+    {"from": "source:raw__orders", "to": "model:stg_orders"},
     {"from": "model:stg_orders", "to": "model:fact_orders"}
   ],
   "focus": ["model:fact_orders"],
@@ -140,7 +139,7 @@ sqb --project-dir examples/waffle_shop lineage fact_orders.total_cents
 Column trace  fact_orders.total_cents  upstream
 
   <- stg_payments.amount_cents (expression)
-       <- raw_payments.amount_cents (direct)
+       <- raw__payments.amount_cents (direct)
 ```
 
 ### List
@@ -153,7 +152,7 @@ sqb lineage fact_orders.total_cents --format list
 Column dependencies
 
 stg_payments.amount_cents -> fact_orders.total_cents  expression
-raw_payments.amount_cents -> stg_payments.amount_cents  direct
+raw__payments.amount_cents -> stg_payments.amount_cents  direct
 ```
 
 ### JSON
