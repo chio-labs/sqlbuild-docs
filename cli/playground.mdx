@@ -51,8 +51,8 @@ sqb build
 # With Dagster integration
 sqb playground dagster my-dagster-project
 cd my-dagster-project
-uv add 'sqlbuild[dagster]'
-DAGSTER_IS_DEV_CLI=1 uv run dagster dev -f dagster/definitions.py
+uv pip install 'sqlbuild[dagster]'
+DAGSTER_IS_DEV_CLI=1 dagster dev -f dagster/definitions.py
 ```
 
 ## Notes
