@@ -86,6 +86,29 @@ FROM __ref("fact_orders") o
 GROUP BY DATE_TRUNC('hour', o.ordered_at)
 ```
 
+### snapshot
+
+Maintains historical row versions with SCD Type 2 semantics. Supports timestamp-based and value-check-based change detection, historical source inputs, hard delete invalidation, and configurable full-refresh safety policies.
+
+```sql
+MODEL (
+  materialized snapshot,
+  unique_key [customer_id],
+  snapshot_strategy timestamp,
+  updated_at updated_at,
+);
+
+SELECT
+  customer_id,
+  name,
+  plan,
+  status,
+  updated_at
+FROM __source("customers")
+```
+
+See [Snapshots](/concepts/snapshots) for full configuration, historical input modes, and querying patterns.
+
 ### custom
 
 User-defined Python materialization function. Custom materializations get full access to the framework including adapter, schema change signals, query change detection, and audit hooks.

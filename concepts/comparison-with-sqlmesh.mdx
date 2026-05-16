@@ -30,7 +30,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | Incremental strategies | append, delete_insert, merge | append, delete+insert, merge | time-range, unique-key, partition, SCD Type 2, append |
 | Microbatch execution | Configurable batch sizes with per-batch audits | Microbatch (recent addition) | Batch size support |
 | Stateful interval tracking | No - cursor-based (no external state) | No | Yes - tracks which intervals ran |
-| SCD Type 2 models | Coming soon | Snapshots (limited) | Built-in |
+| SCD Type 2 models | Timestamp and check strategies, historical input, hard deletes | Snapshots (limited) | Built-in |
 | **Environments** | | | |
 | Virtual environments | No | No | Pointer swaps, no compute cost |
 | Environment diffs | Full row-level data comparison | No | Table diff |
@@ -58,7 +58,6 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 
 ## Not yet in SQLBuild
 
-- **SCD Type 2 models** - slowly changing dimension support (in active development)
 - **Python models** - Pandas, PySpark, Snowpark, BigFrames (in active development)
 - **First-party partition state tracking** - opt-in stateful partition tracking (currently possible via custom materializations, first-party support coming soon)
 - **Broader adapter support** - PostgreSQL, ClickHouse, and Microsoft SQL Server are coming soon
