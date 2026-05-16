@@ -256,6 +256,44 @@ MODEL (
 
 When enabled, SQLBuild casts columns to declared types and uses them for schema-change detection. There is no need to set `type_enforcement: true` explicitly.
 
+### Contracts
+
+Contracts enforce that a model's output matches its declared column schema exactly - column names, column count, and column types. When `contract enforced` is set, the declared columns become the authoritative output contract.
+
+```sql
+MODEL (
+  materialized table,
+  contract enforced,
+  columns (
+    order_id (type INTEGER, audits [not_null]),
+    customer_id (type INTEGER, audits [not_null]),
+    amount_cents (type INTEGER),
+    status (type VARCHAR),
+  ),
+);
+```
+
+Contract enforcement happens at two levels:
+
+**Compile time** - config fields that reference columns (`unique_key`, `cursor`, `updated_at`, `check_columns`) are validated against the declared column names. If a referenced column is not in the contract, compilation fails.
+
+**Runtime** - after materialization into the staging table, SQLBuild inspects the actual output columns and validates them against the contract before promotion:
+
+- Missing declared columns fail with code `K010`
+- Extra undeclared columns fail with code `K011`
+- Type mismatches (e.g. `VARCHAR` where `INTEGER` was declared) fail with code `K013`
+
+If any validation fails, the production table is untouched. Types are compared using adapter-aware normalization, so equivalent types across dialects are handled correctly.
+
+Contract values:
+
+| Value | Behavior |
+|-------|----------|
+| `enforced` | Declared columns are the complete, authoritative output schema |
+| `none` | No contract enforcement (default) |
+
+Contracts interact with schema change policies. For snapshot models, `snapshot_schema_change append_new_columns` is incompatible with `contract enforced` because appending columns would violate the contract.
+
 ### Audit run scope
 
 Audits on incremental models can specify `run_scope` to control when they execute:
@@ -323,6 +361,7 @@ Hooks also support macro calls and project variable interpolation (`@@name`, `@@
 | `pre_hook` | SQL statements to execute before materialization |
 | `post_hook` | SQL statements to execute after materialization |
 | `enabled` | Set to `false` to skip the model |
+| `contract` | `enforced` or `none`. When enforced, declared columns are the authoritative output schema. |
 
 ### Incremental config
 
