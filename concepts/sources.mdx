@@ -88,5 +88,6 @@ You can explicitly set `type_enforcement: false` on a source to disable casting 
 | `expression` | Inline SQL expression (alternative to table reference) |
 | `description` | Human-readable description |
 | `type_enforcement` | Override implicit type enforcement (`true`/`false`). Defaults to `true` when any column declares a type. |
+| `contract` | `enforced` or `none`. When enforced, downstream models validate configured column references against source columns. |
 | `columns` | Column declarations with optional types and audits |
 | `audits` | Source-level audits |

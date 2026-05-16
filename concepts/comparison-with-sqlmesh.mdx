@@ -22,7 +22,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | **Compilation** | | | |
 | SQL validation | SQLGlot-based, offline | dbt Fusion (proprietary license) | SQLGlot-based |
 | Column-level lineage | Compile-time, fast and rich modes | Post-hoc via docs | Compile-time |
-| Column contract validation | Infer columns, check types offline | YAML schema contracts at runtime | Schema contracts via plan |
+| Column contract validation | Compile-time inference plus runtime enforcement with `contract enforced` | YAML schema contracts at runtime | Schema contracts via plan |
 | SQL transpilation | For local E2E replay into DuckDB | No | For cross-dialect model execution |
 | Python macros | `@macro()` syntax | No (Jinja only) | SQLMesh macro syntax |
 | Jinja support | No (Python macros instead) | Yes (core templating) | Yes |
