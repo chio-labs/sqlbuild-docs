@@ -10,8 +10,8 @@ SQLBuild includes a Dagster integration that maps your project's models, sources
 ```bash
 sqb playground dagster my-dagster-project
 cd my-dagster-project
-uv add 'sqlbuild[dagster]'
-DAGSTER_IS_DEV_CLI=1 uv run dagster dev -f dagster/definitions.py
+uv pip install 'sqlbuild[dagster]'
+DAGSTER_IS_DEV_CLI=1 dagster dev -f dagster/definitions.py
 ```
 
 This creates the waffle shop project with a `dagster/definitions.py` that includes asset definitions, scenario checks, and a configured resource. Open the Dagster UI, materialize the assets, then run the scenario checks.
@@ -19,7 +19,7 @@ This creates the waffle shop project with a `dagster/definitions.py` that includ
 ## Install
 
 ```bash
-uv add 'sqlbuild[dagster]'
+uv pip install 'sqlbuild[dagster]'
 # or
 pip install 'sqlbuild[dagster]'
 ```
