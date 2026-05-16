@@ -5,7 +5,7 @@ description: "Trace individual columns through your SQL pipeline - understand wh
 
 ## Why column lineage matters
 
-**Impact analysis** - Before changing a source column, see exactly which downstream models and columns are affected. A rename or type change in `raw_orders.id` can be traced through every model that consumes it, even indirectly.
+**Impact analysis** - Before changing a source column, see exactly which downstream models and columns are affected. A rename or type change in `raw__orders.id` can be traced through every model that consumes it, even indirectly.
 
 **Debugging data issues** - When a column has unexpected values, trace it upstream to find where the data originates and what transformations it passes through. Instead of reading SQL files and mentally joining dependencies, ask SQLBuild to show the path.
 

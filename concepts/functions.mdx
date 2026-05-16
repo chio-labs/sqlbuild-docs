@@ -14,7 +14,7 @@ Scalar UDFs return a single value per row. They can be written in SQL or Python.
 Place SQL function files under `functions/sql/`. Each file has a `FUNCTION()` header declaring arguments and return type, followed by a SQL expression body:
 
 ```sql
--- functions/sql/is_completed_order.sql
+-- functions/sql/udf__is_completed_order.sql
 FUNCTION (
   arguments (order_status STRING),
   returns BOOLEAN,
@@ -49,8 +49,7 @@ Reference scalar UDFs in models with `__udf("name")`:
 ```sql
 SELECT
   order_id,
-  __udf("is_completed_order")(status) AS is_completed,
-  __udf("is_completed_order_py")(status) AS is_completed_py
+  __udf("udf__is_completed_order")(status) AS is_completed
 FROM __ref("stg_orders")
 ```
 
@@ -61,7 +60,7 @@ The function name is the file stem (filename without extension). `__udf()` resol
 Table functions return multiple rows and columns. They are written in SQL under `functions/sql/` with a `returns table(...)` declaration:
 
 ```sql
--- functions/sql/customer_orders.sql
+-- functions/sql/table_fn__customer_orders.sql
 FUNCTION (
   arguments (p_customer_id INTEGER),
   returns table (
@@ -100,7 +99,7 @@ The semantic reason: table functions are parameterized queries meant to be calle
 Table functions are called directly in SQL contexts that support table-valued functions:
 
 ```sql
-SELECT * FROM customer_orders(42)
+SELECT * FROM table_fn__customer_orders(42)
 ```
 
 ## References inside functions
@@ -125,8 +124,8 @@ Functions participate in fingerprint-based change detection. If a function's SQL
 ```
 functions/
   sql/
-    is_completed_order.sql        # scalar SQL UDF
-    customer_orders.sql           # table function (returns table)
+    udf__is_completed_order.sql        # scalar SQL UDF
+    table_fn__customer_orders.sql     # table function (returns table)
   python/
     is_completed_order_py.py      # scalar Python UDF
 ```
