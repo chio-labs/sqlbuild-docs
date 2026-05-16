@@ -53,6 +53,18 @@
         ]
       },
       {
+        "group": "Integrations",
+        "pages": [
+          {
+            "group": "Dagster",
+            "pages": [
+              "integrations/dagster",
+              "integrations/dagster-reference"
+            ]
+          }
+        ]
+      },
+      {
         "group": "CLI Reference",
         "pages": [
           "cli/compile",
@@ -65,6 +77,7 @@
           "cli/clone",
           "cli/diff",
           "cli/lineage",
+          "cli/dag",
           "cli/debug",
           "cli/janitor",
           "cli/query",
