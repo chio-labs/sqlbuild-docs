@@ -137,3 +137,16 @@ def my_assets(context, sqb):
 ```
 
 See the [API reference](/integrations/dagster-reference) for all translator methods.
+
+## Playground
+
+Try the integration without setting anything up:
+
+```bash
+sqb playground dagster my-dagster-project
+cd my-dagster-project
+uv add 'sqlbuild[dagster]'
+DAGSTER_IS_DEV_CLI=1 uv run dagster dev -f dagster/definitions.py
+```
+
+This creates the waffle shop project with a `dagster/definitions.py` that includes asset definitions, scenario checks, and a configured resource. The definitions use `prepare_if_dev()` to auto-generate the DAG artifact when Dagster starts.

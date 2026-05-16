@@ -10,10 +10,17 @@ Creates a self-contained waffle shop project with DuckDB. No warehouse credentia
 ## Usage
 
 ```bash
-sqb playground [path]
+sqb playground [template] [path]
 ```
 
 If `path` is omitted, the project is created at `sqlbuild-playground` in the current directory.
+
+## Templates
+
+| Template | Description |
+|----------|-------------|
+| `waffle_shop` | Default. DuckDB-backed project with models, tests, scenarios, and macros. |
+| `dagster` | Waffle shop project plus a `dagster/` directory with a ready-to-run `definitions.py`. |
 
 ## What it creates
 
@@ -28,14 +35,24 @@ A complete DuckDB-backed project with:
 - Python macros
 - AI agent skill files (auto-installed for OpenCode, Claude Code, and other agents)
 
-## Example
+The `dagster` template adds:
+
+- `dagster/definitions.py` - Dagster definitions with `sqlbuild_assets`, `sqlbuild_scenario_checks`, and `SqlBuildCliResource`
+- `dagster/README.md` - Setup instructions
+
+## Examples
 
 ```bash
+# Default waffle shop
 sqb playground my-project
 cd my-project
-sqb compile
 sqb build
-sqb test
+
+# With Dagster integration
+sqb playground dagster my-dagster-project
+cd my-dagster-project
+uv add 'sqlbuild[dagster]'
+DAGSTER_IS_DEV_CLI=1 uv run dagster dev -f dagster/definitions.py
 ```
 
 ## Notes
@@ -43,3 +60,4 @@ sqb test
 - The target directory must not already exist
 - DuckDB is included as a core dependency - no extra installation needed
 - The local DuckDB database file is created on the first build
+- The Dagster template uses `prepare_if_dev()` to auto-generate the DAG artifact when Dagster starts in dev mode
