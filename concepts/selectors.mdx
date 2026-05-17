@@ -8,9 +8,9 @@ Selectors let you scope commands to specific subsets of your project. They work 
 ## Basic usage
 
 ```bash
-sqb --project-dir examples/waffle_shop build --select daily_revenue
-sqb --project-dir examples/waffle_shop build --select daily_revenue customer_status_snapshot
-sqb --project-dir examples/waffle_shop build --exclude stg_customers
+sqb build --select daily_revenue
+sqb build --select daily_revenue customer_status_snapshot
+sqb build --exclude stg_customers
 ```
 
 `--select` (or `-s` for short) accepts one or more names. Multiple values are unioned. Space-separated names within one `--select` are also unioned. `--exclude` subtracts from the selected set.

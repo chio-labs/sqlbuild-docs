@@ -41,7 +41,7 @@ When the target is a plain resource name, lineage shows the model-level dependen
 The default. Shows an indented dependency tree with resource types and file paths:
 
 ```bash
-sqb --project-dir examples/waffle_shop lineage fact_orders --direction both
+sqb lineage fact_orders --direction both
 ```
 
 ```
@@ -70,7 +70,7 @@ Cycles and repeated nodes are annotated with "(already shown)" to avoid infinite
 An edge list showing each dependency as a directed pair:
 
 ```bash
-sqb --project-dir examples/waffle_shop lineage fact_orders --format list
+sqb lineage fact_orders --format list
 ```
 
 ```
@@ -86,7 +86,7 @@ seed:waffle_types    -> model:fact_orders
 Structured output with nodes, edges, and metadata:
 
 ```bash
-sqb --project-dir examples/waffle_shop lineage fact_orders --format json
+sqb lineage fact_orders --format json
 ```
 
 ```json
@@ -132,7 +132,7 @@ Column lineage supports `upstream` and `downstream` directions (not `both`). The
 ### Tree
 
 ```bash
-sqb --project-dir examples/waffle_shop lineage fact_orders.total_cents
+sqb lineage fact_orders.total_cents
 ```
 
 ```

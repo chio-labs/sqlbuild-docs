@@ -66,7 +66,7 @@ PASS=66  WARN=0  FAIL=0  SKIP=0  TOTAL=66  (1.09s)
 Use `--defer-to` to resolve unselected model references against another environment. This lets you build a subset of models in dev while referencing production tables for everything else:
 
 ```bash
-sqb --project-dir examples/waffle_shop build --select fact_orders --defer-to prod
+sqb build --select fact_orders --defer-to prod
 ```
 
 No `manifest.json` is required. Deferred references resolve directly against the live environment.

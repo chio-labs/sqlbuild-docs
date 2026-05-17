@@ -6,7 +6,7 @@ description: "Compare schemas and data between environments to validate changes 
 SQLBuild can compare schemas and row-level data between any two environments. This lets you validate that changes in dev produce the expected results before promoting to production.
 
 ```bash
-sqb --project-dir examples/waffle_shop diff prod:dev --full --select customer_status_snapshot
+sqb diff prod:dev --full --select customer_status_snapshot
 ```
 
 <Frame>

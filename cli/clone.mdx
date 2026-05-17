@@ -30,13 +30,13 @@ sqb --project-dir <path> clone --from <env> --to <env> [flags]
 
 ```bash
 # Clone all models from prod to dev
-sqb --project-dir examples/waffle_shop clone --from prod --to dev
+sqb clone --from prod --to dev
 
 # Clone only marts to dev
-sqb --project-dir examples/waffle_shop clone --from prod --to dev --select path:marts
+sqb clone --from prod --to dev --select path:marts
 
 # Force physical copies
-sqb --project-dir examples/waffle_shop clone --from prod --to dev --hard-copy
+sqb clone --from prod --to dev --hard-copy
 ```
 
 ## Clone policies

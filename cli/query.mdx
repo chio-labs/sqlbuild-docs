@@ -84,14 +84,14 @@ order_id,customer_id,status
 
 ```bash
 # Quick inspection with default format
-sqb --project-dir examples/waffle_shop query "SELECT * FROM dev.fact_orders"
+sqb query "SELECT * FROM dev.fact_orders"
 
 # Table format with higher limit
-sqb --project-dir examples/waffle_shop query "SELECT * FROM dev.dim_customers" --format table --limit 50
+sqb query "SELECT * FROM dev.dim_customers" --format table --limit 50
 
 # Export to JSON
-sqb --project-dir examples/waffle_shop query "SELECT * FROM dev.daily_revenue" --format json --no-limit
+sqb query "SELECT * FROM dev.daily_revenue" --format json --no-limit
 
 # Run SQL from a file
-sqb --project-dir examples/waffle_shop query --file debug_query.sql
+sqb query --file debug_query.sql
 ```
