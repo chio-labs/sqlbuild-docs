@@ -32,6 +32,7 @@
             "pages": [
               "concepts/adapters",
               "concepts/adapters/duckdb",
+              "concepts/adapters/motherduck",
               "concepts/adapters/snowflake",
               "concepts/adapters/bigquery",
               "concepts/adapters/databricks"

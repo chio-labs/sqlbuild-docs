@@ -1,0 +1,67 @@
+---
+title: "MotherDuck"
+description: "MotherDuck adapter configuration for SQLBuild."
+---
+
+MotherDuck uses DuckDB's built-in `md:` connection support. No extra installation needed beyond the core DuckDB dependency.
+
+## Connection config
+
+```toml
+adapter = "motherduck"
+
+[connection]
+database = "my_database"
+token = "your_motherduck_token"
+```
+
+| Field | Description |
+|-------|-------------|
+| `database` | MotherDuck database name. Automatically prefixed with `md:` if not already present. Defaults to `md:` (your default MotherDuck database). |
+| `token` | MotherDuck access token. Can also be set via environment variable. |
+
+## Authentication
+
+MotherDuck requires an access token. Generate one from the MotherDuck UI and pass it via the connection config or an environment variable:
+
+```toml
+[connection]
+database = "my_database"
+token = "${ENV:MOTHERDUCK_TOKEN}"
+```
+
+## Per-environment connections
+
+Use environments to separate production and development databases on MotherDuck:
+
+```toml
+adapter = "motherduck"
+
+[connection]
+token = "${ENV:MOTHERDUCK_TOKEN}"
+
+[environments.prod]
+schema = "prod"
+
+[environments.prod.connection]
+database = "prod_db"
+
+[environments.dev]
+schema = "dev"
+
+[environments.dev.connection]
+database = "dev_db"
+```
+
+## Local development with DuckDB
+
+Use `sqlbuild_local.toml` to override the adapter for local development against a plain DuckDB file:
+
+```toml
+adapter = "duckdb"
+
+[connection]
+database = "local_dev.duckdb"
+```
+
+This lets you develop and test locally with zero MotherDuck compute cost, then deploy to MotherDuck in production. SQLBuild's [scenario replay](/concepts/scenarios) also runs locally in DuckDB regardless of the production adapter.
