@@ -1,0 +1,59 @@
+---
+title: "PostgreSQL"
+description: "PostgreSQL adapter configuration for SQLBuild."
+---
+
+PostgreSQL requires the optional `psycopg` dependency:
+
+```bash
+pip install 'sqlbuild[postgres]'
+# or
+uv pip install 'sqlbuild[postgres]'
+```
+
+## Connection config
+
+```toml
+adapter = "postgres"
+
+[connection]
+host = "localhost"
+port = 5432
+user = "my_user"
+password = "my_password"
+dbname = "my_database"
+```
+
+| Field | Description |
+|-------|-------------|
+| `host` | PostgreSQL server hostname (default: `localhost`) |
+| `port` | PostgreSQL server port (default: `5432`) |
+| `user` | Database user |
+| `password` | Database password |
+| `dbname` | Database name |
+
+All fields in `connection` are passed to `psycopg.connect()`. See the [psycopg documentation](https://www.psycopg.org/psycopg3/docs/api/connections.html) for all available options.
+
+## Per-environment connections
+
+```toml
+adapter = "postgres"
+
+[connection]
+host = "localhost"
+user = "my_user"
+password = "${ENV:PG_PASSWORD}"
+
+[environments.prod]
+schema = "prod"
+
+[environments.prod.connection]
+host = "prod-db.example.com"
+dbname = "analytics"
+
+[environments.dev]
+schema = "dev"
+
+[environments.dev.connection]
+dbname = "analytics_dev"
+```

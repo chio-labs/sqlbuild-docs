@@ -35,7 +35,8 @@
               "concepts/adapters/motherduck",
               "concepts/adapters/snowflake",
               "concepts/adapters/bigquery",
-              "concepts/adapters/databricks"
+              "concepts/adapters/databricks",
+              "concepts/adapters/postgres"
             ]
           },
           "concepts/sources",
