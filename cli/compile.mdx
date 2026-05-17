@@ -68,7 +68,7 @@ Compile returns exit code `1` when any error-severity diagnostic is found, makin
 ### Text output (default)
 
 ```bash
-sqb --project-dir examples/waffle_shop compile
+sqb compile
 ```
 
 ```
@@ -91,7 +91,7 @@ Each model shows its name, status (OK or FAIL), and column count. Models with co
 ### JSON output
 
 ```bash
-sqb --project-dir examples/waffle_shop compile --json
+sqb compile --json
 ```
 
 Returns a structured report including:

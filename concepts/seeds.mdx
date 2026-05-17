@@ -57,7 +57,7 @@ LEFT JOIN __seed("waffle_types") w ON o.waffle_type_id = w.waffle_type_id
 Seeds are loaded automatically during `sqb build`. You can also load them standalone:
 
 ```bash
-sqb --project-dir examples/waffle_shop seed
+sqb seed
 ```
 
 Seeds are fully replaced on every run. If the CSV changes, the table is recreated with the new data.
