@@ -36,16 +36,6 @@ SQLBuild tests and audits become Dagster asset checks. Scenarios become asset ch
 
 ## Quickstart
 
-### 1. Generate the DAG artifact
-
-```bash
-sqb compile --dag
-```
-
-This writes `target/sqlbuild_dag.json`. The artifact is static and can be committed to version control or generated in CI.
-
-### 2. Define assets and resource
-
 ```python
 # definitions.py
 from sqlbuild.integrations.dagster import (
@@ -56,6 +46,7 @@ from sqlbuild.integrations.dagster import (
 import dagster as dg
 
 project = SqlBuildProject(project_dir=".")
+project.prepare_if_dev()  # auto-generates DAG artifact in dagster dev
 
 @sqlbuild_assets(project=project)
 def my_sqlbuild_assets(context: dg.AssetExecutionContext, sqb: SqlBuildCliResource):
@@ -67,13 +58,13 @@ defs = dg.Definitions(
 )
 ```
 
-### 3. Launch
-
 ```bash
-dagster dev -f definitions.py
+DAGSTER_IS_DEV_CLI=1 dagster dev -f definitions.py
 ```
 
 Dagster discovers every SQLBuild model as an asset. Selecting a subset of assets in the Dagster UI automatically scopes the `sqb build` invocation to those models via `--select`.
+
+For production deployments, use `project.prepare()` or `sqb compile --dag` to generate the DAG artifact explicitly in your CI pipeline.
 
 ## Asset selection
 
