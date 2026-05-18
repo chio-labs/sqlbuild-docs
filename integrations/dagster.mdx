@@ -5,17 +5,6 @@ description: "Orchestrate SQLBuild pipelines with Dagster scheduling, retries, a
 
 SQLBuild includes a Dagster integration that maps your project's models, sources, seeds, functions, tests, audits, and scenarios into Dagster assets and asset checks. SQLBuild handles the SQL transformation layer. Dagster handles scheduling, retries, alerting, and the asset-centric UI.
 
-## Try it
-
-```bash
-sqb playground dagster my-dagster-project
-cd my-dagster-project
-uv pip install 'sqlbuild[dagster]'
-DAGSTER_IS_DEV_CLI=1 dagster dev -f dagster/definitions.py
-```
-
-This creates the waffle shop project with a `dagster/definitions.py` that includes asset definitions, scenario checks, and a configured resource. Open the Dagster UI, materialize the assets, then run the scenario checks.
-
 ## Install
 
 ```bash
@@ -25,6 +14,16 @@ pip install 'sqlbuild[dagster]'
 ```
 
 This installs `dagster` and `dagster-webserver` alongside SQLBuild.
+
+## Try it
+
+```bash
+sqb playground dagster my-dagster-project
+cd my-dagster-project
+DAGSTER_IS_DEV_CLI=1 dagster dev -f dagster/definitions.py
+```
+
+This creates the waffle shop project with a `dagster/definitions.py` that includes asset definitions, scenario checks, and a configured resource. Open the Dagster UI, materialize the assets, then run the scenario checks.
 
 ## How it works
 
