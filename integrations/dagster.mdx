@@ -20,7 +20,7 @@ This installs `dagster` and `dagster-webserver` alongside SQLBuild.
 ```bash
 sqb playground dagster my-dagster-project
 cd my-dagster-project
-DAGSTER_IS_DEV_CLI=1 dagster dev -f dagster/definitions.py
+dagster dev -f dagster/definitions.py
 ```
 
 This creates the waffle shop project with a `dagster/definitions.py` that includes asset definitions, scenario checks, and a configured resource. Open the Dagster UI, materialize the assets, then run the scenario checks.
@@ -59,7 +59,7 @@ defs = dg.Definitions(
 ```
 
 ```bash
-DAGSTER_IS_DEV_CLI=1 dagster dev -f definitions.py
+dagster dev -f definitions.py
 ```
 
 Dagster discovers every SQLBuild model as an asset. Selecting a subset of assets in the Dagster UI automatically scopes the `sqb build` invocation to those models via `--select`.
