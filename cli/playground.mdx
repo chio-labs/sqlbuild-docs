@@ -10,10 +10,10 @@ Creates a self-contained waffle shop project with DuckDB. No warehouse credentia
 ## Usage
 
 ```bash
-sqb playground [template] [path]
+sqb playground [name]
 ```
 
-If `path` is omitted, the project is created at `sqlbuild-playground` in the current directory.
+The argument is used as both the template name and the directory name. If omitted, the default `waffle_shop` template is used and the project is created in a directory matching the template name.
 
 ## Templates
 
@@ -44,13 +44,13 @@ The `dagster` template adds:
 
 ```bash
 # Default waffle shop
-sqb playground my-project
-cd my-project
+sqb playground waffle-shop
+cd waffle-shop
 sqb build
 
 # With Dagster integration
-sqb playground dagster my-dagster-project
-cd my-dagster-project
+sqb playground dagster
+cd dagster
 uv pip install 'sqlbuild[dagster]'
 dagster dev -f dagster/definitions.py
 ```
