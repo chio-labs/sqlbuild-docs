@@ -49,8 +49,8 @@ cd waffle-shop
 sqb build
 
 # With Dagster integration
-sqb playground dagster
-cd dagster
+sqb playground --template dagster
+cd sqlbuild-playground
 uv pip install 'sqlbuild[dagster]'
 dagster dev -f dagster/definitions.py
 ```
