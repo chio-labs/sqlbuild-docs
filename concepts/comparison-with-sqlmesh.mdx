@@ -27,7 +27,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | Python macros | `@macro()` syntax | No (Jinja only) | SQLMesh macro syntax |
 | Jinja support | No (Python macros instead) | Yes (core templating) | Yes |
 | **Incremental** | | | |
-| Incremental strategies | append, delete_insert, merge | append, delete+insert, merge | time-range, unique-key, partition, SCD Type 2, append |
+| Incremental strategies | append, delete_insert, merge, SCD Type 2 | append, delete+insert, merge, snapshots | append, delete_insert (time-range), merge (unique-key), SCD Type 2, partition (stateful) |
 | Microbatch execution | Configurable batch sizes with per-batch audits | Microbatch (recent addition) | Batch size support |
 | Stateful interval tracking | No - cursor-based (no external state) | No | Yes - tracks which intervals ran |
 | SCD Type 2 models | Timestamp and check strategies, historical input, hard deletes | Snapshots (limited) | Built-in |
@@ -60,4 +60,4 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 
 - **Python models** - Pandas, PySpark, Snowpark, BigFrames (in active development)
 - **First-party partition state tracking** - opt-in stateful partition tracking (currently possible via custom materializations, first-party support coming soon)
-- **Broader adapter support** - PostgreSQL, ClickHouse, and Microsoft SQL Server are coming soon
+- **Broader adapter support** - ClickHouse and Microsoft SQL Server are coming soon
