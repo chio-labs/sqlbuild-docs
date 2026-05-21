@@ -113,10 +113,10 @@ This is useful for rebuilding a specific slice of the DAG without manually listi
 Use commas to intersect selector results:
 
 ```bash
-sqb build --select "tag:staging,stg_orders"
+sqb build --select "tag:staging,path:finance"
 ```
 
-This selects only models that match *both* conditions - in this case, models tagged `staging` that are also named `stg_orders`.
+This selects only models that match *both* conditions - in this case, models tagged `staging` that are also under the `finance` directory.
 
 ## Combining select and exclude
 
