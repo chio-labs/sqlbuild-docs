@@ -1,0 +1,337 @@
+---
+title: "Loaders"
+description: "Load external data into source tables with Python functions."
+---
+
+Loaders are Python functions that load data into source tables. They replace expression sources and manual ETL scripts with code that lives inside your project, runs as part of the build, and supports incremental write strategies.
+
+## How it works
+
+1. Write a Python function under `loaders/` decorated with `@loader`
+2. Bind it to a source in `sources/*.yml` with the `loader` field
+3. SQLBuild calls the function, writes returned rows to a staging table, then applies the configured write strategy to the target
+
+Loaders participate in the build lifecycle. When `sqb build` runs, managed sources are loaded before any dependent model is materialized.
+
+## Defining a loader
+
+Place Python files under `loaders/` in your project directory. Each file can contain one or more loader functions:
+
+```python
+# loaders/raw_sources.py
+from sqlbuild.loaders import loader
+
+@loader
+def raw_customers(ctx):
+    return [
+        {"id": 1, "name": "Leslie Knope", "email": "leslie@pawnee.gov"},
+        {"id": 2, "name": "Ron Swanson", "email": "ron@pawnee.gov"},
+    ]
+```
+
+The function receives a `LoaderContext` and returns rows as a list of dicts, an iterator of dicts, or `None` for self-managed loaders.
+
+## Binding to a source
+
+Connect the loader to a source in `sources/*.yml`:
+
+```yaml
+sources:
+  - name: raw_customers
+    loader: raw_customers
+    write_strategy: table
+    columns:
+      - name: id
+        type: INTEGER
+      - name: name
+        type: VARCHAR
+      - name: email
+        type: VARCHAR
+```
+
+The `loader` field references the function name. The source is now a **managed source** - SQLBuild owns both the loading and the schema.
+
+Models reference managed sources the same way as any other source:
+
+```sql
+SELECT id, name FROM __source("raw_customers")
+```
+
+## Write strategies
+
+The `write_strategy` field controls how returned rows are written to the target table.
+
+### table
+
+Full replace. The target is dropped and recreated from the loader output on every run.
+
+```yaml
+sources:
+  - name: raw_countries
+    loader: countries
+    write_strategy: table
+    columns:
+      - name: country_id
+        type: INTEGER
+      - name: country_code
+        type: VARCHAR
+```
+
+### append
+
+Insert all returned rows into the target. No deduplication.
+
+```yaml
+sources:
+  - name: raw_webhook_events
+    loader: webhook_events
+    write_strategy: append
+    columns:
+      - name: event_id
+        type: INTEGER
+      - name: event_name
+        type: VARCHAR
+```
+
+### delete_insert
+
+Delete rows in the cursor range, then insert replacements. Requires `cursor_column`.
+
+```yaml
+sources:
+  - name: raw_order_events
+    loader: order_events
+    write_strategy: delete_insert
+    cursor_column: event_at
+    columns:
+      - name: event_id
+        type: INTEGER
+      - name: event_at
+        type: TIMESTAMP
+      - name: amount_cents
+        type: INTEGER
+```
+
+The loader receives `ctx.current_cursor_value` with the current `MAX(cursor_column)` from the target, so it can fetch only new or updated data:
+
+```python
+@loader
+def order_events(ctx):
+    if ctx.current_cursor_value is None:
+        return fetch_all_events()
+    return fetch_events_since(ctx.current_cursor_value)
+```
+
+### merge
+
+Upsert based on `unique_key`. Requires both `unique_key` and `cursor_column`.
+
+```yaml
+sources:
+  - name: raw_customers
+    loader: customers
+    write_strategy: merge
+    unique_key: customer_id
+    cursor_column: updated_at
+    columns:
+      - name: customer_id
+        type: INTEGER
+      - name: plan_name
+        type: VARCHAR
+      - name: updated_at
+        type: TIMESTAMP
+```
+
+Existing rows matching the unique key are updated; new rows are inserted.
+
+## Self-managed loaders
+
+If a loader returns `None`, SQLBuild skips its row-writing pipeline. The loader manages writes directly through `ctx.execute_sql()`:
+
+```python
+@loader
+def raw_status(ctx):
+    ctx.execute_sql(f"DROP TABLE IF EXISTS {ctx.target}")
+    ctx.execute_sql(
+        f"CREATE TABLE {ctx.target} AS "
+        "SELECT 1 AS status_id, 'loaded' AS status_name"
+    )
+```
+
+Self-managed loaders must not declare a `write_strategy` in the source YAML. They are useful for loading data through adapter-specific SQL (e.g. `COPY INTO`, external tables) where returning Python dicts is not practical.
+
+## Loader context
+
+Every loader function receives a `LoaderContext` as its first argument. It provides access to the target relation, cursor state, environment, and helper methods.
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `target` | `str` | Fully-qualified target relation name |
+| `target_database` | `str \| None` | Target database |
+| `target_schema` | `str \| None` | Target schema |
+| `target_name` | `str` | Unqualified target table name |
+| `current_cursor_value` | `object \| None` | Current `MAX(cursor_column)` from the target, or `None` if the table does not exist or has no cursor column |
+| `run_id` | `str` | Unique identifier for this execution run |
+| `environment` | `str \| None` | Active environment name |
+| `vars` | `dict` | Project variables (merged from project, environment, and local config) |
+| `is_reload` | `bool` | `True` when `--reload` was passed |
+| `start_cursor_ts` | `datetime \| None` | Timestamp cursor start override from `--start-cursor-ts` |
+| `end_cursor_ts` | `datetime \| None` | Timestamp cursor end override from `--end-cursor-ts` |
+| `start_cursor_int` | `int \| None` | Integer cursor start override from `--start-cursor-int` |
+| `end_cursor_int` | `int \| None` | Integer cursor end override from `--end-cursor-int` |
+| `adapter` | `BaseAdapter` | The database adapter instance |
+| `connection` | `object` | The active database connection |
+| `logger` | `Logger` | Python logger scoped to the loader |
+
+### Methods
+
+| Method | Description |
+|--------|-------------|
+| `execute_sql(sql)` | Execute a SQL statement against the connection |
+| `query(sql)` | Execute a SQL query and return the cursor |
+| `log(message)` | Log a message to the execution lifecycle output |
+| `qualify_name(name)` | Return a fully-qualified relation name in the target database/schema |
+| `loader(loader_fn)` | Return a `LoaderRelationRef` for an upstream loader dependency |
+| `source(source_name)` | Return a `LoaderRelationRef` for a project source by YAML name |
+
+### LoaderRelationRef
+
+Returned by `ctx.loader()` and `ctx.source()`. Provides access to an upstream relation:
+
+| Property / Method | Description |
+|-------------------|-------------|
+| `target` | Fully-qualified relation name |
+| `current_cursor_value` | Current `MAX(cursor_column)` from the relation |
+| `max(column)` | Return the `MAX` of any column from the relation |
+
+## Loader dependencies
+
+Loaders can depend on other loaders using `depends_on`. Dependencies are executed first, and their target relations are available via `ctx.loader()`:
+
+```python
+from sqlbuild.loaders import loader
+
+@loader
+def raw_accounts(ctx):
+    return [
+        {"account_id": 1, "account_name": "Pawnee Parks"},
+        {"account_id": 2, "account_name": "Eagleton"},
+    ]
+
+@loader(depends_on=[raw_accounts])
+def raw_account_metrics(ctx):
+    accounts = ctx.loader(raw_accounts)
+    rows = ctx.query(f"SELECT account_id FROM {accounts.target}")
+    return [
+        {"account_id": row[0], "metric": "active"}
+        for row in rows.fetchall()
+    ]
+```
+
+Dependencies form a DAG. SQLBuild schedules loaders in topological order and executes independent loaders concurrently when `--concurrency` is set.
+
+Intermediate loaders (those referenced only via `depends_on` without a source binding) are given synthetic source entries and write to `__loader__<name>` tables by default. Use the `target` parameter on the decorator to override:
+
+```python
+@loader(target="staging.shared_accounts")
+def raw_accounts(ctx):
+    ...
+```
+
+## Decorator parameters
+
+The `@loader` decorator accepts optional parameters that can also be set in the source YAML. When both are specified, the YAML takes precedence.
+
+| Parameter | Description |
+|-----------|-------------|
+| `depends_on` | List of loader functions this loader depends on |
+| `target` | Override the target relation name (can include schema or database) |
+| `write_strategy` | `table`, `append`, `delete_insert`, or `merge` |
+| `cursor_column` | Column used for incremental cursor tracking |
+| `unique_key` | Column(s) used as the merge key (string or list of strings) |
+| `columns` | Column specifications with name, type, nullable, and description |
+| `contract` | `enforced` or `none` |
+
+## Auto-load during builds
+
+By default, `sqb build` and `sqb run` automatically load managed sources before building dependent models. This is controlled by the `auto_load_sources` setting:
+
+```toml
+[settings]
+auto_load_sources = true   # default
+```
+
+You can also control this per-run with CLI flags:
+
+```bash
+# Explicitly load sources before building
+sqb build --load
+
+# Skip source loading
+sqb build --no-load
+
+# Reload sources (passes is_reload=True to loaders)
+sqb build --reload
+```
+
+When `--reload` is passed, `ctx.is_reload` is `True` in the loader function. This lets loaders implement different behavior for full reloads versus normal incremental loads.
+
+## Source deferral
+
+When using environments, loaders write data into the active environment. But models may need to read source data from a different environment (e.g. reading production data while developing in dev). The `defer_sources_to` field controls this:
+
+```toml
+[environments.dev]
+schema = "dev"
+defer_sources_to = "prod"
+
+[environments.prod]
+schema = "prod"
+```
+
+With this config, models in the `dev` environment read managed source data from `prod` schema, even though `sqb load` writes to `dev`. This prevents accidentally reading empty or partial source tables during development.
+
+If an environment uses managed sources but does not declare `defer_sources_to`, SQLBuild raises an error rather than guessing.
+
+## Schema evolution
+
+When a loader returns rows with columns not present in the existing target table, SQLBuild detects the schema change and adds the new columns automatically. Type mismatches between the staging table and the existing target raise an error.
+
+## Project structure
+
+```
+my-project/
+  loaders/
+    raw_sources.py          # loader functions
+    api_sources.py           # more loader functions
+  sources/
+    raw.yml                  # source declarations with loader bindings
+  models/
+    staging/
+      stg_customers.sql      # __source("raw_customers")
+```
+
+SQLBuild discovers all `.py` files under `loaders/` recursively (excluding `__init__.py` and files starting with `_`). Each file is scanned for functions decorated with `@loader`.
+
+## Config reference
+
+### Source YAML fields for managed sources
+
+| Field | Description |
+|-------|-------------|
+| `loader` | Name of the loader function to bind |
+| `write_strategy` | `table`, `append`, `delete_insert`, or `merge` |
+| `cursor_column` | Column for incremental cursor tracking (required for `delete_insert` and `merge`) |
+| `unique_key` | Merge key column(s) (required for `merge`) |
+| `columns` | Column declarations with types |
+| `contract` | `enforced` or `none` |
+
+### Validation rules
+
+- `append` cannot have `unique_key`
+- `merge` requires `unique_key`
+- `table` cannot have `cursor_column` or `unique_key`
+- `delete_insert` requires `cursor_column` and cannot have `unique_key`
+- `cursor_column` requires one of `append`, `delete_insert`, or `merge`

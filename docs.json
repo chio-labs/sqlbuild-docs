@@ -40,6 +40,7 @@
             ]
           },
           "concepts/sources",
+          "concepts/loaders",
           "concepts/seeds",
           "concepts/models",
           "concepts/interpolation",
@@ -76,6 +77,7 @@
           "cli/run",
           "cli/test",
           "cli/audit",
+          "cli/load",
           "cli/seed",
           "cli/clone",
           "cli/diff",

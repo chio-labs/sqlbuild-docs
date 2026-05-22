@@ -107,6 +107,17 @@ def grant_target(target):
 
 ### Extensibility
 
+- **Source loaders:** Load external data into source tables with Python functions. Supports incremental write strategies (table, append, delete_insert, merge), cursor-based loading, loader-to-loader dependencies, and concurrent execution. Loaders run automatically during builds.
+
+```python
+from sqlbuild.loaders import loader
+
+@loader
+def raw_orders(ctx):
+    if ctx.current_cursor_value is None:
+        return fetch_all_orders()
+    return fetch_orders_since(ctx.current_cursor_value)
+```
 - **User-defined functions:** SQL and Python UDFs managed as part of your project. Functions participate in the DAG - definition changes trigger rebuilds of dependent models. Table functions provide predicate-pushdown-friendly alternatives to final-layer views.
 - **Custom materializations:** Write materialization logic in Python with full framework integration - including audit hooks, schema change signals, and query change detection.
 
