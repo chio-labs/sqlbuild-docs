@@ -111,9 +111,10 @@ def grant_target(target):
 
 ```python
 from sqlbuild.loaders import loader
+from sqlbuild.executor.load.models import LoaderContext
 
 @loader
-def raw_orders(ctx):
+def raw_orders(ctx: LoaderContext):
     if ctx.current_cursor_value is None:
         return fetch_all_orders()
     return fetch_orders_since(ctx.current_cursor_value)
