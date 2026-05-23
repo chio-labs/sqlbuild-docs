@@ -13,8 +13,8 @@ SQLBuild uses adapters to connect to different database engines.
 | [BigQuery](/concepts/adapters/bigquery) | Supported | `sqlbuild[bigquery]` |
 | [Databricks](/concepts/adapters/databricks) | Supported | `sqlbuild[databricks]` |
 | [PostgreSQL](/concepts/adapters/postgres) | Supported | `sqlbuild[postgres]` |
+| [SQL Server](/concepts/adapters/sqlserver) | Supported | `sqlbuild[sqlserver]` |
 | ClickHouse | Coming soon | |
-| Microsoft SQL Server | Coming soon | |
 
 Set the adapter in `sqlbuild_project.toml`:
 
@@ -86,7 +86,7 @@ For full control with no inherited defaults, subclass `StrictAdapter` instead. E
 - SQLBuild discovers all `.py` files under `adapters/` recursively (excluding `__init__.py` and files starting with `_`)
 - Each file is scanned for classes that define a string `adapter_name` and subclass `StrictAdapter` (or any of its subclasses like `BaseAdapter` or a built-in adapter)
 - Adapter names must be unique across all adapter files - duplicates raise an error
-- Custom adapter names cannot shadow built-in names (`duckdb`, `snowflake`, `bigquery`, `databricks`)
+- Custom adapter names cannot shadow built-in names (`duckdb`, `snowflake`, `bigquery`, `databricks`, `postgres`, `sqlserver`)
 
 ### Adapter class hierarchy
 
@@ -96,7 +96,9 @@ StrictAdapter          (fully abstract - all methods must be implemented)
         ├── DuckDbAdapter
         ├── SnowflakeAdapter
         ├── BigQueryAdapter
-        └── DatabricksAdapter
+        ├── DatabricksAdapter
+        ├── PostgresAdapter
+        └── SqlServerAdapter
 ```
 
 `StrictAdapter` composes four mixins that define the full adapter contract:

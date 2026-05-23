@@ -36,7 +36,8 @@
               "concepts/adapters/snowflake",
               "concepts/adapters/bigquery",
               "concepts/adapters/databricks",
-              "concepts/adapters/postgres"
+              "concepts/adapters/postgres",
+              "concepts/adapters/sqlserver"
             ]
           },
           "concepts/sources",

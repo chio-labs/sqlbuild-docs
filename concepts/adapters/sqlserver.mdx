@@ -1,0 +1,59 @@
+---
+title: "SQL Server"
+description: "Microsoft SQL Server adapter configuration for SQLBuild."
+---
+
+SQL Server requires the optional `pymssql` dependency:
+
+```bash
+pip install 'sqlbuild[sqlserver]'
+# or
+uv pip install 'sqlbuild[sqlserver]'
+```
+
+## Connection config
+
+```toml
+adapter = "sqlserver"
+
+[connection]
+host = "localhost"
+port = 1433
+user = "sa"
+password = "my_password"
+database = "my_database"
+```
+
+| Field | Description |
+|-------|-------------|
+| `host` | SQL Server hostname (default: `localhost`). Also accepts `server` as an alias. |
+| `port` | SQL Server port (default: `1433`) |
+| `user` | Database user (default: `sa`). Also accepts `username` as an alias. |
+| `password` | Database password |
+| `database` | Database name (default: `master`). Also accepts `dbname` as an alias. |
+
+All fields in `connection` are passed to `pymssql.connect()`. See the [pymssql documentation](https://pymssql.readthedocs.io/en/stable/ref/pymssql.html) for all available options.
+
+## Per-environment connections
+
+```toml
+adapter = "sqlserver"
+
+[connection]
+host = "localhost"
+user = "sa"
+password = "${ENV:MSSQL_PASSWORD}"
+
+[environments.prod]
+schema = "prod"
+
+[environments.prod.connection]
+host = "prod-sql.example.com"
+database = "analytics"
+
+[environments.dev]
+schema = "dev"
+
+[environments.dev.connection]
+database = "analytics_dev"
+```
