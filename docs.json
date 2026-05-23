@@ -65,7 +65,8 @@
               "integrations/dagster",
               "integrations/dagster-reference"
             ]
-          }
+          },
+          "integrations/dlt"
         ]
       },
       {

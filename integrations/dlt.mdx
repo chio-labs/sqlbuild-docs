@@ -1,0 +1,193 @@
+---
+title: "dlt"
+description: "Use dlt pipelines inside SQLBuild source loaders."
+---
+
+[dlt](https://dlthub.com) is an open-source Python library for loading data from APIs, databases, cloud storage, and other sources. You can use dlt inside a SQLBuild [source loader](/concepts/loaders) to ingest data as part of your build lifecycle.
+
+## Install
+
+```bash
+pip install 'dlt[duckdb]'
+# or for Snowflake
+pip install 'dlt[snowflake]'
+```
+
+Install dlt with the extras matching your SQLBuild adapter.
+
+## How it works
+
+A self-managed loader calls `dlt.pipeline(...).run(...)` to load data into the same database that SQLBuild manages. The loader returns `None` - dlt handles the writes, and SQLBuild treats the source as loaded.
+
+```
+loaders/               # dlt pipelines wrapped as loaders
+  github_sources.py
+sources/
+  github.yml           # source declarations bound to loaders
+models/
+  staging/
+    stg_issues.sql     # __source("raw_github_issues")
+```
+
+## Example: REST API source
+
+Load GitHub issues into a source table using dlt's REST API source:
+
+```python
+# loaders/github_sources.py
+import dlt
+from dlt.sources.rest_api import rest_api_source
+from sqlbuild.loaders import loader
+from sqlbuild.executor.load.models import LoaderContext
+
+@loader
+def raw_github_issues(ctx: LoaderContext):
+    source = rest_api_source({
+        "client": {
+            "base_url": "https://api.github.com/",
+            "headers": {"Authorization": f"Bearer {ctx.vars['github_token']}"},
+            "paginator": {"type": "header_link"},
+        },
+        "resources": [
+            {
+                "name": "issues",
+                "endpoint": {
+                    "path": "repos/{owner}/{repo}/issues",
+                    "params": {
+                        "owner": ctx.vars["github_owner"],
+                        "repo": ctx.vars["github_repo"],
+                        "state": "all",
+                        "per_page": 100,
+                    },
+                },
+            },
+        ],
+    })
+
+    pipeline = dlt.pipeline(
+        pipeline_name="github_issues",
+        destination=dlt.destinations.duckdb(ctx.connection),
+        dataset_name=ctx.target_schema or "main",
+    )
+    pipeline.run(source)
+```
+
+Bind it to a source:
+
+```yaml
+# sources/github.yml
+sources:
+  - name: raw_github_issues
+    loader: raw_github_issues
+    table: issues
+    columns:
+      - name: id
+        type: INTEGER
+      - name: title
+        type: VARCHAR
+      - name: state
+        type: VARCHAR
+      - name: created_at
+        type: TIMESTAMP
+```
+
+Reference it in models:
+
+```sql
+SELECT id, title, state FROM __source("raw_github_issues")
+```
+
+## Example: SQL database source
+
+Replicate a table from a PostgreSQL database:
+
+```python
+# loaders/postgres_sources.py
+import dlt
+from dlt.sources.sql_database import sql_database
+from sqlbuild.loaders import loader
+from sqlbuild.executor.load.models import LoaderContext
+
+@loader
+def raw_pg_customers(ctx: LoaderContext):
+    source = sql_database(
+        ctx.vars["postgres_connection_string"],
+        table_names=["customers"],
+    )
+
+    pipeline = dlt.pipeline(
+        pipeline_name="pg_customers",
+        destination=dlt.destinations.duckdb(ctx.connection),
+        dataset_name=ctx.target_schema or "main",
+    )
+    pipeline.run(source)
+```
+
+## Passing credentials
+
+Use SQLBuild [project variables](/concepts/project-configuration#project-variables) to pass credentials to dlt without hardcoding them:
+
+```toml
+# sqlbuild_local.toml (gitignored)
+[vars]
+github_token = "ghp_..."
+postgres_connection_string = "postgresql://user:pass@host:5432/db"
+```
+
+Access them in the loader via `ctx.vars["github_token"]`.
+
+For production, set variables via environment variables or per-environment config:
+
+```toml
+# sqlbuild_project.toml
+[environments.prod.vars]
+github_token = "${GITHUB_TOKEN}"
+```
+
+## DuckDB connection sharing
+
+When using the DuckDB adapter, you can pass `ctx.connection` directly to dlt's DuckDB destination. This reuses SQLBuild's open connection, so dlt writes into the same database file without needing a separate connection string:
+
+```python
+pipeline = dlt.pipeline(
+    pipeline_name="my_pipeline",
+    destination=dlt.destinations.duckdb(ctx.connection),
+    dataset_name=ctx.target_schema or "main",
+)
+```
+
+## Warehouse destinations
+
+For Snowflake, BigQuery, or Databricks, configure dlt with its own connection credentials. dlt writes directly to the warehouse, and SQLBuild reads the resulting tables as sources:
+
+```python
+@loader
+def raw_api_data(ctx: LoaderContext):
+    source = rest_api_source({...})
+
+    pipeline = dlt.pipeline(
+        pipeline_name="api_data",
+        destination="snowflake",
+        dataset_name=ctx.target_schema or "public",
+    )
+    pipeline.run(source)
+```
+
+Configure dlt credentials via its own `secrets.toml` or environment variables as described in the [dlt documentation](https://dlthub.com/docs/general-usage/credentials/setup).
+
+## Build integration
+
+Loaders run automatically during `sqb build` (when `auto_load_sources` is enabled). This means dlt pipelines execute as part of the normal build lifecycle:
+
+```bash
+# dlt loaders run, then models build
+sqb build
+
+# skip loading (use existing source data)
+sqb build --no-load
+
+# run loaders standalone
+sqb load
+```
+
+See [Loaders](/concepts/loaders) for details on write strategies, the loader context API, auto-load behavior, and source deferral.

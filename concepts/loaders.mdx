@@ -20,9 +20,10 @@ Place Python files under `loaders/` in your project directory. Each file can con
 ```python
 # loaders/raw_sources.py
 from sqlbuild.loaders import loader
+from sqlbuild.executor.load.models import LoaderContext
 
 @loader
-def raw_customers(ctx):
+def raw_customers(ctx: LoaderContext):
     return [
         {"id": 1, "name": "Leslie Knope", "email": "leslie@pawnee.gov"},
         {"id": 2, "name": "Ron Swanson", "email": "ron@pawnee.gov"},
@@ -116,7 +117,7 @@ The loader receives `ctx.current_cursor_value` with the current `MAX(cursor_colu
 
 ```python
 @loader
-def order_events(ctx):
+def order_events(ctx: LoaderContext):
     if ctx.current_cursor_value is None:
         return fetch_all_events()
     return fetch_events_since(ctx.current_cursor_value)
@@ -146,11 +147,11 @@ Existing rows matching the unique key are updated; new rows are inserted.
 
 ## Self-managed loaders
 
-If a loader returns `None`, SQLBuild skips its row-writing pipeline. The loader manages writes directly through `ctx.execute_sql()`:
+If a loader returns `None`, SQLBuild skips its row-writing pipeline. The loader is responsible for writing data to the target itself, using whatever approach makes sense - `ctx.execute_sql()`, an external library, a subprocess, or anything else:
 
 ```python
 @loader
-def raw_status(ctx):
+def raw_status(ctx: LoaderContext):
     ctx.execute_sql(f"DROP TABLE IF EXISTS {ctx.target}")
     ctx.execute_sql(
         f"CREATE TABLE {ctx.target} AS "
@@ -158,7 +159,7 @@ def raw_status(ctx):
     )
 ```
 
-Self-managed loaders must not declare a `write_strategy` in the source YAML. They are useful for loading data through adapter-specific SQL (e.g. `COPY INTO`, external tables) where returning Python dicts is not practical.
+Self-managed loaders must not declare a `write_strategy` in the source YAML. They are useful when you want to use adapter-specific SQL (e.g. `COPY INTO`, external tables), call an external ingestion tool like [dlt](/integrations/dlt), or handle writes in a way that doesn't fit the dict-return pattern.
 
 ## Loader context
 
@@ -212,16 +213,17 @@ Loaders can depend on other loaders using `depends_on`. Dependencies are execute
 
 ```python
 from sqlbuild.loaders import loader
+from sqlbuild.executor.load.models import LoaderContext
 
 @loader
-def raw_accounts(ctx):
+def raw_accounts(ctx: LoaderContext):
     return [
         {"account_id": 1, "account_name": "Pawnee Parks"},
         {"account_id": 2, "account_name": "Eagleton"},
     ]
 
 @loader(depends_on=[raw_accounts])
-def raw_account_metrics(ctx):
+def raw_account_metrics(ctx: LoaderContext):
     accounts = ctx.loader(raw_accounts)
     rows = ctx.query(f"SELECT account_id FROM {accounts.target}")
     return [
@@ -236,7 +238,7 @@ Intermediate loaders (those referenced only via `depends_on` without a source bi
 
 ```python
 @loader(target="staging.shared_accounts")
-def raw_accounts(ctx):
+def raw_accounts(ctx: LoaderContext):
     ...
 ```
 
