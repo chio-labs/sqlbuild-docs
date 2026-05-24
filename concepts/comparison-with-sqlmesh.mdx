@@ -44,6 +44,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | dbt interop | Run alongside dbt - reads manifest, no migration | N/A | Jinja compatibility layer plus own macro system |
 | **Sources** | | | |
 | Source loaders | Python `@loader` functions with table/append/delete_insert/merge strategies | No (external to dbt) | No (external to SQLMesh) |
+| Declarative ingestion | ingestr integration - YAML-only config for 50+ sources | No | No |
 | Auto-load during builds | Managed sources loaded before dependent models | No | No |
 | Source deferral | `defer_sources_to` reads source data from another environment | No | No |
 | **Other** | | | |
