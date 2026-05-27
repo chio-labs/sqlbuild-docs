@@ -23,7 +23,7 @@ from sqlbuild.loaders import loader
 from sqlbuild.executor.load.models import LoaderContext
 
 @loader
-def raw_customers(ctx: LoaderContext):
+def raw_customers(ctx: LoaderContext) -> list[dict[str, object]]:
     return [
         {"id": 1, "name": "Leslie Knope", "email": "leslie@pawnee.gov"},
         {"id": 2, "name": "Ron Swanson", "email": "ron@pawnee.gov"},
@@ -117,7 +117,7 @@ The loader receives `ctx.current_cursor_value` with the current `MAX(cursor_colu
 
 ```python
 @loader
-def order_events(ctx: LoaderContext):
+def order_events(ctx: LoaderContext) -> list[dict[str, object]]:
     if ctx.current_cursor_value is None:
         return fetch_all_events()
     return fetch_events_since(ctx.current_cursor_value)
@@ -151,7 +151,7 @@ If a loader returns `None`, SQLBuild skips its row-writing pipeline. The loader 
 
 ```python
 @loader
-def raw_status(ctx: LoaderContext):
+def raw_status(ctx: LoaderContext) -> None:
     ctx.execute_sql(f"DROP TABLE IF EXISTS {ctx.target}")
     ctx.execute_sql(
         f"CREATE TABLE {ctx.target} AS "
@@ -216,14 +216,14 @@ from sqlbuild.loaders import loader
 from sqlbuild.executor.load.models import LoaderContext
 
 @loader
-def raw_accounts(ctx: LoaderContext):
+def raw_accounts(ctx: LoaderContext) -> list[dict[str, object]]:
     return [
         {"account_id": 1, "account_name": "Pawnee Parks"},
         {"account_id": 2, "account_name": "Eagleton"},
     ]
 
 @loader(depends_on=[raw_accounts])
-def raw_account_metrics(ctx: LoaderContext):
+def raw_account_metrics(ctx: LoaderContext) -> list[dict[str, object]]:
     accounts = ctx.loader(raw_accounts)
     rows = ctx.query(f"SELECT account_id FROM {accounts.target}")
     return [

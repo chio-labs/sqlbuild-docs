@@ -74,27 +74,27 @@
       {
         "group": "CLI Reference",
         "pages": [
+          "cli/init",
+          "cli/playground",
+          "cli/skills",
           "cli/compile",
           "cli/plan",
           "cli/build",
           "cli/run",
-          "cli/test",
-          "cli/audit",
           "cli/load",
           "cli/seed",
+          "cli/test",
+          "cli/scenario",
+          "cli/audit",
           "cli/clone",
           "cli/diff",
           "cli/lineage",
           "cli/dag",
+          "cli/query",
           "cli/debug",
           "cli/janitor",
-          "cli/query",
-          "cli/scenario",
-          "cli/dbt",
-          "cli/skills",
           "cli/clean",
-          "cli/init",
-          "cli/playground"
+          "cli/dbt"
         ]
       }
     ]
