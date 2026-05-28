@@ -33,7 +33,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | Stateful interval tracking | No - cursor-based (no external state) | No | Yes - tracks which intervals ran |
 | SCD Type 2 models | Timestamp and check strategies, historical input, hard deletes | Snapshots (limited) | Built-in |
 | **Environments** | | | |
-| Virtual environments | No | No | Pointer swaps, no compute cost |
+| Virtual environments | Pointer swaps with hash-based version reuse | No | Pointer swaps, no compute cost |
 | Environment diffs | Full row-level data comparison | No | Table diff |
 | Zero-copy cloning | `sqb clone` | No | No |
 | **Models** | | | |
@@ -58,12 +58,11 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 
 | Tool | Best for |
 |------|----------|
-| **SQLBuild** | Test-first SQL pipelines. Chained unit tests, local E2E scenario replay in DuckDB, pre-promotion audit gating, offline compile-time validation, and stateless operation. |
+| **SQLBuild** | Test-first SQL pipelines. Chained unit tests, local E2E scenario replay in DuckDB, pre-promotion audit gating, offline compile-time validation, virtual environments with instant promotion. |
 | **dbt** | The most widely adopted SQL transformation framework with the largest adapter and community ecosystem. |
 | **SQLMesh** | State-managed pipelines with virtual environments, interval tracking, and cross-dialect transpilation. |
 
 ## Not yet in SQLBuild
 
-- **Virtual environments** - pointer-based environment promotion without recomputing models
 - **Python models** - Pandas, PySpark, Snowpark, BigFrames
 - **Broader adapter support** - ClickHouse, Redshift, Trino, Spark, Athena
