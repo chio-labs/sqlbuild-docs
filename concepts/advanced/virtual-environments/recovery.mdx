@@ -21,18 +21,18 @@ State corruption is detected by schema validation during `state migrate`. If the
 
 | Scenario | Detection | Recovery |
 |----------|-----------|----------|
-| Missing logical VDE view | `sqb reconcile` reports missing view | `sqb reconcile repair-view --virtual-env <name> --model <model>` |
-| Missing physical relation | `sqb reconcile` reports missing relation; `repair-view` blocks | `sqb build --select <model>` to rebuild |
-| Logical target is a table (not a view) | `repair-view` and `attach` block | Drop the table manually, then `repair-view` |
-| Checkpoint physical relation missing | `sqb rollback` blocks with "missing warehouse relation" | Use a more recent checkpoint, or rebuild |
+| Missing logical VDE view | `sqb reconcile` reports missing view | `sqb reconcile repair-view` for the affected model |
+| Missing physical relation | `sqb reconcile` reports it, `repair-view` blocks | Rebuild with `sqb build --select` |
+| Logical target is a table, not a view | `repair-view` and `attach` block | Drop the table manually, then `repair-view` |
+| Checkpoint physical relation missing | `sqb rollback` blocks | Use a more recent checkpoint, or rebuild |
 | Promoted physical relation missing | `sqb promote` blocks | Rebuild the source VDE first |
 
 ## Lock conflicts
 
 | Scenario | Error | Recovery |
 |----------|-------|----------|
-| VDE locked by another process | "virtual environment '<name>' is locked" | Wait for the other process, or `sqb state locks clear <key> --force` |
-| Lock held by crashed process | Same | `sqb state locks clear <key> --force` |
+| VDE locked by another process | "virtual environment is locked" | Wait for the other process, or clear the lock |
+| Lock held by crashed process | Same | `sqb state locks clear` with `--force` |
 
 Only clear locks when you are certain the holding operation is no longer running.
 
@@ -40,8 +40,8 @@ Only clear locks when you are certain the holding operation is no longer running
 
 | Scenario | Behavior | Recovery |
 |----------|----------|----------|
-| Interrupted adopt | Failed operation recorded in state. Physical schema may have partial artifacts (table moved but view not created). | `sqb reconcile` to diagnose, manual repair if needed, retry adopt. |
-| Interrupted detach | Failed operation recorded. VDE stays `finalized`. Physical version preserved. | `sqb reconcile` to diagnose, retry detach. |
+| Interrupted adopt | Failed operation recorded. Physical schema may have partial artifacts. | `sqb reconcile` to diagnose, manual repair if needed, retry. |
+| Interrupted detach | Failed operation recorded. VDE stays finalized. Physical version preserved. | `sqb reconcile` to diagnose, retry detach. |
 | Interrupted promotion | Failed operation recorded. Target VDE lock released. | Retry promote. |
 
 There is no automatic resume command for interrupted operations. SQLBuild records the failure in `state_operations` and `state_operation_events`, preserves VDE refs and checkpoints, and leaves recovery to the operator.
@@ -65,10 +65,10 @@ SQLBuild blocks operations that don't apply to the current mode:
 
 | Operation | Direct mode | Virtual mode |
 |-----------|-------------|--------------|
-| `sqb state init/migrate/rollback/reset` | Blocked: "requires environment_mode = 'virtual'" | Allowed |
-| `sqb run` | Allowed | Blocked: use `sqb build` |
-| `sqb build --defer-to` | Allowed | Blocked: VDE refs handle upstream resolution |
-| `sqb promote` | Blocked: "promote requires virtual mode" | Allowed |
+| `sqb state` subcommands | Blocked | Allowed |
+| `sqb run` | Allowed | Blocked (use `sqb build`) |
+| `sqb build --defer-to` | Allowed | Blocked (VDE refs handle upstream resolution) |
+| `sqb promote` | Blocked | Allowed |
 | `sqb rollback` | Blocked | Allowed |
 | `sqb reconcile` | Blocked | Allowed |
 
