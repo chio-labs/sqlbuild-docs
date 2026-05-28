@@ -3,6 +3,10 @@ title: "Overview"
 description: "Version-controlled SQL pipeline environments with instant promotion and rollback."
 ---
 
+<Note>
+Virtual environments are in alpha. The core workflow (build, promote, rollback, reconcile) is functional and tested across supported adapters. The API and CLI surface may evolve based on feedback. We recommend using virtual environments in development and staging before adopting them for production workloads.
+</Note>
+
 Virtual environments (VDEs) let you build, preview, and promote SQL pipeline changes without recomputing models. Each VDE is a set of pointers to versioned physical relations. Creating a new VDE is instant (pointer copy, no data duplication), and promoting one VDE into another is a view swap, not a rebuild.
 
 ## When to use virtual environments
