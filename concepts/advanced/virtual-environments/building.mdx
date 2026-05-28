@@ -117,6 +117,10 @@ When an incremental model's version hash changes, SQLBuild seeds the new physica
 
 For append models with bounded replay (`query_change_backfill bounded-7d`), the seed copies only rows before the replay window cutoff. The incremental delta then appends the bounded range without duplicating rows.
 
+## Limitations
+
+Custom materializations are not supported in virtual mode. Models using custom materializations must use direct mode. Custom materializations can write arbitrary relations and may not follow the VDE physical/virtual lifecycle rules that virtual mode relies on.
+
 ## Functions
 
 Functions are published into the logical VDE schema, not the physical layer. Each VDE has its own copy of function definitions. Function versions are tracked in state and participate in promotion and rollback.
