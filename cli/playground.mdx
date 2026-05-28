@@ -21,6 +21,7 @@ The argument is used as both the template name and the directory name. If omitte
 |----------|-------------|
 | `waffle_shop` | Default. DuckDB-backed project with models, tests, scenarios, and macros. |
 | `dagster` | Waffle shop project plus a `dagster/` directory with a ready-to-run `definitions.py`. |
+| `virtual` | Waffle shop with virtual environments enabled, a local DuckDB state store, loaders, and the full virtual lifecycle (build, promote, rollback). |
 
 ## What it creates
 
@@ -53,6 +54,14 @@ sqb playground --template dagster
 cd sqlbuild-playground
 uv pip install 'sqlbuild[dagster]'
 dagster dev -f dagster/definitions.py
+
+# With virtual environments
+sqb playground --template virtual
+cd sqlbuild-playground
+sqb state init
+sqb build
+sqb build --virtual-env pr
+sqb promote --from pr --to dev
 ```
 
 ## Notes
