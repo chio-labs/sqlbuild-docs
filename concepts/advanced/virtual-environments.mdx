@@ -55,6 +55,22 @@ Creating a new VDE from a baseline copies only pointer rows in the state databas
 
 Promoting VDE `pr_123` to `prod` updates the pointer rows and refreshes the logical views. No models are rebuilt. If every model in the source VDE has already been built and validated, promotion is a metadata operation.
 
+## Try it
+
+```bash
+sqb playground --template virtual
+cd sqlbuild-playground
+sqb state init
+sqb build
+sqb build --virtual-env pr
+sqb diff dev:pr --schema-only --allow-partial-diff
+sqb promote --from pr --to dev
+sqb state checkpoints list
+sqb rollback
+```
+
+This creates a self-contained DuckDB project with loaders, models, tests, scenarios, and a local state store. No warehouse credentials required.
+
 ## Example workflow
 
 ```bash
