@@ -61,7 +61,7 @@
         "group": "Advanced",
         "pages": [
           {
-            "group": "Virtual Environments",
+            "group": "Virtual Environments (Alpha)",
             "pages": [
               "concepts/advanced/virtual-environments",
               "concepts/advanced/virtual-environments/setup",

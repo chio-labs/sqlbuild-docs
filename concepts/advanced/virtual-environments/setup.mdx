@@ -52,7 +52,7 @@ schema = "sqlbuild_state"
 database = "state.duckdb"
 ```
 
-DuckDB state stores are file-based. Relative paths are resolved against the project directory. Suitable for local development and lightweight deployments.
+DuckDB state stores are file-based. Relative paths are resolved against the project directory. Suitable for local development and single-user workflows. Not recommended when multiple processes or CI jobs need concurrent state access.
 
 ### Postgres state backend
 
@@ -128,6 +128,39 @@ dbname = "sqlbuild_state"
 ```
 
 Each physical environment has its own state store. VDEs are scoped to their physical environment and cannot be promoted or compared across different physical environments.
+
+## Unsuffixed VDE naming
+
+By default, all VDE logical views use a suffixed schema: `dev__kevin.fact_orders`. For the primary VDE that consumers query directly (e.g. the production VDE), you typically want clean unsuffixed names: `dev.fact_orders`.
+
+Configure this with `unsuffixed_virtual_env`:
+
+```toml
+[environments.dev.state]
+backend = "duckdb"
+schema = "sqlbuild_state"
+unsuffixed_virtual_env = "dev"
+
+[environments.dev.state.connection]
+database = "state.duckdb"
+```
+
+With this config, VDE `dev` uses `dev.fact_orders` while other VDEs like `kevin` use `dev__kevin.fact_orders`.
+
+This setting is also required for [adopt and detach](/concepts/advanced/virtual-environments/adopt-detach) operations so that existing consumer queries continue to work after migrating to virtual mode.
+
+## Janitor configuration
+
+When using virtual environments, configure the janitor to run periodically to clean up expired VDEs, old checkpoints, and unreferenced physical versions:
+
+```toml
+[janitor]
+enabled = true
+retention_days = 30
+max_checkpoints = 20
+```
+
+See [Janitor](/concepts/advanced/virtual-environments/janitor) for details on what gets cleaned up and how retention works.
 
 ## State tables
 
