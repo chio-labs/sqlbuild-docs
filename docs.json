@@ -58,6 +58,28 @@
         ]
       },
       {
+        "group": "Advanced",
+        "pages": [
+          {
+            "group": "Virtual Environments",
+            "pages": [
+              "concepts/advanced/virtual-environments",
+              "concepts/advanced/virtual-environments/setup",
+              "concepts/advanced/virtual-environments/building",
+              "concepts/advanced/virtual-environments/promotion",
+              "concepts/advanced/virtual-environments/rollback",
+              "concepts/advanced/virtual-environments/adopt-detach",
+              "concepts/advanced/virtual-environments/clone",
+              "concepts/advanced/virtual-environments/diff",
+              "concepts/advanced/virtual-environments/reconcile",
+              "concepts/advanced/virtual-environments/locks",
+              "concepts/advanced/virtual-environments/janitor",
+              "concepts/advanced/virtual-environments/recovery"
+            ]
+          }
+        ]
+      },
+      {
         "group": "Integrations",
         "pages": [
           {
@@ -94,7 +116,11 @@
           "cli/debug",
           "cli/janitor",
           "cli/clean",
-          "cli/dbt"
+          "cli/dbt",
+          "cli/state",
+          "cli/promote",
+          "cli/rollback",
+          "cli/reconcile"
         ]
       }
     ]

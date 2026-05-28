@@ -42,6 +42,7 @@ materialized = "view"
 |-------|-------------|
 | `name` | Project name. Used in fingerprint tracking and manifest generation. |
 | `adapter` | Database adapter: `duckdb`, `motherduck`, `snowflake`, `bigquery`, `databricks`, `postgres`, or `sqlserver`. See [Adapters](/concepts/adapters). |
+| `environment_mode` | `direct` (default) or `virtual`. When set to `virtual`, enables [virtual environments](/concepts/advanced/virtual-environments) with versioned model outputs, promotion, rollback, and state management. |
 
 ### Connection
 
