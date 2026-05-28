@@ -89,6 +89,7 @@
               "integrations/dagster-reference"
             ]
           },
+          "integrations/rivers",
           "integrations/dlt",
           "integrations/ingestr"
         ]
