@@ -105,6 +105,10 @@ def grant_target(target):
 - **Deferred references:** Compile and plan against a production environment with `--defer-to` while building in dev.
 - **No manifest required:** Clone, diff, and defer work directly against live environments. No `manifest.json` generation, no artifact management, no stale state.
 
+### Virtual environments
+
+- **Advanced virtual environments:** Optional state-backed workflows for low-copy branching, promotion, and rollback when your team is ready to operate a shared state store. See [Virtual Environments](/concepts/advanced/virtual-environments).
+
 ### Extensibility
 
 - **Source loaders:** Load external data into source tables with Python functions. Supports incremental write strategies (table, append, delete_insert, merge), cursor-based loading, loader-to-loader dependencies, and concurrent execution. Loaders run automatically during builds.
