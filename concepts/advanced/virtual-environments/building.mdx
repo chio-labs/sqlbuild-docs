@@ -78,7 +78,7 @@ sqb build --virtual-env pr_123 --select fact_orders
 # error: selected models have stale required upstreams: stg_orders
 ```
 
-Use `--include-stale-upstreams` to add the minimal stale ancestor closure:
+Pass `--include-stale-upstreams` to expand the selection to the minimal set of stale ancestor models needed to make the selected scope coherent:
 
 ```bash
 sqb build --virtual-env pr_123 --select fact_orders --include-stale-upstreams

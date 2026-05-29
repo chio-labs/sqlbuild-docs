@@ -51,19 +51,23 @@ Use `sqb state checkpoints list` to see available checkpoints.
 
 ## Partial rollback
 
-Roll back a subset of models:
+Roll back a subset of models with `--select`:
 
 ```bash
 sqb rollback --select fact_orders
 ```
 
-Partial rollback is guarded by default if it would leave the VDE working:
+Rolling back some models but not others can leave the VDE with stale models - models whose restored versions no longer line up with the rest of the VDE. When this happens, rollback is blocked by default so you don't leave the VDE in a working state by accident.
+
+To accept a working VDE, pass `--allow-partial-rollback`:
 
 ```bash
 sqb rollback --select fact_orders --allow-partial-rollback
 ```
 
-Use `--include-stale-upstreams` to add required upstream refs from the checkpoint:
+The VDE is marked `working` after the rollback. You can finalize it later by building or rolling back the remaining models.
+
+If the models you select depend on upstream models that also need to be restored for the scope to be coherent, pass `--include-stale-upstreams` to expand the selection to the minimal set of required upstream refs from the checkpoint:
 
 ```bash
 sqb rollback --select fact_orders --include-stale-upstreams
