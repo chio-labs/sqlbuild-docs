@@ -12,14 +12,14 @@ Run end-to-end scenario tests. Scenarios materialize fixture inputs as physical 
 Run scenario tests against the warehouse.
 
 ```bash
-sqb scenario test [selectors...] [flags]
+sqb scenario test [flags]
 ```
 
 ### Flags
 
 | Flag | Description |
 |------|-------------|
-| `--select`, `-s` | Select scenarios (merged with positional selectors) |
+| `--select`, `-s` | Select scenarios to run |
 | `--exclude` | Exclude scenarios from the selection |
 | `--retain` | Keep scenario-owned warehouse artifacts for inspection |
 | `--local` | Run locally against DuckDB using captured JSONL snapshots |
@@ -35,19 +35,18 @@ sqb scenario test [selectors...] [flags]
 
 ### Selectors
 
-Scenarios can be selected positionally or with `--select`. Both forms are merged. `--exclude` removes scenarios from the selection. Without any selectors, all discovered scenarios run.
+Scenarios are selected with `--select`. `--exclude` removes scenarios from the selection. Without any selectors, all discovered scenarios run.
 
 | Selector | Example |
 |----------|---------|
-| Scenario name | `sqb scenario test daily_revenue_minimal` |
-| Multiple names | `sqb scenario test daily_revenue_minimal daily_revenue_multi_order` |
-| `.sql` file path | `sqb scenario test tests/scenarios/revenue/daily_revenue_minimal.sql` |
-| Folder | `sqb scenario test tests/scenarios/revenue` |
-| Scenario-root-relative folder | `sqb scenario test revenue` |
-| `--select` flag | `sqb scenario test --select daily_revenue_minimal` |
-| `--exclude` flag | `sqb scenario test revenue --exclude daily_revenue_multi_order` |
+| Scenario name | `sqb scenario test --select daily_revenue_minimal` |
+| Multiple names | `sqb scenario test --select daily_revenue_minimal --select daily_revenue_multi_order` |
+| `.sql` file path | `sqb scenario test --select tests/scenarios/revenue/daily_revenue_minimal.sql` |
+| Folder | `sqb scenario test --select tests/scenarios/revenue` |
+| Scenario-root-relative folder | `sqb scenario test --select revenue` |
+| Exclude | `sqb scenario test --select revenue --exclude daily_revenue_multi_order` |
 
-Positional and `--select` selectors are merged, mixed selector types are supported, and the result is de-duplicated by scenario name.
+Mixed selector types are supported and the result is de-duplicated by scenario name.
 
 ### Remote examples
 
@@ -56,13 +55,13 @@ Positional and `--select` selectors are merged, mixed selector types are support
 sqb scenario test
 
 # Run one scenario
-sqb scenario test daily_revenue_minimal
+sqb scenario test --select daily_revenue_minimal
 
 # Run and retain warehouse artifacts
-sqb scenario test daily_revenue_minimal --retain
+sqb scenario test --select daily_revenue_minimal --retain
 
 # Run all scenarios in a folder
-sqb scenario test revenue
+sqb scenario test --select revenue
 ```
 
 ### Local examples
@@ -106,13 +105,15 @@ Failed scenarios suggest rerunning with `--retain` for inspection. Local runs al
 Capture scenario input fixtures from the warehouse as JSONL snapshots for local replay.
 
 ```bash
-sqb scenario capture [selectors...] [flags]
+sqb scenario capture [flags]
 ```
 
 ### Flags
 
 | Flag | Description |
 |------|-------------|
+| `--select`, `-s` | Select scenarios to capture |
+| `--exclude` | Exclude scenarios from the selection |
 | `--retain` | Keep warehouse fixture artifacts after capture |
 | `--force` | Bypass snapshot capture safety limits |
 | `--max-snapshot-rows` | Override per-relation row limit |
@@ -128,10 +129,10 @@ sqb scenario capture [selectors...] [flags]
 sqb scenario capture
 
 # Capture one scenario
-sqb scenario capture daily_revenue_minimal
+sqb scenario capture --select daily_revenue_minimal
 
 # Capture and retain warehouse artifacts
-sqb scenario capture daily_revenue_minimal --retain
+sqb scenario capture --select daily_revenue_minimal --retain
 ```
 
 Snapshots are written to `tests/_scenario_snapshots/<scenario_name>/` with a `scenario.json` manifest and JSONL files for each fixture relation. These files can be committed to version control.

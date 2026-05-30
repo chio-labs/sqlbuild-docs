@@ -140,7 +140,7 @@ Scenario artifacts are physically isolated from production:
 When a scenario fails or you want to inspect intermediate state:
 
 ```bash
-sqb scenario test daily_revenue_minimal --retain
+sqb scenario test --select daily_revenue_minimal --retain
 ```
 
 This keeps all scenario-owned relations in the warehouse and prints a relation map showing the logical-to-physical name mapping. You can then query the scenario tables directly to debug.
@@ -156,7 +156,7 @@ Scenarios can run locally against DuckDB using captured JSONL snapshots - no war
 First, capture scenario inputs from the real warehouse:
 
 ```bash
-sqb scenario capture daily_revenue_minimal
+sqb scenario capture --select daily_revenue_minimal
 ```
 
 This:
