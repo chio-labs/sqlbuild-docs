@@ -19,6 +19,8 @@ sqb scenario test [selectors...] [flags]
 
 | Flag | Description |
 |------|-------------|
+| `--select`, `-s` | Select scenarios (merged with positional selectors) |
+| `--exclude` | Exclude scenarios from the selection |
 | `--retain` | Keep scenario-owned warehouse artifacts for inspection |
 | `--local` | Run locally against DuckDB using captured JSONL snapshots |
 | `--strict` | Treat missing/stale local snapshots as errors instead of skips |
@@ -33,7 +35,7 @@ sqb scenario test [selectors...] [flags]
 
 ### Selectors
 
-Zero or more selectors can be provided. Without selectors, all discovered scenarios run.
+Scenarios can be selected positionally or with `--select`. Both forms are merged. `--exclude` removes scenarios from the selection. Without any selectors, all discovered scenarios run.
 
 | Selector | Example |
 |----------|---------|
@@ -42,8 +44,10 @@ Zero or more selectors can be provided. Without selectors, all discovered scenar
 | `.sql` file path | `sqb scenario test tests/scenarios/revenue/daily_revenue_minimal.sql` |
 | Folder | `sqb scenario test tests/scenarios/revenue` |
 | Scenario-root-relative folder | `sqb scenario test revenue` |
+| `--select` flag | `sqb scenario test --select daily_revenue_minimal` |
+| `--exclude` flag | `sqb scenario test revenue --exclude daily_revenue_multi_order` |
 
-Mixed selector types are supported and de-duplicated by scenario name.
+Positional and `--select` selectors are merged, mixed selector types are supported, and the result is de-duplicated by scenario name.
 
 ### Remote examples
 
