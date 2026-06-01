@@ -130,3 +130,16 @@ The commands differ in what they include by default:
 - `sqb check` runs Python checks only. See [`sqb check`](/cli/check).
 
 Use `--no-python` on `plan`, `run`, and `build` to suppress read-side tasks/assets. Loader-side Python required to populate selected sources still runs (use `--no-load` to skip source loading). See the [`sqb build`](/cli/build) and [`sqb run`](/cli/run) references.
+
+## Try it
+
+The `python_nodes` playground is a small working project with a task, loader, model, asset, and check:
+
+```bash
+sqb playground --template python_nodes
+cd sqlbuild-playground
+sqb build --select +fact_orders --select +orders_export
+sqb check --select +check_orders_export
+```
+
+See [`sqb playground`](/cli/playground).
