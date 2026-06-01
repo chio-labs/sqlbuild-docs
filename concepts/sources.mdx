@@ -95,7 +95,7 @@ sources:
 
 Managed sources support incremental write strategies (`table`, `append`, `delete_insert`, `merge`), cursor-based loading, and concurrent execution.
 
-See [Loaders](/concepts/loaders) for the full guide on writing loader functions, write strategies, the loader context API, and auto-load behavior during builds.
+See [Loaders](/concepts/python-nodes/loaders) for the full guide on writing loader functions, write strategies, the loader context API, and auto-load behavior during builds.
 
 ## Config reference
 
@@ -106,7 +106,7 @@ See [Loaders](/concepts/loaders) for the full guide on writing loader functions,
 | `schema` | Target schema (optional) |
 | `table` | Target table name (defaults to `name` if omitted) |
 | `expression` | Inline SQL expression (alternative to table reference) |
-| `managed` | Set to `true` to bind the source to the `@loader` function of the same name (see [Loaders](/concepts/loaders)) |
+| `managed` | Set to `true` to bind the source to the `@loader` function of the same name (see [Loaders](/concepts/python-nodes/loaders)) |
 | `write_strategy` | How the loader writes data: `table`, `append`, `delete_insert`, or `merge` (requires `managed: true`) |
 | `cursor_column` | Column for incremental cursor tracking (required for `delete_insert` and `merge`) |
 | `unique_key` | Merge key column(s) (required for `merge`) |

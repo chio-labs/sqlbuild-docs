@@ -79,7 +79,7 @@ Environments let you build to different schemas, databases, or connections from 
 | `database` | Target database for all models in this environment |
 | `connection` | Override the base connection config |
 | `vars` | Environment-specific project variables |
-| `defer_sources_to` | Environment name to read managed source data from (see [Loaders](/concepts/loaders#source-deferral)) |
+| `defer_sources_to` | Environment name to read managed source data from (see [Loaders](/concepts/python-nodes/loaders#source-deferral)) |
 | `clone` | Clone policy (see below) |
 
 ```toml
@@ -193,7 +193,7 @@ default_audit_run_scope = "final"
 | `query_change_tracking` | `true` | Track query fingerprints for change detection |
 | `sql_validation` | `true` | Validate SQL syntax during compilation |
 | `concurrency` | `1` | Maximum parallel model execution (currently serial only) |
-| `auto_load_sources` | `true` | Automatically run source loaders before building dependent models during `sqb build` and `sqb run`. See [Loaders](/concepts/loaders). |
+| `auto_load_sources` | `true` | Automatically run source loaders before building dependent models during `sqb build` and `sqb run`. See [Loaders](/concepts/python-nodes/loaders). |
 | `table_promotion_mode` | adapter default | `staged` (CTAS to staging, audit, then promote) or `direct` (CTAS directly to target) |
 | `default_audit_severity` | `warn` | Default severity for audits: `warn` or `error` |
 | `default_audit_run_scope` | `final` | Default run scope for audits: `final` or `delta_and_final` |

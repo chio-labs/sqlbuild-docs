@@ -41,7 +41,6 @@
             ]
           },
           "concepts/sources",
-          "concepts/loaders",
           "concepts/seeds",
           "concepts/models",
           "concepts/interpolation",
@@ -55,6 +54,17 @@
           "concepts/selectors",
           "concepts/column-lineage",
           "concepts/environment-diffs"
+        ]
+      },
+      {
+        "group": "Python Nodes",
+        "pages": [
+          "concepts/python-nodes/overview",
+          "concepts/python-nodes/loaders",
+          "concepts/python-nodes/tasks",
+          "concepts/python-nodes/assets",
+          "concepts/python-nodes/checks",
+          "concepts/python-nodes/sql-references"
         ]
       },
       {
@@ -109,6 +119,7 @@
           "cli/test",
           "cli/scenario",
           "cli/audit",
+          "cli/check",
           "cli/clone",
           "cli/diff",
           "cli/lineage",
