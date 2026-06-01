@@ -79,12 +79,12 @@ You can explicitly set `type_enforcement: false` on a source to disable casting 
 
 ## Managed sources (loaders)
 
-Sources can be loaded by Python functions instead of pointing at existing tables or inline expressions. Add a `loader` field to bind a source to a loader function, and SQLBuild will call it to populate the source table:
+Sources can be loaded by Python functions instead of pointing at existing tables or inline expressions. Set `managed: true` to bind a source to the `@loader` function **of the same name**, and SQLBuild will call it to populate the source table:
 
 ```yaml
 sources:
   - name: raw_customers
-    loader: raw_customers
+    managed: true
     write_strategy: table
     columns:
       - name: id
@@ -106,8 +106,8 @@ See [Loaders](/concepts/loaders) for the full guide on writing loader functions,
 | `schema` | Target schema (optional) |
 | `table` | Target table name (defaults to `name` if omitted) |
 | `expression` | Inline SQL expression (alternative to table reference) |
-| `loader` | Name of a loader function to bind (see [Loaders](/concepts/loaders)) |
-| `write_strategy` | How the loader writes data: `table`, `append`, `delete_insert`, or `merge` |
+| `managed` | Set to `true` to bind the source to the `@loader` function of the same name (see [Loaders](/concepts/loaders)) |
+| `write_strategy` | How the loader writes data: `table`, `append`, `delete_insert`, or `merge` (requires `managed: true`) |
 | `cursor_column` | Column for incremental cursor tracking (required for `delete_insert` and `merge`) |
 | `unique_key` | Merge key column(s) (required for `merge`) |
 | `description` | Human-readable description |
