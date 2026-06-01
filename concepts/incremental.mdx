@@ -3,13 +3,13 @@ title: "Incremental Models"
 description: "Cursor-based incremental strategies, microbatch execution, and backfill policies."
 ---
 
-Incremental models process only new or changed data instead of rebuilding the entire table. SQLBuild tracks position using a cursor column (timestamp or integer) and automatically detects where to resume. If a model fails for several runs, the next successful build replays from where it left off with no manual backfilling.
+Incremental models process only new or changed data instead of rebuilding the entire table. SQLBuild works out where to resume by reading the highest cursor value (timestamp or integer) already in the target table, so there is no state store or checkpoint to maintain. If a model fails for several runs, the next successful build picks up from the last data it actually wrote, with no manual backfilling.
 
 ## Strategies
 
 ### append
 
-Inserts new rows without modifying existing data. Optionally uses a cursor to track position and avoid reprocessing the full source on every run.
+Inserts new rows without modifying existing data. Optionally uses a cursor (read from the target table's highest value) to avoid reprocessing the full source on every run.
 
 ```sql
 MODEL (
