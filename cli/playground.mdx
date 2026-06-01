@@ -13,7 +13,7 @@ Creates a self-contained waffle shop project with DuckDB. No warehouse credentia
 sqb playground [name]
 ```
 
-The argument is used as both the template name and the directory name. If omitted, the default `waffle_shop` template is used and the project is created in a directory matching the template name.
+The positional argument is the directory to create (default `sqlbuild-playground`). The template is chosen with `--template` (default `waffle_shop`).
 
 ## Templates
 
@@ -23,6 +23,7 @@ The argument is used as both the template name and the directory name. If omitte
 | `dagster` | Waffle shop project plus a `dagster/` directory with a ready-to-run `definitions.py`. |
 | `rivers` | Waffle shop project plus a `rivers_pipeline/` directory with a Rivers repository definition. |
 | `virtual` | Waffle shop with virtual environments enabled, a local DuckDB state store, loaders, and the full virtual lifecycle (build, promote, rollback). |
+| `python_nodes` | A small DuckDB project demonstrating [Python nodes](/concepts/python-nodes/overview): a task feeding a loader, a model read by a Python asset through `ctx.relation(model(...))`, a soft-skip fan-in, `materialized=False`, and a Python check. |
 
 ## What it creates
 
@@ -41,6 +42,12 @@ The `dagster` template adds:
 
 - `dagster/definitions.py` - Dagster definitions with `sqlbuild_assets`, `sqlbuild_scenario_checks`, and `SqlBuildCliResource`
 - `dagster/README.md` - Setup instructions
+
+The `python_nodes` template instead creates a focused Python-nodes project:
+
+- `tasks/orders.py`, `loaders/orders.py`, `assets/orders_export.py`, `checks/orders_export.py`
+- A `fact_orders` SQL model over a managed `raw_orders` source
+- Examples of the SQL boundary, `ctx.relation(model(...))`, soft-skip fan-in, and a Python check
 
 ## Examples
 
@@ -69,6 +76,12 @@ sqb state init
 sqb build
 sqb build --virtual-env pr
 sqb promote --from pr --to dev
+
+# With Python nodes
+sqb playground --template python_nodes
+cd sqlbuild-playground
+sqb build --select +fact_orders --select +orders_export
+sqb check --select +check_orders_export
 ```
 
 ## Notes
