@@ -97,7 +97,7 @@ def grant_target(target):
 
 ### Incremental processing
 
-- **Cursor-based replay:** SQLBuild tracks position using a timestamp or integer column and automatically detects where to resume. If a model fails for several runs, the next successful build replays from where it left off with no manual backfilling.
+- **Cursor-based replay:** SQLBuild resumes by reading the highest timestamp or integer value already in the target table, so there is no state store or checkpoint to maintain. If a model fails for several runs, the next successful build picks up from the last data it actually wrote, with no manual backfilling.
 - **Microbatch mode:** Split large replay windows into configurable batches, each with its own audit cycle. Or process the full range in one pass, the choice is per-model.
 
 ### Multi-environment workflows
