@@ -67,7 +67,7 @@ def raw_github_issues(ctx: LoaderContext):
     pipeline = dlt.pipeline(
         pipeline_name="github_issues",
         destination=dlt.destinations.duckdb(ctx.connection),
-        dataset_name=ctx.target_schema or "main",
+        dataset_name=ctx.destination_schema or "main",
     )
     pipeline.run(source)
 ```
@@ -118,7 +118,7 @@ def raw_pg_customers(ctx: LoaderContext):
     pipeline = dlt.pipeline(
         pipeline_name="pg_customers",
         destination=dlt.destinations.duckdb(ctx.connection),
-        dataset_name=ctx.target_schema or "main",
+        dataset_name=ctx.destination_schema or "main",
     )
     pipeline.run(source)
 ```
@@ -140,7 +140,7 @@ For production, set variables via environment variables or per-environment confi
 
 ```toml
 # sqlbuild_project.toml
-[environments.prod.vars]
+[targets.prod.vars]
 github_token = "${GITHUB_TOKEN}"
 ```
 
@@ -152,7 +152,7 @@ When using the DuckDB adapter, you can pass `ctx.connection` directly to dlt's D
 pipeline = dlt.pipeline(
     pipeline_name="my_pipeline",
     destination=dlt.destinations.duckdb(ctx.connection),
-    dataset_name=ctx.target_schema or "main",
+    dataset_name=ctx.destination_schema or "main",
 )
 ```
 
@@ -168,7 +168,7 @@ def raw_api_data(ctx: LoaderContext):
     pipeline = dlt.pipeline(
         pipeline_name="api_data",
         destination="snowflake",
-        dataset_name=ctx.target_schema or "public",
+        dataset_name=ctx.destination_schema or "public",
     )
     pipeline.run(source)
 ```

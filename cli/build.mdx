@@ -18,7 +18,7 @@ sqb --project-dir <path> build [flags]
 | Flag | Description |
 |------|-------------|
 | `--no-sql-validation` | Skip compile-time SQL syntax validation |
-| `--defer-to` | Resolve unselected model references against another environment |
+| `--defer-to` | Resolve unselected model references against another target |
 | `--full-refresh` | Drop and rebuild all selected models from scratch |
 | `--fail-fast` | Stop on first failure and skip remaining nodes |
 | `--concurrency` | Number of worker connections (default: 1) |
@@ -31,7 +31,7 @@ sqb --project-dir <path> build [flags]
 | `--no-load` | Skip automatic source loading |
 | `--no-python` | Skip read-side Python tasks and assets (loader-side Python still runs for selected sources) |
 | `--reload` | Reload managed sources (passes `is_reload=True` to loaders) |
-| `--defer-sources-to` | Read managed source data from another environment |
+| `--defer-sources-to` | Read managed source data from another target |
 | `--select`, `-s` | Select specific models |
 | `--exclude` | Exclude specific models |
 
@@ -69,13 +69,13 @@ PASS=66  WARN=0  FAIL=0  SKIP=0  TOTAL=66  (1.09s)
 
 ## Deferred builds
 
-Use `--defer-to` to resolve unselected model references against another environment. This lets you build a subset of models in dev while referencing production tables for everything else:
+Use `--defer-to` to resolve unselected model references against another target. This lets you build a subset of models in dev while referencing production tables for everything else:
 
 ```bash
 sqb build --select fact_orders --defer-to prod
 ```
 
-No `manifest.json` is required. Deferred references resolve directly against the live environment.
+No `manifest.json` is required. Deferred references resolve directly against the live target.
 
 ## Failure behavior
 

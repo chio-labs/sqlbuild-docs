@@ -87,7 +87,7 @@ def grant_target(target):
 ```sql
 MODEL (
   materialized table,
-  post_hook ['@grant_target(@@CTX:target.qualified)'],
+  post_hook ['@grant_target(@@CTX:destination.qualified)'],
 );
 
 SELECT 1 AS id
@@ -97,7 +97,7 @@ Hook SQL is validated at compile time using SQLGlot, so invalid hook SQL is caug
 
 ## Macro context
 
-When a macro function accepts a `ctx` parameter as its first argument, SQLBuild passes a `MacroContext` object with adapter and environment information:
+When a macro function accepts a `ctx` parameter as its first argument, SQLBuild passes a `MacroContext` object with adapter and target information:
 
 ```python
 # macros/datetime.py
@@ -113,8 +113,8 @@ The macro context provides:
 |-------|-------------|
 | `adapter_name` | The active adapter (e.g. `duckdb`, `snowflake`) |
 | `sqlglot_enabled` | Whether SQLGlot analysis is enabled |
-| `environment_name` | The active environment name, if any |
-| `vars` | Effective project variables as a dict (merged from project config, environment, local config, and CLI `--vars`) |
+| `target_name` | The active target name, if any |
+| `vars` | Effective project variables as a dict (merged from project config, target, local config, and CLI `--vars`) |
 
 ```python
 def schema_qualified(ctx, table: str) -> str:

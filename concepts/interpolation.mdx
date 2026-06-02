@@ -17,24 +17,24 @@ The rule is simple: if it's any SQL that will be executed, it uses `@`. If it's 
 | `@macro(args)` | Model SQL, hooks, tests, audits, inline source expressions | Compile time - expands to macro return value |
 | `@@name` | Model SQL, hooks, tests, audits, inline source expressions | Compile time - project variable substitution |
 | `@@ENV:NAME` | Model SQL, hooks, tests, audits, inline source expressions | Compile time - environment variable |
-| `@@CTX:name` | Hooks only | Compile time - target relation, environment, run ID |
+| `@@CTX:name` | Hooks only | Compile time - destination relation, target, run ID |
 | `@@@name` | Model SQL | Preserved for runtime (custom materializations) |
 | `@name` / `@'name'` | Generic audit SQL only | Audit engine parameter |
 | `${CTX:...}` | TOML/YAML config values | Config compilation |
 | `${ENV:...}` | TOML/YAML config values | Config compilation |
 
-`@@CTX:` is intentionally hook-only. Model SQL describes a relation's data and should not reference its own target identity. Hooks are the operational SQL layer where target context is useful - grants, logging, post-materialization DDL.
+`@@CTX:` is intentionally hook-only. Model SQL describes a relation's data and should not reference its own destination identity. Hooks are the operational SQL layer where destination context is useful - grants, logging, post-materialization DDL.
 
 ## Project variables
 
-Project variables use `@@name` syntax in SQL and are defined in `sqlbuild_project.toml` or per-environment:
+Project variables use `@@name` syntax in SQL and are defined in `sqlbuild_project.toml` or per-target:
 
 ```toml
 # sqlbuild_project.toml
 [vars]
 schema_prefix = "analytics"
 
-[environments.prod.vars]
+[targets.prod.vars]
 schema_prefix = "prod_analytics"
 ```
 
@@ -83,31 +83,35 @@ If the environment variable is not set, SQLBuild raises a compile error.
 
 ## Context variables
 
-Context variables provide access to the current model's target relation, environment, and run metadata.
+Context variables provide access to the current model's destination relation, active target, and run metadata.
 
 **In hooks** (`@@CTX:` syntax):
 
 ```sql
-post_hook ['GRANT SELECT ON @@CTX:target.qualified TO analyst_role'],
+post_hook ['GRANT SELECT ON @@CTX:destination.qualified TO analyst_role'],
 ```
 
 **In TOML/YAML config values** (`${CTX:...}` syntax):
 
 ```toml
-[environments.prod]
-schema = "${CTX:target.schema}"
+[targets.prod]
+schema = "${CTX:destination.schema}"
 ```
 
 Available context variables:
 
 | Variable | Value |
 |----------|-------|
-| `target.qualified` | Fully qualified target relation name |
-| `target.schema` | Target schema |
-| `target.name` | Target relation name |
-| `model_name` | Model name |
-| `environment` | Current environment name |
-| `run_id` | Current run ID |
+| `destination.qualified` | Fully qualified destination relation name |
+| `destination.schema` | Destination schema |
+| `destination.database` | Destination database |
+| `destination.table` | Destination relation name |
+| `model.name` | Model name |
+| `model.database` | Model database |
+| `model.schema` | Model schema |
+| `model.alias` | Model alias |
+| `run.target` | Active target name |
+| `run.id` | Current run ID |
 
 **In macros**, the `MacroContext` object is passed as the first argument when a macro function accepts a `ctx` parameter:
 
@@ -118,7 +122,7 @@ def timestamp_trunc(ctx, grain: str, expr: str) -> str:
     return f"DATE_TRUNC('{grain}', {expr})"
 ```
 
-The macro context provides `adapter_name`, `sqlglot_enabled`, `environment_name`, and `vars`.
+The macro context provides `adapter_name`, `sqlglot_enabled`, `target_name`, and `vars`.
 
 ## Deferred placeholders
 
@@ -153,5 +157,5 @@ SQLBuild processes authored SQL in this order:
 This means:
 - Config templates resolve first, before any SQL processing
 - Macros see already-substituted variable values in the SQL
-- `@@CTX:target.qualified` in hooks sees the final environment-overridden target name because hooks are expanded after target naming is fully resolved
+- `@@CTX:destination.qualified` in hooks sees the final target-overridden destination name because hooks are expanded after destination naming is fully resolved
 - SQLGlot validates the final expanded SQL, catching syntax errors from both vars and macros

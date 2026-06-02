@@ -46,7 +46,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | Source loaders | Python `@loader` functions with table/append/delete_insert/merge strategies | No (external to dbt) | No (external to SQLMesh) |
 | Declarative ingestion | ingestr integration - YAML-only config for 50+ sources | No | No |
 | Auto-load during builds | Managed sources loaded before dependent models | No | No |
-| Source deferral | `defer_sources_to` reads source data from another environment | No | No |
+| Source deferral | `defer_sources_to` reads source data from another target | No | No |
 | **Other** | | | |
 | Reference syntax | `__ref()` - parses as valid SQL | `{{ ref() }}` - Jinja template | `model_name` with dependency tracking |
 | Adapters | DuckDB, MotherDuck, Snowflake, BigQuery, Databricks, PostgreSQL, SQL Server | 30+ (community adapters) | DuckDB, Snowflake, BigQuery, Databricks, Spark, Redshift, Postgres, Trino, MySQL |

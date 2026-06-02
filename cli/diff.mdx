@@ -1,9 +1,9 @@
 ---
 title: "diff"
-description: "Compare schemas and data between environments."
+description: "Compare schemas and data between targets or virtual environments."
 ---
 
-Compares schemas and optionally row-level data between two environments. See [Environment Diffs](/concepts/environment-diffs) for detailed usage.
+Compares schemas and optionally row-level data between two build contexts: two targets (e.g. `prod:dev`) in direct mode, or two virtual environments when virtual mode is enabled. See [Data Diffs](/concepts/diffs) for detailed usage.
 
 ## Usage
 
@@ -11,7 +11,7 @@ Compares schemas and optionally row-level data between two environments. See [En
 sqb diff <FROM>:<TO> <mode> [flags]
 ```
 
-The first argument is a positional environment range in `FROM:TO` format. Exactly one mode is required: `--full`, `--schema-only`, or `--bounded <duration>`.
+The first argument is a positional `FROM:TO` range. Exactly one mode is required: `--full`, `--schema-only`, or `--bounded <duration>`.
 
 ## Flags
 

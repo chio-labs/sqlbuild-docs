@@ -53,7 +53,7 @@
           "concepts/scenarios",
           "concepts/selectors",
           "concepts/column-lineage",
-          "concepts/environment-diffs"
+          "concepts/diffs"
         ]
       },
       {

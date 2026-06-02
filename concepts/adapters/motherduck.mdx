@@ -30,9 +30,9 @@ database = "my_database"
 token = "${ENV:MOTHERDUCK_TOKEN}"
 ```
 
-## Per-environment connections
+## Per-target connections
 
-Use environments to separate production and development databases on MotherDuck:
+Use targets to separate production and development databases on MotherDuck:
 
 ```toml
 adapter = "motherduck"
@@ -40,16 +40,16 @@ adapter = "motherduck"
 [connection]
 token = "${ENV:MOTHERDUCK_TOKEN}"
 
-[environments.prod]
+[targets.prod]
 schema = "prod"
 
-[environments.prod.connection]
+[targets.prod.connection]
 database = "prod_db"
 
-[environments.dev]
+[targets.dev]
 schema = "dev"
 
-[environments.dev.connection]
+[targets.dev.connection]
 database = "dev_db"
 ```
 

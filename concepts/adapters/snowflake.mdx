@@ -32,9 +32,9 @@ All fields in `connection` are passed directly to `snowflake.connector.connect()
 
 On connect, SQLBuild runs `USE ROLE`, `USE WAREHOUSE`, `USE DATABASE`, and `USE SCHEMA` statements based on the connection config. These ensure the session context is set correctly regardless of the user's default settings.
 
-## Per-environment connections
+## Per-target connections
 
-Use environments to connect to different Snowflake databases or warehouses:
+Use targets to connect to different Snowflake databases or warehouses:
 
 ```toml
 adapter = "snowflake"
@@ -44,18 +44,18 @@ account = "my_org-my_account"
 user = "my_user"
 password = "my_password"
 
-[environments.prod]
+[targets.prod]
 schema = "prod"
 
-[environments.prod.connection]
+[targets.prod.connection]
 role = "PROD_ROLE"
 warehouse = "PROD_WH"
 database = "PROD_DB"
 
-[environments.dev]
+[targets.dev]
 schema = "dev"
 
-[environments.dev.connection]
+[targets.dev.connection]
 role = "DEV_ROLE"
 warehouse = "DEV_WH"
 database = "DEV_DB"

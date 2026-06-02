@@ -196,7 +196,7 @@ The `@mock_orders()` call expands at compile time to whatever SQL the Python mac
 
 ## Macro mocking
 
-When a model uses macros that you want to control in tests (e.g. environment-specific logic, dynamic SQL generation), you can override their output with `__macro__<name>` CTEs:
+When a model uses macros that you want to control in tests (e.g. target-specific logic, dynamic SQL generation), you can override their output with `__macro__<name>` CTEs:
 
 ```sql
 TEST();
@@ -219,7 +219,7 @@ When a `__macro__` mock is defined, every call to `@country_filter(...)` in any 
 The mock value must be a single `SELECT` with one string literal. Use doubled single quotes for quotes within the value (standard SQL escaping).
 
 This is useful for:
-- Testing models that use environment-specific macros without depending on environment config
+- Testing models that use target-specific macros without depending on target config
 - Controlling dynamic SQL generation to produce predictable test inputs
 - Isolating model logic from macro implementation details
 

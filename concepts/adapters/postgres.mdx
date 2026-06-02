@@ -34,7 +34,7 @@ dbname = "my_database"
 
 All fields in `connection` are passed to `psycopg.connect()`. See the [psycopg documentation](https://www.psycopg.org/psycopg3/docs/api/connections.html) for all available options.
 
-## Per-environment connections
+## Per-target connections
 
 ```toml
 adapter = "postgres"
@@ -44,16 +44,16 @@ host = "localhost"
 user = "my_user"
 password = "${ENV:PG_PASSWORD}"
 
-[environments.prod]
+[targets.prod]
 schema = "prod"
 
-[environments.prod.connection]
+[targets.prod.connection]
 host = "prod-db.example.com"
 dbname = "analytics"
 
-[environments.dev]
+[targets.dev]
 schema = "dev"
 
-[environments.dev.connection]
+[targets.dev.connection]
 dbname = "analytics_dev"
 ```

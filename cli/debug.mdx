@@ -17,7 +17,7 @@ The command runs three groups of checks:
 
 **Runtime** - SQLBuild version, Python version, Python path, OS info.
 
-**Configuration** - Finds and validates `sqlbuild_project.toml`, loads `sqlbuild_local.toml` if present, resolves the adapter and active environment.
+**Configuration** - Finds and validates `sqlbuild_project.toml`, loads `sqlbuild_local.toml` if present, resolves the adapter and active target.
 
 **Connection** - Displays connection settings (secrets are masked), attempts to connect to the warehouse, and runs `SELECT 1` to verify query execution.
 
@@ -48,7 +48,7 @@ Configuration:
   local config: /home/user/waffle_shop/sqlbuild_local.toml [OK found]
   project: waffle_shop [OK loaded]
   adapter: snowflake [OK found]
-  environment: dev [OK resolved]
+  target: dev [OK resolved]
 
 Connection:
   account: FJMQFQV-OJ66172
