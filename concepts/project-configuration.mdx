@@ -15,7 +15,7 @@ A complete example:
 ```toml
 name = "waffle_shop"
 adapter = "duckdb"
-default_environment = "dev"
+default_target = "dev"
 
 [connection]
 database = "waffle_shop_control.duckdb"
@@ -26,10 +26,10 @@ default_audit_severity = "warn"
 [defaults]
 materialized = "table"
 
-[environments.prod]
+[targets.prod]
 schema = "prod"
 
-[environments.dev]
+[targets.dev]
 schema = "dev"
 
 [path_defaults."models/staging"]
@@ -42,7 +42,7 @@ materialized = "view"
 |-------|-------------|
 | `name` | Project name. Used in fingerprint tracking and manifest generation. |
 | `adapter` | Database adapter: `duckdb`, `motherduck`, `snowflake`, `bigquery`, `databricks`, `postgres`, or `sqlserver`. See [Adapters](/concepts/adapters). |
-| `environment_mode` | `direct` (default) or `virtual`. When set to `virtual`, enables [virtual environments](/concepts/advanced/virtual-environments) with versioned model outputs, promotion, rollback, and state management. |
+| `default_target` | Name of the target to build against when none is selected (see [Targets](#targets)). |
 
 ### Connection
 
@@ -53,79 +53,80 @@ The `connection` block is passed directly to the adapter. For DuckDB:
 database = "my_project.duckdb"
 ```
 
-Environments can override the connection:
+Targets can override the connection:
 
 ```toml
-[environments.prod]
+[targets.prod]
 schema = "prod"
 
-[environments.prod.connection]
+[targets.prod.connection]
 database = "prod.duckdb"
 
-[environments.dev]
+[targets.dev]
 schema = "dev"
 
-[environments.dev.connection]
+[targets.dev.connection]
 database = "dev.duckdb"
 ```
 
-## Environments
+## Targets
 
-Environments let you build to different schemas, databases, or connections from the same project. Each environment can override:
+A target is a named build context - the schema, database, or connection you build against (for example `dev` and `prod`). Targets let you build to different places from the same project. Each target can override:
 
 | Field | Description |
 |-------|-------------|
-| `schema` | Target schema for all models in this environment |
-| `database` | Target database for all models in this environment |
+| `schema` | Schema for all models in this target |
+| `database` | Database for all models in this target |
 | `connection` | Override the base connection config |
-| `vars` | Environment-specific project variables |
-| `defer_sources_to` | Environment name to read managed source data from (see [Loaders](/concepts/python-nodes/loaders#source-deferral)) |
+| `vars` | Target-specific project variables |
+| `defer_sources_to` | Target name to read managed source data from (see [Loaders](/concepts/python-nodes/loaders#source-deferral)) |
 | `clone` | Clone policy (see below) |
 
 ```toml
-[environments.prod]
+[targets.prod]
 schema = "prod"
 
-[environments.prod.vars]
+[targets.prod.vars]
 source_schema = "raw_prod"
 
-[environments.dev]
+[targets.dev]
 schema = "dev"
 
-[environments.dev.vars]
+[targets.dev.vars]
 source_schema = "raw_dev"
 
-[environments.staging]
+[targets.staging]
 schema = "staging"
 
-[environments.staging.connection]
+[targets.staging.connection]
 database = "staging.duckdb"
 ```
 
-### Selecting an environment
+### Selecting a target
 
-The active environment is determined by (in order of precedence):
+The active target is determined by (in order of precedence):
 
-1. `sqlbuild_local.toml` `environment` field (highest priority)
-2. `default_environment` in `sqlbuild_project.toml`
-3. No environment (models build to default schema)
+1. `--target` on the command line (highest priority)
+2. `sqlbuild_local.toml` `target` field
+3. `default_target` in `sqlbuild_project.toml`
+4. No target (models build to the default schema)
 
 ### Clone policies
 
-Environments can declare whether they allow cloning to or from:
+Targets can declare whether they allow cloning to or from:
 
 ```toml
-[environments.prod]
+[targets.prod]
 schema = "prod"
 
-[environments.prod.clone]
+[targets.prod.clone]
 allow_as_source = true
 allow_as_target = false
 
-[environments.dev]
+[targets.dev]
 schema = "dev"
 
-[environments.dev.clone]
+[targets.dev.clone]
 allow_as_source = false
 allow_as_target = true
 ```
@@ -190,6 +191,7 @@ default_audit_run_scope = "final"
 | Field | Default | Description |
 |-------|---------|-------------|
 | `sqlglot` | `true` | Enable SQLGlot-based SQL validation and static analysis at compile time |
+| `virtual_environments` | `false` | Enable [virtual environments](/concepts/advanced/virtual-environments) (versioned model outputs, promotion, rollback, state management). When `false`, the project runs in direct mode. |
 | `query_change_tracking` | `true` | Track query fingerprints for change detection |
 | `sql_validation` | `true` | Validate SQL syntax during compilation |
 | `concurrency` | `1` | Maximum parallel model execution (currently serial only) |
@@ -213,13 +215,13 @@ schema_prefix = "analytics"
 retention_days = "90"
 ```
 
-Environment-specific variables override project-level ones:
+Target-specific variables override project-level ones:
 
 ```toml
 [vars]
 schema_prefix = "analytics"
 
-[environments.prod.vars]
+[targets.prod.vars]
 schema_prefix = "prod_analytics"
 ```
 
@@ -314,7 +316,7 @@ See [skills CLI reference](/cli/skills) for usage details.
 Local developer overrides. This file should be gitignored.
 
 ```toml
-environment = "dev"
+target = "dev"
 
 [connection]
 database = "my_local.duckdb"
@@ -329,10 +331,10 @@ debug_mode = "true"
 
 | Field | Description |
 |-------|-------------|
-| `environment` | Override which environment is active for this developer |
+| `target` | Override which target is active for this developer |
 | `adapter` | Override the database adapter (e.g. use DuckDB locally while prod uses Snowflake) |
-| `connection` | Override connection config (merged on top of project + environment connection) |
+| `connection` | Override connection config (merged on top of project + target connection) |
 | `settings` | Override global settings (only explicitly set fields take effect) |
-| `vars` | Developer-specific variable overrides (merged on top of project + environment vars) |
+| `vars` | Developer-specific variable overrides (merged on top of project + target vars) |
 
-This replaces the common dbt pattern of switching profiles or setting environment variables to change targets. Each developer sets their environment, connection, and preferences once in `sqlbuild_local.toml` and it persists across sessions.
+This replaces the common dbt pattern of switching profiles or setting environment variables to change targets. Each developer sets their target, connection, and preferences once in `sqlbuild_local.toml` and it persists across sessions.

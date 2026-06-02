@@ -16,23 +16,23 @@ Virtual environments (VDEs) let you build, preview, and promote SQL pipeline cha
 - **Multi-developer isolation** - each developer works in their own VDE without conflicting with others, sharing physical versions when code is identical
 - **Instant rollback** - revert production to a prior finalized state by restoring a checkpoint's pointer set
 
-Virtual environments are opt-in via `environment_mode = "virtual"` and require a state store. Projects that don't need environment isolation or promotion workflows should use the default direct mode.
+Virtual environments are opt-in via `virtual_environments = true` (under `[settings]`) and require a state store. Projects that don't need environment isolation or promotion workflows should use the default direct mode.
 
 ## How it works
 
-### Two types of environments
+### Targets and virtual environments
 
-SQLBuild has two separate environment concepts in virtual mode:
+In virtual mode there are two separate concepts:
 
-**Physical environments** are the existing SQLBuild environments from `sqlbuild_project.toml`. They choose the warehouse connection, target schema, and state database.
+**Targets** are the existing SQLBuild build contexts from `sqlbuild_project.toml` (e.g. `dev`, `prod`). They choose the warehouse connection, schema, and state database. In virtual mode they are sometimes called *physical targets* to distinguish them from VDEs.
 
 **Virtual data environments (VDEs)** are versioned pointer sets stored in the state database. They choose which model versions the logical views point to.
 
 ```bash
-sqb --environment prod build --virtual-env pr_123
+sqb --target prod build --virtual-env pr_123
 ```
 
-This means: use the `prod` physical environment (warehouse, state DB), but build into the `pr_123` virtual environment.
+This means: use the `prod` physical target (warehouse, state DB), but build into the `pr_123` virtual environment.
 
 ### Version identity
 

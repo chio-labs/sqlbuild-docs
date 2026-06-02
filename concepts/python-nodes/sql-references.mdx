@@ -56,7 +56,7 @@ Do not hardcode model or source names in raw SQL. In virtual mode a model resolv
 | `model("name")` | The built model relation (the VDE logical relation in virtual mode) |
 | `source("name")` | The source read relation, following deferred-source semantics |
 
-`source(...)` respects `defer_sources_to`, so a node reading a source in `dev` can read the deferred environment's data just like SQL models do.
+`source(...)` respects `defer_sources_to`, so a node reading a source in `dev` can read the deferred target's data just like SQL models do.
 
 ## Where references are allowed
 

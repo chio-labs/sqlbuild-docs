@@ -5,7 +5,7 @@ description: "Manage the virtual mode state store."
 
 # sqb state
 
-Manages the virtual mode state store lifecycle, locks, and checkpoints. Requires `environment_mode = "virtual"`.
+Manages the virtual mode state store lifecycle, locks, and checkpoints. Requires `virtual_environments = true`.
 
 ## Usage
 
@@ -45,7 +45,7 @@ sqb state rollback --backup-id <id>
 
 ### reset
 
-Drop all state tables. Requires `allow_reset = true` in the environment state config and `--auto-approve` on the command line.
+Drop all state tables. Requires `allow_reset = true` in the target state config and `--auto-approve` on the command line.
 
 ```bash
 sqb state reset --auto-approve

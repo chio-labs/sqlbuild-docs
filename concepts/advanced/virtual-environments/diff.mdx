@@ -3,7 +3,7 @@ title: "Diff"
 description: "Compare virtual data environments."
 ---
 
-In virtual mode, `sqb diff` compares VDE ref sets within the same physical environment. It shows which models have different version hashes and, for changed models, reports schema and row-level differences.
+In virtual mode, `sqb diff` compares VDE ref sets within the same physical target. It shows which models have different version hashes and, for changed models, reports schema and row-level differences.
 
 ## Basic usage
 
@@ -11,7 +11,7 @@ In virtual mode, `sqb diff` compares VDE ref sets within the same physical envir
 sqb diff dev:pr_123
 ```
 
-The format is `<left_vde>:<right_vde>`. Both VDEs must exist in the active physical environment's state store.
+The format is `<left_vde>:<right_vde>`. Both VDEs must exist in the active physical target's state store.
 
 ## What diff shows
 
@@ -53,6 +53,6 @@ This guard prevents misleading diff output when one VDE has pending changes that
 
 ## Comparison with direct-mode diff
 
-In direct mode, `sqb diff prod:dev` compares physical environment schemas and data directly in the warehouse. In virtual mode, `sqb diff dev:pr_123` compares VDE pointer sets within a single physical environment, then inspects the physical versions those pointers reference.
+In direct mode, `sqb diff prod:dev` compares physical target schemas and data directly in the warehouse. In virtual mode, `sqb diff dev:pr_123` compares VDE pointer sets within a single physical target, then inspects the physical versions those pointers reference.
 
-The output format is the same - schema diffs, row counts, changed columns, and example rows. The difference is what is being compared: physical environments vs virtual pointer sets.
+The output format is the same - schema diffs, row counts, changed columns, and example rows. The difference is what is being compared: physical targets vs virtual pointer sets.

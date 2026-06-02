@@ -152,9 +152,9 @@ If a loader returns `None`, SQLBuild skips its row-writing pipeline. The loader 
 ```python
 @loader
 def raw_status(ctx: LoaderContext) -> None:
-    ctx.execute_sql(f"DROP TABLE IF EXISTS {ctx.target}")
+    ctx.execute_sql(f"DROP TABLE IF EXISTS {ctx.destination}")
     ctx.execute_sql(
-        f"CREATE TABLE {ctx.target} AS "
+        f"CREATE TABLE {ctx.destination} AS "
         "SELECT 1 AS status_id, 'loaded' AS status_name"
     )
 ```
@@ -176,20 +176,20 @@ Self-managed loaders must not declare a `write_strategy`. They are useful when y
 
 ## Loader context
 
-Every loader function receives a `LoaderContext` as its first argument. It provides access to the target relation, cursor state, environment, and helper methods.
+Every loader function receives a `LoaderContext` as its first argument. It provides access to the destination relation, cursor state, active target, and helper methods.
 
 ### Properties
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `target` | `str` | Fully-qualified target relation name |
-| `target_database` | `str \| None` | Target database |
-| `target_schema` | `str \| None` | Target schema |
-| `target_name` | `str` | Unqualified target table name |
-| `current_cursor_value` | `object \| None` | Current `MAX(cursor_column)` from the target, or `None` if the table does not exist or has no cursor column |
+| `destination` | `str` | Fully-qualified destination relation name (where rows are written) |
+| `destination_database` | `str \| None` | Destination database |
+| `destination_schema` | `str \| None` | Destination schema |
+| `destination_name` | `str` | Unqualified destination table name |
+| `current_cursor_value` | `object \| None` | Current `MAX(cursor_column)` from the destination, or `None` if the table does not exist or has no cursor column |
 | `run_id` | `str` | Unique identifier for this execution run |
-| `environment` | `str \| None` | Active environment name |
-| `vars` | `dict` | Project variables (merged from project, environment, and local config) |
+| `target` | `str \| None` | Active target name (e.g. `dev`, `prod`) |
+| `vars` | `dict` | Project variables (merged from project, target, and local config) |
 | `is_reload` | `bool` | `True` when `--reload` was passed |
 | `start_cursor_ts` | `datetime \| None` | Timestamp cursor start override from `--start-cursor-ts` |
 | `end_cursor_ts` | `datetime \| None` | Timestamp cursor end override from `--end-cursor-ts` |
@@ -206,7 +206,7 @@ Every loader function receives a `LoaderContext` as its first argument. It provi
 | `execute_sql(sql)` | Execute a SQL statement against the connection |
 | `query(sql)` | Execute a SQL query and return the cursor |
 | `log(message)` | Log a message to the execution lifecycle output |
-| `qualify_name(name)` | Return a fully-qualified relation name in the target database/schema |
+| `qualify_name(name)` | Return a fully-qualified relation name in the destination database/schema |
 | `loader(loader_fn)` | Return a `LoaderRelationRef` for an upstream loader dependency |
 | `source(source_name)` | Return a `LoaderRelationRef` for a project source by YAML name |
 
@@ -216,13 +216,13 @@ Returned by `ctx.loader()` and `ctx.source()`. Provides access to an upstream re
 
 | Property / Method | Description |
 |-------------------|-------------|
-| `target` | Fully-qualified relation name |
+| `destination` | Fully-qualified relation name |
 | `current_cursor_value` | Current `MAX(cursor_column)` from the relation |
 | `max(column)` | Return the `MAX` of any column from the relation |
 
 ## Loader dependencies
 
-Loaders can depend on other loaders using `depends_on`. Dependencies are executed first, and their target relations are available via `ctx.loader()`:
+Loaders can depend on other loaders using `depends_on`. Dependencies are executed first, and their destination relations are available via `ctx.loader()`:
 
 ```python
 from sqlbuild.loaders import loader
@@ -238,7 +238,7 @@ def raw_accounts(ctx: LoaderContext) -> list[dict[str, object]]:
 @loader(depends_on=[raw_accounts])
 def raw_account_metrics(ctx: LoaderContext) -> list[dict[str, object]]:
     accounts = ctx.loader(raw_accounts)
-    rows = ctx.query(f"SELECT account_id FROM {accounts.target}")
+    rows = ctx.query(f"SELECT account_id FROM {accounts.destination}")
     return [
         {"account_id": row[0], "metric": "active"}
         for row in rows.fetchall()
@@ -247,10 +247,10 @@ def raw_account_metrics(ctx: LoaderContext) -> list[dict[str, object]]:
 
 Dependencies form a DAG. SQLBuild schedules loaders in topological order and executes independent loaders concurrently when `--concurrency` is set.
 
-Intermediate loaders (those referenced only via `depends_on`, with no managed source of the same name) are given synthetic source entries and write to `__loader__<name>` tables by default. Only the terminal loader - the one whose name matches a managed source - populates that source; intermediate loaders feed it. Use the `target` parameter on the decorator to override the intermediate relation:
+Intermediate loaders (those referenced only via `depends_on`, with no managed source of the same name) are given synthetic source entries and write to `__loader__<name>` tables by default. Only the terminal loader - the one whose name matches a managed source - populates that source; intermediate loaders feed it. Use the `destination` parameter on the decorator to override the intermediate relation:
 
 ```python
-@loader(target="staging.shared_accounts")
+@loader(destination="staging.shared_accounts")
 def raw_accounts(ctx: LoaderContext):
     ...
 ```
@@ -262,7 +262,7 @@ The `@loader` decorator accepts optional parameters that can also be set in the 
 | Parameter | Description |
 |-----------|-------------|
 | `depends_on` | List of loader functions this loader depends on |
-| `target` | Override the target relation name (can include schema or database) |
+| `destination` | Override the destination relation name (can include schema or database) |
 | `write_strategy` | `table`, `append`, `delete_insert`, or `merge` |
 | `cursor_column` | Column used for incremental cursor tracking |
 | `unique_key` | Column(s) used as the merge key (string or list of strings) |
@@ -295,20 +295,20 @@ When `--reload` is passed, `ctx.is_reload` is `True` in the loader function. Thi
 
 ## Source deferral
 
-When using environments, loaders write data into the active environment. But models may need to read source data from a different environment (e.g. reading production data while developing in dev). The `defer_sources_to` field controls this:
+When using multiple targets, loaders write data into the active target. But models may need to read source data from a different target (e.g. reading production data while developing in dev). The `defer_sources_to` field controls this:
 
 ```toml
-[environments.dev]
+[targets.dev]
 schema = "dev"
 defer_sources_to = "prod"
 
-[environments.prod]
+[targets.prod]
 schema = "prod"
 ```
 
-With this config, models in the `dev` environment read managed source data from `prod` schema, even though `sqb load` writes to `dev`. This prevents accidentally reading empty or partial source tables during development.
+With this config, models in the `dev` target read managed source data from `prod` schema, even though `sqb load` writes to `dev`. This prevents accidentally reading empty or partial source tables during development.
 
-If an environment uses managed sources but does not declare `defer_sources_to`, SQLBuild raises an error rather than guessing.
+If a target uses managed sources but does not declare `defer_sources_to`, SQLBuild raises an error rather than guessing.
 
 ## Schema evolution
 

@@ -7,7 +7,7 @@ Virtual builds create versioned physical relations and update VDE pointer sets. 
 
 ## Default VDE
 
-When you run `sqb build` in virtual mode without `--virtual-env`, the VDE name defaults to the active physical environment name:
+When you run `sqb build` in virtual mode without `--virtual-env`, the VDE name defaults to the active physical target name:
 
 ```bash
 sqb build
@@ -23,7 +23,7 @@ Use `--virtual-env` to build into a named VDE:
 sqb build --virtual-env pr_123
 ```
 
-If VDE `pr_123` does not exist, SQLBuild creates it by inheriting refs from the baseline VDE (the default VDE for the active physical environment). Unchanged models share the same physical relations as the baseline - no data is copied.
+If VDE `pr_123` does not exist, SQLBuild creates it by inheriting refs from the baseline VDE (the default VDE for the active physical target). Unchanged models share the same physical relations as the baseline - no data is copied.
 
 Only models with changed code, config, or upstream versions get new physical version relations.
 
@@ -128,19 +128,19 @@ from sqlbuild.virtual.executor.models import VersionPrepareContext
 from sqlbuild.executor.custom.models import MaterializationContext, MaterializationResult
 
 def prepare_version(ctx: VersionPrepareContext) -> None:
-    """Prepare the new physical target from the prior version."""
-    ctx.execute_sql(f"CREATE TABLE {ctx.target} AS SELECT * FROM {ctx.prior_relation}")
+    """Prepare the new physical destination from the prior version."""
+    ctx.execute_sql(f"CREATE TABLE {ctx.destination} AS SELECT * FROM {ctx.prior_relation}")
 
 def materialize(ctx: MaterializationContext) -> MaterializationResult:
-    """Run the custom materialization logic against the prepared target."""
+    """Run the custom materialization logic against the prepared destination."""
     ...
 ```
 
 If `prepare_version` is not defined, the framework uses the default clone/copy. Most custom materializations do not need to define it.
 
-`VersionPrepareContext` provides `prior_relation` (the source physical version), `target` (the new physical target), `adapter`, `connection`, `execute_sql()`, `config`, and `vars`.
+`VersionPrepareContext` provides `prior_relation` (the source physical version), `destination` (the new physical destination relation), `adapter`, `connection`, `execute_sql()`, `config`, and `vars`.
 
-Custom materializations in virtual mode must write only to `ctx.target`. Side-effect writes to other relations are not tracked by virtual state, not cleaned up by janitor, and not restored by rollback.
+Custom materializations in virtual mode must write only to `ctx.destination`. Side-effect writes to other relations are not tracked by virtual state, not cleaned up by janitor, and not restored by rollback.
 
 ## Functions
 

@@ -5,7 +5,7 @@ description: "Hydrate physical versions from a source warehouse."
 
 In virtual mode, `sqb clone` hydrates physical version relations from a source warehouse into the target physical storage layer. It does not copy VDE pointer sets or create logical views - it copies the underlying physical data so that builds and promotions can reference those versions locally.
 
-This is useful for seeding a new environment from an existing one, or restoring physical versions that were cleaned up by the janitor.
+This is useful for seeding a new target from an existing one, or restoring physical versions that were cleaned up by the janitor.
 
 ## How it works
 
@@ -65,4 +65,4 @@ Clone is a physical-layer operation. VDE pointer management is handled by [build
 
 ## Comparison with direct-mode clone
 
-In direct mode, `sqb clone` copies model relations between environments using zero-copy cloning where supported. In virtual mode, clone hydrates versioned physical relations instead. The source and target are still physical environments, but the copied objects are physical version relations rather than normal model targets.
+In direct mode, `sqb clone` copies model relations between targets using zero-copy cloning where supported. In virtual mode, clone hydrates versioned physical relations instead. The source and target are still physical targets, but the copied objects are physical version relations rather than normal model targets.

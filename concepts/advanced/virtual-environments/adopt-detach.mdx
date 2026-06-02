@@ -15,12 +15,12 @@ Adopt converts an existing stateless project into virtual mode. Detach reverses 
 2. `unsuffixed_virtual_env` must be configured so existing object names are preserved:
 
 ```toml
-[environments.dev.state]
+[targets.dev.state]
 backend = "duckdb"
 schema = "sqlbuild_state"
 unsuffixed_virtual_env = "dev"
 
-[environments.dev.state.connection]
+[targets.dev.state.connection]
 database = "state.duckdb"
 ```
 

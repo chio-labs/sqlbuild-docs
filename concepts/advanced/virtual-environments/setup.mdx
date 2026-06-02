@@ -3,35 +3,37 @@ title: "Setup"
 description: "Configure virtual environments and initialize the state store."
 ---
 
-Virtual environments require two things: `environment_mode = "virtual"` in your project config, and a state store configured for your active environment.
+Virtual environments require two things: `virtual_environments = true` in your project settings, and a state store configured for your active target.
 
 ## Project configuration
 
 ```toml
 name = "my_project"
 adapter = "duckdb"
-environment_mode = "virtual"
-default_environment = "dev"
+default_target = "dev"
+
+[settings]
+virtual_environments = true
 
 [connection]
 database = "warehouse.duckdb"
 
-[environments.dev]
+[targets.dev]
 schema = "dev"
 
-[environments.dev.state]
+[targets.dev.state]
 backend = "duckdb"
 schema = "sqlbuild_state"
 
-[environments.dev.state.connection]
+[targets.dev.state.connection]
 database = "state.duckdb"
 ```
 
-The `environment_mode` field switches the project from direct mode (default) to virtual mode. All state, plan, build, promote, rollback, and reconcile commands route through the virtual path when this is set.
+The `virtual_environments` setting switches the project from direct mode (default) to virtual mode. All state, plan, build, promote, rollback, and reconcile commands route through the virtual path when this is enabled.
 
 ## State configuration
 
-Each physical environment that uses virtual mode needs a `[environments.<name>.state]` block:
+Each physical target that uses virtual mode needs a `[targets.<name>.state]` block:
 
 | Field | Required | Description |
 |-------|----------|-------------|
@@ -44,11 +46,11 @@ Each physical environment that uses virtual mode needs a `[environments.<name>.s
 ### DuckDB state backend
 
 ```toml
-[environments.dev.state]
+[targets.dev.state]
 backend = "duckdb"
 schema = "sqlbuild_state"
 
-[environments.dev.state.connection]
+[targets.dev.state.connection]
 database = "state.duckdb"
 ```
 
@@ -57,11 +59,11 @@ DuckDB state stores are file-based. Relative paths are resolved against the proj
 ### Postgres state backend
 
 ```toml
-[environments.prod.state]
+[targets.prod.state]
 backend = "postgres"
 schema = "sqlbuild_state"
 
-[environments.prod.state.connection]
+[targets.prod.state.connection]
 host = "state-db.internal"
 port = 5432
 user = "sqlbuild_state"
@@ -79,7 +81,7 @@ Before using virtual commands, initialize the state store:
 sqb state init
 ```
 
-This creates the state tables in the configured schema. Run it once per physical environment.
+This creates the state tables in the configured schema. Run it once per physical target.
 
 ## State lifecycle
 
@@ -100,34 +102,34 @@ This creates the state tables in the configured schema. Run it once per physical
 Use `sqlbuild_local.toml` to override state connection config per developer:
 
 ```toml
-[environments.dev.state.connection]
+[targets.dev.state.connection]
 database = "local-state.duckdb"
 ```
 
 This is useful when each developer uses a local state file while the project config points to a shared state database.
 
-## Per-environment state
+## Per-target state
 
-Different physical environments can use different state backends:
+Different physical targets can use different state backends:
 
 ```toml
-[environments.dev.state]
+[targets.dev.state]
 backend = "duckdb"
 schema = "sqlbuild_state"
 
-[environments.dev.state.connection]
+[targets.dev.state.connection]
 database = "state.duckdb"
 
-[environments.prod.state]
+[targets.prod.state]
 backend = "postgres"
 schema = "sqlbuild_state"
 
-[environments.prod.state.connection]
+[targets.prod.state.connection]
 host = "prod-state.internal"
 dbname = "sqlbuild_state"
 ```
 
-Each physical environment has its own state store. VDEs are scoped to their physical environment and cannot be promoted or compared across different physical environments.
+Each physical target has its own state store. VDEs are scoped to their physical target and cannot be promoted or compared across different physical targets.
 
 ## Unsuffixed VDE naming
 
@@ -136,12 +138,12 @@ By default, all VDE logical views use a suffixed schema: `dev__kevin.fact_orders
 Configure this with `unsuffixed_virtual_env`:
 
 ```toml
-[environments.dev.state]
+[targets.dev.state]
 backend = "duckdb"
 schema = "sqlbuild_state"
 unsuffixed_virtual_env = "dev"
 
-[environments.dev.state.connection]
+[targets.dev.state.connection]
 database = "state.duckdb"
 ```
 

@@ -34,7 +34,7 @@ database = "my_database"
 
 All fields in `connection` are passed to `pymssql.connect()`. See the [pymssql documentation](https://pymssql.readthedocs.io/en/stable/ref/pymssql.html) for all available options.
 
-## Per-environment connections
+## Per-target connections
 
 ```toml
 adapter = "sqlserver"
@@ -44,16 +44,16 @@ host = "localhost"
 user = "sa"
 password = "${ENV:MSSQL_PASSWORD}"
 
-[environments.prod]
+[targets.prod]
 schema = "prod"
 
-[environments.prod.connection]
+[targets.prod.connection]
 host = "prod-sql.example.com"
 database = "analytics"
 
-[environments.dev]
+[targets.dev]
 schema = "dev"
 
-[environments.dev.connection]
+[targets.dev.connection]
 database = "analytics_dev"
 ```

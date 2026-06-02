@@ -1,16 +1,23 @@
 ---
-title: "Environment Diffs"
-description: "Compare schemas and data between environments to validate changes before promotion."
+title: "Data Diffs"
+description: "Compare schemas and data between targets or virtual environments to validate changes before promotion."
 ---
 
-SQLBuild can compare schemas and row-level data between any two environments. This lets you validate that changes in dev produce the expected results before promoting to production.
+SQLBuild can compare schemas and row-level data between two build contexts. This lets you validate that changes produce the expected results before promoting them.
+
+`sqb diff FROM:TO` compares:
+
+- **two targets** (e.g. `prod:dev`) in direct mode, or
+- **two virtual environments** (VDEs) when [virtual environments](/concepts/advanced/virtual-environments) are enabled.
+
+The mechanics below are identical for both; only what `FROM` and `TO` refer to changes.
 
 ```bash
 sqb diff prod:dev --full --select customer_status_snapshot
 ```
 
 <Frame>
-  <img src="/sqlbuild_diff.png" alt="SQLBuild diff output showing schema comparison, row-level differences, and changed column values between prod and dev environments" />
+  <img src="/sqlbuild_diff.png" alt="SQLBuild diff output showing schema comparison, row-level differences, and changed column values between two build contexts" />
 </Frame>
 
 ## Comparison modes
@@ -26,7 +33,7 @@ sqb diff prod:dev --full --select fact_orders
 ```
 
 Rows are joined on the model's `unique_key` and compared column by column. The output shows:
-- Row counts for each environment
+- Row counts for each side
 - How many rows are equal, unequal, or only in one side
 - Which columns have mismatches with match percentages
 - Example values showing what changed
@@ -53,13 +60,13 @@ For timestamp cursors, the bound is a duration (`14d`, `6h`, `30m`). For integer
 
 ## Row matching
 
-Rows are matched between environments using the model's `unique_key`. For models without a `unique_key`, SQLBuild uses all columns as a composite key.
+Rows are matched between the two sides using the model's `unique_key`. For models without a `unique_key`, SQLBuild uses all columns as a composite key.
 
 The diff output categorises rows as:
-- **Equal** - same key, same values in both environments
+- **Equal** - same key, same values on both sides
 - **Unequal** - same key, different values (with per-column breakdown)
-- **Left only** - exists in the FROM environment but not TO
-- **Right only** - exists in the TO environment but not FROM
+- **Left only** - exists in the FROM side but not TO
+- **Right only** - exists in the TO side but not FROM
 
 ## Tolerances
 
@@ -87,7 +94,7 @@ Tolerances can be set per-column (`by_column`) or per-type (`by_type`).
 
 ## Excluded columns
 
-Columns that are expected to differ between environments (like timestamps or environment-specific values) can be excluded from the row comparison:
+Columns that are expected to differ between the two sides (like timestamps or context-specific values) can be excluded from the row comparison:
 
 ```sql
 MODEL (

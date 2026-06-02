@@ -18,7 +18,7 @@ sqb --project-dir <path> run [flags]
 | Flag | Description |
 |------|-------------|
 | `--no-sql-validation` | Skip compile-time SQL syntax validation |
-| `--defer-to` | Resolve unselected model references against another environment |
+| `--defer-to` | Resolve unselected model references against another target |
 | `--full-refresh` | Drop and rebuild all selected models from scratch |
 | `--fail-fast` | Stop on first failure and skip remaining nodes |
 | `--concurrency` | Number of worker connections (default: 1) |
@@ -31,6 +31,6 @@ sqb --project-dir <path> run [flags]
 | `--no-load` | Skip automatic source loading |
 | `--no-python` | Skip read-side Python tasks and assets (loader-side Python still runs for selected sources) |
 | `--reload` | Reload managed sources (passes `is_reload=True` to loaders) |
-| `--defer-sources-to` | Read managed source data from another environment |
+| `--defer-sources-to` | Read managed source data from another target |
 | `--select`, `-s` | Select specific models |
 | `--exclude` | Exclude specific models |

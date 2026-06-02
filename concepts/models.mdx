@@ -327,7 +327,7 @@ Pre-hooks and post-hooks execute SQL before and after materialization. They supp
 ```sql
 MODEL (
   materialized table,
-  post_hook ['GRANT SELECT ON @@CTX:target.qualified TO analyst_role'],
+  post_hook ['GRANT SELECT ON @@CTX:destination.qualified TO analyst_role'],
 );
 ```
 
@@ -335,12 +335,12 @@ Available context variables in hooks:
 
 | Variable | Value |
 |----------|-------|
-| `@@CTX:target.qualified` | Fully qualified target relation name |
-| `@@CTX:target.schema` | Target schema |
-| `@@CTX:target.name` | Target relation name |
-| `@@CTX:model_name` | Model name |
-| `@@CTX:environment` | Current environment name |
-| `@@CTX:run_id` | Current run ID |
+| `@@CTX:destination.qualified` | Fully qualified destination relation name |
+| `@@CTX:destination.schema` | Destination schema |
+| `@@CTX:destination.table` | Destination relation name |
+| `@@CTX:model.name` | Model name |
+| `@@CTX:run.target` | Active target name |
+| `@@CTX:run.id` | Current run ID |
 
 Hooks also support macro calls and project variable interpolation (`@@name`, `@@ENV:NAME`).
 
