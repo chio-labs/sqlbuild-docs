@@ -64,6 +64,7 @@
           "concepts/python-nodes/tasks",
           "concepts/python-nodes/assets",
           "concepts/python-nodes/checks",
+          "concepts/python-nodes/factories",
           "concepts/python-nodes/sql-references"
         ]
       },
