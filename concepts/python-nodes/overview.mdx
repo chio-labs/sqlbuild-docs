@@ -93,7 +93,7 @@ def export_orders(ctx):
 ```
 
 - A plain value or `None` is also accepted and normalized to a successful result.
-- `ctx.skip(reason, mode=...)` skips the node. `mode` accepts `"downstream"` (default, skips dependents too) or `"self"` (skips only this node), as a string or the `SkipMode` enum from `sqlbuild.tasks`/`sqlbuild.assets`.
+- `ctx.skip(reason, mode=...)` skips the node. `mode` accepts `"soft"` (default, skips only this node) or `"hard"` (also blocks dependents), as a string or the `SkipMode` enum from `sqlbuild.tasks`/`sqlbuild.assets`.
 - Assets may pass `materialized=True`/`False` to record whether an artifact was produced.
 
 Downstream nodes run only if at least one upstream succeeded. If all upstreams are skipped, the downstream is skipped. A failed or hard-skipped upstream blocks its dependents.

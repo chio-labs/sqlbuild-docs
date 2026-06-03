@@ -69,8 +69,8 @@ def export_if_present(ctx: TaskContext):
     return ctx.result(payload=do_export())
 ```
 
-- `"downstream"` (default) skips this task and its dependents.
-- `"self"` skips only this task; dependents may still run if another upstream succeeded.
+- `"soft"` (default) skips only this task; dependents may still run if another upstream succeeded.
+- `"hard"` skips this task and blocks its dependents.
 
 `mode` accepts either a plain string or the `SkipMode` enum:
 
@@ -80,7 +80,7 @@ from sqlbuild.tasks import task, SkipMode
 
 @task
 def optional_step(ctx):
-    return ctx.skip("nothing to do", mode=SkipMode.SELF)  # or mode="self"
+    return ctx.skip("nothing to do", mode=SkipMode.HARD)  # or mode="hard"
 ```
 
 ## Retries
