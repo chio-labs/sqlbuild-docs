@@ -104,7 +104,7 @@ from sqlbuild.retries import RetryPolicy
 @asset(retry=RetryPolicy(max_attempts=3, retry_on=(IOError,)))
 def export(ctx):
     if not ready():
-        return ctx.skip("upstream not ready", mode="self")  # or SkipMode.SELF
+        return ctx.skip("upstream not ready", mode="soft")  # or SkipMode.SOFT
     return ctx.result(metadata={"path": do_export()}, materialized=True)
 ```
 
