@@ -1,9 +1,11 @@
 ---
 title: "Introduction"
-description: "Typed, test-first SQL pipelines with local E2E testing."
+description: "A SQL-first data framework: transformation, ingestion, Python tasks and assets, and testing in one tool."
 ---
 
-Validate SQL at compile time, block bad data before promotion, and run full E2E tests with no warehouse required.
+SQLBuild is a SQL-first data framework that handles transformation, ingestion, Python tasks and assets, and testing in one tool.
+
+It keeps a low, dbt-like floor for SQL models while adding compile-time validation, pre-promotion audit gating, and full local E2E testing. It can also run alongside an existing dbt project, so you can adopt it incrementally.
 
 ## Supported adapters
 
@@ -20,6 +22,28 @@ DuckDB runs entirely locally, so you can try SQLBuild and run full E2E tests wit
 5. **Test** with chained unit tests, E2E scenario tests, and local replay through DuckDB - no warehouse required
 
 ## Why SQLBuild?
+
+### Familiar SQL models
+
+Models are SQL files with a `MODEL()` header and a `SELECT`. References to other models and sources use `__ref()` and `__source()`, and configuration, schema, and audits are declared inline in the header. If you know dbt or SQLMesh, you already know the shape.
+
+```sql
+-- models/marts/fact_orders.sql
+MODEL (
+  materialized table,
+  columns (
+    order_id (audits [not_null, unique]),
+  ),
+);
+
+SELECT
+  o.order_id,
+  o.customer_id,
+  p.amount_cents AS total_cents,
+  p.method AS payment_method
+FROM __ref("stg_orders") o
+JOIN __ref("stg_payments") p USING (order_id)
+```
 
 ### SQL unit tests that scale
 
@@ -80,7 +104,7 @@ SELECT 1
 
 ### Python macros, not Jinja
 
-- **Real Python functions:** Testable, debuggable, and composable with standard tooling. No templating language, no string interpolation surprises.
+- **Real Python functions:** Macros are plain Python, called with `@macro()` in SQL. Testable, debuggable, and composable with standard tooling - no Jinja, no string-templating language to wrangle.
 
 ```python
 # macros/grant_target.py
