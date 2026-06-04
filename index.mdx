@@ -3,7 +3,7 @@ title: "Introduction"
 description: "A SQL-first data framework: transformation, ingestion, Python tasks and assets, and testing in one tool."
 ---
 
-SQLBuild keeps a low, dbt-like floor for SQL models while adding compile-time validation, pre-promotion audit gating, and full local E2E testing. Beyond transformation, it also handles ingestion and Python tasks, assets, and checks - so a whole pipeline lives in one tool. It can run alongside an existing dbt project, so you can adopt it incrementally.
+SQLBuild keeps a low, dbt-like floor for SQL models, then adds what you'd normally reach for other tools for: pre-promotion audit gating, local E2E testing, ingestion, and Python tasks, assets, and checks. Virtual environments are there when you want instant, low-copy branching and promotion - opt-in, never forced on you. It can run alongside an existing dbt project, so you can adopt it incrementally.
 
 ## Supported adapters
 
@@ -135,7 +135,7 @@ def grant_target(target):
 
 ### Virtual environments
 
-- **Advanced virtual environments:** Optional state-backed workflows for low-copy branching, promotion, and rollback when your team is ready to operate a shared state store. See [Virtual Environments](/concepts/advanced/virtual-environments).
+- **Opt-in, not forced:** Virtual environments give you instant low-copy branching, promotion, and rollback - but they are an opt-in mode, not a tax you pay upfront. Stateless direct mode stays the default, so the floor stays low and you reach for state only when a workflow actually needs it. See [Virtual Environments](/concepts/advanced/virtual-environments).
 
 ### Extensibility
 
