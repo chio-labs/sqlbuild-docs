@@ -3,10 +3,7 @@ title: "Introduction"
 description: "A SQL-first data framework: transformation, ingestion, Python tasks and assets, and testing in one tool."
 ---
 
-- **Low, dbt-like floor** - familiar SQL models, no new paradigm to learn.
-- **Beyond transformation** - ingestion, Python tasks/assets/checks, pre-promotion audit gating, and local E2E testing, in one tool.
-- **Opt-in virtual environments** - instant low-copy branching and promotion when you want it, never forced.
-- **Runs alongside dbt** - point it at an existing project and adopt incrementally.
+SQLBuild keeps a low, dbt-like floor for SQL models and can run alongside an existing dbt project. It adds ingestion, Python nodes, and opt-in virtual environments for more advanced use cases, letting you expand scope as your project naturally grows.
 
 ## Supported adapters
 
@@ -140,9 +137,14 @@ def grant_target(target):
 
 - **Opt-in, not forced:** Virtual environments give you instant low-copy branching, promotion, and rollback - but they are an opt-in mode, not a tax you pay upfront. Stateless direct mode stays the default, so the floor stays low and you reach for state only when a workflow actually needs it. See [Virtual Environments](/concepts/advanced/virtual-environments).
 
-### Extensibility
+### Python nodes
 
-- **Source loaders:** Load external data into source tables with Python functions. Supports incremental write strategies (table, append, delete_insert, merge), cursor-based loading, loader-to-loader dependencies, and concurrent execution. Loaders run automatically during builds.
+Grow beyond warehouse-only SQL without leaving the graph. Python nodes are ordinary functions, decorated to become first-class nodes in the same DAG as your SQL models, and they run as part of `sqb run` and `sqb build`. There are four kinds:
+
+- **Loaders** (`@loader`) load external data into managed sources, with incremental write strategies (table, append, delete_insert, merge), cursor-based loading, and concurrent execution.
+- **Tasks** (`@task`) run Python computation or side effects as graph nodes.
+- **Assets** (`@asset`) produce or observe external artifacts, with optional columns and lineage.
+- **Checks** (`@check`) validate tasks, assets, and loaders, and run during `sqb build` or on their own with `sqb check`.
 
 ```python
 from sqlbuild.loaders import loader
@@ -154,6 +156,11 @@ def raw_orders(ctx: LoaderContext):
         return fetch_all_orders()
     return fetch_orders_since(ctx.current_cursor_value)
 ```
+
+SQL models never depend on Python nodes - the only path from Python into SQL is a loader populating a source - so the SQL graph stays fully analyzable on its own. Nodes can also be generated programmatically with `@factory`. See [Python Nodes](/concepts/python-nodes/overview).
+
+### Extensibility
+
 - **User-defined functions:** SQL and Python UDFs managed as part of your project. Functions participate in the DAG - definition changes trigger rebuilds of dependent models. Table functions provide predicate-pushdown-friendly alternatives to final-layer views.
 - **Custom materializations:** Write materialization logic in Python with full framework integration - including audit hooks, schema change signals, and query change detection.
 
