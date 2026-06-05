@@ -97,6 +97,107 @@ Managed sources support incremental write strategies (`table`, `append`, `delete
 
 See [Loaders](/concepts/python-nodes/loaders) for the full guide on writing loader functions, write strategies, the loader context API, and auto-load behavior during builds.
 
+## Source freshness
+
+Source freshness lets SQLBuild observe whether a source's data has changed between runs. This feeds into [planning and change detection](/concepts/planning) -- when combined with `--changes-only`, models downstream of unchanged sources can be skipped.
+
+Configure freshness per source with a `freshness:` block:
+
+```yaml
+sources:
+  - name: raw_events
+    schema: raw
+    table: events
+    freshness:
+      strategy: column
+      column: updated_at
+      type: timestamp
+      lag_tolerance: 15m
+```
+
+### Strategies
+
+| Strategy | Description | Required fields |
+|----------|-------------|-----------------|
+| `adapter` | Uses warehouse metadata (e.g. Snowflake `LAST_ALTERED`). No query against the source table. | None |
+| `column` | Reads `MAX(column)` from the source table. | `column`, `type` |
+| `sql` | Runs a custom query that returns a single scalar value. | `query`, `type` |
+
+#### adapter
+
+```yaml
+freshness:
+  strategy: adapter
+```
+
+Uses adapter-level table metadata. Supported on Snowflake, BigQuery, Databricks, PostgreSQL, DuckDB, and SQL Server. Does not support `type`, `column`, or `query`.
+
+#### column
+
+```yaml
+freshness:
+  strategy: column
+  column: updated_at
+  type: timestamp
+```
+
+Queries `MAX(column)` from the source table. The column must be a plain column name (no expressions -- use `sql` strategy for those). Requires `type`.
+
+#### sql
+
+```yaml
+freshness:
+  strategy: sql
+  query: "SELECT MAX(version_id) FROM raw.events"
+  type: integer
+```
+
+Runs an arbitrary SQL query that returns a single scalar. Requires `type`. Does not support `column`.
+
+### Type
+
+The `type` field declares the value kind for comparison:
+
+| Type | Description |
+|------|-------------|
+| `timestamp` | Datetime value. Supports `lag_tolerance`. |
+| `integer` | Integer value. Change detected by exact comparison. |
+| `string` | String value. Change detected by exact comparison. |
+
+### Lag tolerance
+
+`lag_tolerance` is optional and only valid with `type: timestamp`. It declares how much the observed timestamp can drift from the previous observation before being treated as a change:
+
+```yaml
+freshness:
+  strategy: column
+  column: updated_at
+  type: timestamp
+  lag_tolerance: 2h
+```
+
+Accepts positive durations: `15m` (minutes), `2h` (hours), `1d` (days). If the current observation is within the tolerance of the previous one, the source is treated as unchanged.
+
+### Auto-observation
+
+Sources without an explicit `freshness:` block are auto-observed using the `adapter` strategy if:
+
+- The source has a physical table (not an expression source)
+- The source is not managed
+- The adapter supports table freshness metadata
+
+This means most unmanaged table sources get freshness tracking automatically on adapters that support it, with no configuration needed.
+
+### Freshness config reference
+
+| Field | Description |
+|-------|-------------|
+| `strategy` | Observation strategy: `adapter`, `column`, or `sql` |
+| `type` | Value kind: `timestamp`, `integer`, or `string` |
+| `column` | Column name for `column` strategy |
+| `query` | SQL query for `sql` strategy |
+| `lag_tolerance` | Duration tolerance for timestamp comparisons (e.g. `15m`, `2h`, `1d`). Only valid with `type: timestamp`. |
+
 ## Config reference
 
 | Field | Description |
@@ -110,6 +211,7 @@ See [Loaders](/concepts/python-nodes/loaders) for the full guide on writing load
 | `write_strategy` | How the loader writes data: `table`, `append`, `delete_insert`, or `merge` (requires `managed: true`) |
 | `cursor_column` | Column for incremental cursor tracking (required for `delete_insert` and `merge`) |
 | `unique_key` | Merge key column(s) (required for `merge`) |
+| `freshness` | Source freshness observation config (see [Source freshness](#source-freshness)) |
 | `description` | Human-readable description |
 | `type_enforcement` | Override implicit type enforcement (`true`/`false`). Defaults to `true` when any column declares a type. |
 | `contract` | `enforced` or `none`. When enforced, downstream models validate configured column references against source columns. |

@@ -94,15 +94,19 @@ sqb build --virtual-env pr_123 --select path:marts --changes-only
 
 This intersects the user selection with the default stale-driven selection, useful when the stale cascade is large and you want to build a coherent subgraph without running unchanged models.
 
+For `--changes-only` behavior in direct (non-virtual) mode, see [Planning and Change Detection](/concepts/planning#changes-only-mode).
+
 ## Stale detection
 
 SQLBuild determines which models need rebuilding by comparing expected version hashes against bound version hashes in the VDE refs:
 
-1. **Expected local hash** - derived from the model's query SQL and version-identity config
+1. **Expected local hash** - derived from the model's query SQL, version-identity config, and source freshness hashes
 2. **Expected version hash** - local hash propagated through upstream dependencies (upstream hash changes cascade downstream)
 3. **Bound version hash** - the hash currently stored in the VDE refs from the last successful build
 
 A model is stale when `bound != expected`. Stale models whose own local hash changed are roots (`query changed`, `config changed`, `function changed`). Others are stale due to `upstream changed`.
+
+Source freshness observations are persisted per virtual environment and included in version hash computation. When a source's observed data version changes, its downstream models become stale. See [Sources -- Source freshness](/concepts/sources#source-freshness) for configuration.
 
 ## Seeded incremental builds
 

@@ -29,6 +29,7 @@ sqb --project-dir <path> run [flags]
 | `--end-cursor-int` | Override end cursor for integer incremental models |
 | `--load` | Explicitly load managed sources before running |
 | `--no-load` | Skip automatic source loading |
+| `--changes-only` | Only run models that have actually changed (see [Planning and Change Detection](/concepts/planning#changes-only-mode)) |
 | `--no-python` | Skip read-side Python tasks and assets (loader-side Python still runs for selected sources) |
 | `--reload` | Reload managed sources (passes `is_reload=True` to loaders) |
 | `--defer-sources-to` | Read managed source data from another target |
