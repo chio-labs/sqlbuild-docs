@@ -1,0 +1,95 @@
+---
+title: "Planning and Change Detection"
+description: "How SQLBuild decides what to build: fingerprints, source freshness, and changes-only mode."
+---
+
+When you run `sqb plan`, `sqb build`, or `sqb run`, SQLBuild compiles your project, compares it against the current warehouse state, and produces a plan. The plan determines which models need work and why.
+
+## Change detection
+
+SQLBuild detects changes by comparing the compiled project against fingerprints stored in the warehouse from the last successful build.
+
+### What is tracked
+
+Each model and function has a **fingerprint** derived from:
+
+- **Query hash** -- the normalized SQL after macro expansion and reference resolution.
+- **Config hash** -- version-identity config values (materialization settings, contracts, hooks, custom config/placeholders).
+- **Function hashes** -- for models that depend on user-defined functions, the function's own fingerprint is included. A function change cascades to all dependent models.
+
+After a successful build, SQLBuild writes these fingerprints to `_sqlbuild_fingerprints` in the target schema. On the next run, the planner reads them back and compares.
+
+### Change reasons
+
+The plan assigns a reason to each model that needs work:
+
+| Reason | Meaning |
+|--------|---------|
+| First run | No fingerprint exists in the target schema |
+| Query changed | The model's query SQL differs from the stored fingerprint |
+| Config changed | Version-identity config values differ |
+| Schema changed | Upstream schema changes detected (column additions, removals, type changes) |
+| Upstream changed | An upstream model's change cascades downstream |
+
+Models with no changes show as `Normal` in the plan output and are executed in their standard mode (views are recreated, incrementals run their delta, etc.).
+
+### Backfill policies
+
+When a change is detected on an incremental model, the **backfill policy** determines how much data to reprocess. See [Incremental Models -- Backfill policies](/concepts/incremental#backfill-policies) for `query_change_backfill` and `schema_change_backfill` configuration.
+
+## Source freshness
+
+Source freshness lets SQLBuild observe whether external source data has actually changed between runs. When combined with `--changes-only`, this allows the planner to skip models whose upstream sources haven't moved.
+
+### Configuration
+
+Source freshness is configured per source in `sources/*.yml` with a `freshness:` block. See [Sources -- Source freshness](/concepts/sources#source-freshness) for the full configuration reference.
+
+### How observations work
+
+During planning, SQLBuild observes the current data version of each source that has freshness configured (or that the adapter can observe automatically):
+
+1. **Observe** -- query the source's current data version using the configured strategy.
+2. **Compare** -- compare the observed version against the last recorded observation from `_sqlbuild_source_freshness` in the target schema.
+3. **Propagate** -- walk the DAG downstream from changed or unknown sources to identify which models are affected.
+
+Sources without explicit `freshness:` config are auto-observed using the `adapter` strategy if the adapter supports table metadata and the source has a physical table (not an expression source, not a managed source).
+
+### Lag tolerance
+
+For timestamp-based freshness, `lag_tolerance` controls how much the observed value can drift before being considered a real change. If the current timestamp is within the tolerance of the previous observation, the source is treated as unchanged. This is useful for sources where the freshness timestamp moves by seconds or minutes on every query but the underlying data hasn't meaningfully changed.
+
+### State storage
+
+Source freshness observations are stored in `_sqlbuild_source_freshness` in each target schema. Records are appended only after the affected downstream models build successfully -- if a build fails, the previous observation is preserved so the next run still sees the source as changed.
+
+## Changes-only mode
+
+By default, SQLBuild executes all selected models regardless of whether they have changed. `--changes-only` narrows the scope to only models that are actually stale.
+
+```bash
+sqb build --changes-only
+sqb build --select path:marts --changes-only
+sqb plan --changes-only
+sqb run --changes-only
+```
+
+### What gets pruned
+
+When `--changes-only` is active, the planner removes models and functions from the selected scope if they have no pending work:
+
+- **Models** are kept if they have any change reason (query changed, config changed, schema changed, first run, upstream cascade), a pending backfill, or are downstream of a source with changed freshness. Models with no changes and no stale sources are pruned.
+- **Functions** are kept if their fingerprint changed or they have a pending backfill. Unchanged functions are pruned.
+- **Sources, seeds, and other non-model resources** are always kept.
+
+### Python nodes
+
+When `--changes-only` prunes SQL models from the scope, read-side Python nodes (tasks, assets, checks) that depend on the pruned models are also dropped. Loaders always run regardless of pruning.
+
+### Source freshness integration
+
+Source freshness feeds directly into `--changes-only` decisions. Even if a model's own SQL and config haven't changed, it is kept in scope if any of its upstream sources have new data (or if freshness is unknown for a source). This means `--changes-only` respects both code changes and data changes.
+
+### Virtual environments
+
+Virtual environments have their own `--changes-only` behavior based on version hash comparison rather than fingerprints. See [Virtual Environments -- Changes only](/concepts/advanced/virtual-environments/building#changes-only) for details.
