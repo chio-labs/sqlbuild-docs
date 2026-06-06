@@ -322,14 +322,18 @@ MODEL (
 
 ## Hooks
 
-Pre-hooks and post-hooks execute SQL before and after materialization. They support macro expansion and context variable interpolation:
+Pre-hooks and post-hooks run before and after materialization. Each entry is either a `sql("...")` hook that executes SQL, or a `python("hook_name")` hook that calls a Python function from the `hooks/` directory.
+
+### SQL hooks
 
 ```sql
 MODEL (
   materialized table,
-  post_hook ['GRANT SELECT ON @@CTX:destination.qualified TO analyst_role'],
+  post_hooks [sql('GRANT SELECT ON @@CTX:destination.qualified TO analyst_role')],
 );
 ```
+
+SQL hooks support macro expansion (`@macro()`), project variables (`@@name`), environment variables (`@@ENV:NAME`), and context variables (`@@CTX:`). SQL is validated at compile time using SQLGlot.
 
 Available context variables in hooks:
 
@@ -342,7 +346,107 @@ Available context variables in hooks:
 | `@@CTX:run.target` | Active target name |
 | `@@CTX:run.id` | Current run ID |
 
-Hooks also support macro calls and project variable interpolation (`@@name`, `@@ENV:NAME`).
+### Python hooks
+
+Python hooks call `@hook`-decorated functions discovered from the `hooks/` directory:
+
+```python
+# hooks/permissions.py
+from sqlbuild.hooks import hook
+
+@hook
+def grant_analyst(ctx):
+    ctx.execute_sql(f"GRANT SELECT ON {ctx.destination.qualified} TO analyst_role")
+```
+
+Reference a Python hook in the MODEL() header by name, with optional keyword arguments:
+
+```sql
+MODEL (
+  materialized table,
+  post_hooks [python("grant_analyst")],
+);
+```
+
+```sql
+MODEL (
+  materialized table,
+  post_hooks [python("grant_analyst", role: "reader_role")],
+);
+```
+
+You can mix SQL and Python hooks in the same list:
+
+```sql
+MODEL (
+  materialized table,
+  pre_hooks [sql('SET search_path TO analytics')],
+  post_hooks [
+    python("grant_analyst"),
+    sql('ANALYZE @@CTX:destination.qualified'),
+  ],
+);
+```
+
+### Hook context
+
+Python hooks receive a `HookContext` as their first parameter (named `ctx`, `context`, or `hook_context`):
+
+| Field | Description |
+|-------|-------------|
+| `ctx.model_name` | Name of the model being built |
+| `ctx.phase` | `pre_hooks` or `post_hooks` |
+| `ctx.hook_name` | Name of the hook being invoked |
+| `ctx.run_id` | Current run ID |
+| `ctx.environment` | Active target name |
+| `ctx.vars` | Project variables |
+| `ctx.destination.qualified` | Fully qualified destination relation name |
+| `ctx.destination.schema` | Destination schema |
+| `ctx.destination.name` | Destination relation name |
+| `ctx.destination.database` | Destination database |
+| `ctx.adapter` | Adapter instance |
+| `ctx.connection` | Live connection |
+| `ctx.execute_sql(sql)` | Execute SQL on the connection |
+| `ctx.query(sql)` | Execute SQL and return rows |
+| `ctx.log(message)` | Log to the run output |
+
+### Hook decorator
+
+The `@hook` decorator accepts optional metadata:
+
+```python
+from sqlbuild.hooks import hook
+
+@hook
+def grant_analyst(ctx):
+    """Grant analyst role on the destination table."""
+    ctx.execute_sql(f"GRANT SELECT ON {ctx.destination.qualified} TO analyst_role")
+
+@hook(name="custom_name", description="Custom hook with explicit name")
+def my_hook(ctx, role="analyst_role"):
+    ctx.execute_sql(f"GRANT SELECT ON {ctx.destination.qualified} TO {role}")
+```
+
+| Argument | Description |
+|----------|-------------|
+| `name` | Override the hook name (defaults to the function name) |
+| `description` | Human-readable description (defaults to the function docstring) |
+
+### Discovery rules
+
+- Hook functions are discovered from `.py` files under `hooks/` recursively
+- Files named `__init__.py` or starting with `_` are skipped
+- Each function decorated with `@hook` is registered by name
+- Hook names must be unique across all hook files
+- Python hook references in MODEL() headers are validated at compile time: unknown names, unknown kwargs, and missing required parameters all raise compile errors
+
+### Validation
+
+At compile time, SQLBuild validates every `python("hook_name")` reference:
+
+- The hook name must match a discovered `@hook` function
+- Any keyword arguments passed in the MODEL() header must match parameters on the function signature
+- If the function does not accept `**kwargs`, unknown arguments raise a compile error
 
 ## Config reference
 
@@ -358,8 +462,8 @@ Hooks also support macro calls and project variable interpolation (`@@name`, `@@
 | `schema` | Override target schema |
 | `database` | Override target database |
 | `alias` | Override target relation name |
-| `pre_hook` | SQL statements to execute before materialization |
-| `post_hook` | SQL statements to execute after materialization |
+| `pre_hooks` | Lifecycle hooks to run before materialization: `sql("...")` and/or `python("hook_name")` entries |
+| `post_hooks` | Lifecycle hooks to run after materialization: `sql("...")` and/or `python("hook_name")` entries |
 | `enabled` | Set to `false` to skip the model |
 | `contract` | `enforced` or `none`. When enforced, declared columns are the authoritative output schema. |
 

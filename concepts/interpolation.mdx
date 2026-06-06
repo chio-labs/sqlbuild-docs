@@ -5,8 +5,8 @@ description: "How SQLBuild processes variables, context, and dynamic content in 
 
 SQLBuild uses two syntax layers for dynamic content:
 
-- **`@` syntax** is for any executable SQL - model queries, hooks, tests, audits, and inline source expressions
-- **`${...}` syntax** is for config values - project TOML config, MODEL() header fields (excluding hooks), and source/seed YAML declarations
+- **`@` syntax** is for any executable SQL - model queries, SQL hooks, tests, audits, and inline source expressions
+- **`${...}` syntax** is for config values - project TOML config, MODEL() header fields (excluding SQL hooks), and source/seed YAML declarations
 
 The rule is simple: if it's any SQL that will be executed, it uses `@`. If it's a config value, it uses `${...}`. These layers never mix.
 
@@ -14,16 +14,16 @@ The rule is simple: if it's any SQL that will be executed, it uses `@`. If it's 
 
 | Syntax | Where | Resolved |
 |--------|-------|----------|
-| `@macro(args)` | Model SQL, hooks, tests, audits, inline source expressions | Compile time - expands to macro return value |
-| `@@name` | Model SQL, hooks, tests, audits, inline source expressions | Compile time - project variable substitution |
-| `@@ENV:NAME` | Model SQL, hooks, tests, audits, inline source expressions | Compile time - environment variable |
-| `@@CTX:name` | Hooks only | Compile time - destination relation, target, run ID |
+| `@macro(args)` | Model SQL, SQL hooks, tests, audits, inline source expressions | Compile time - expands to macro return value |
+| `@@name` | Model SQL, SQL hooks, tests, audits, inline source expressions | Compile time - project variable substitution |
+| `@@ENV:NAME` | Model SQL, SQL hooks, tests, audits, inline source expressions | Compile time - environment variable |
+| `@@CTX:name` | SQL hooks only | Compile time - destination relation, target, run ID |
 | `@@@name` | Model SQL | Preserved for runtime (custom materializations) |
 | `@name` / `@'name'` | Generic audit SQL only | Audit engine parameter |
 | `${CTX:...}` | TOML/YAML config values | Config compilation |
 | `${ENV:...}` | TOML/YAML config values | Config compilation |
 
-`@@CTX:` is intentionally hook-only. Model SQL describes a relation's data and should not reference its own destination identity. Hooks are the operational SQL layer where destination context is useful - grants, logging, post-materialization DDL.
+`@@CTX:` is intentionally SQL-hook-only. Model SQL describes a relation's data and should not reference its own destination identity. SQL hooks are the operational SQL layer where destination context is useful - grants, logging, post-materialization DDL. Python hooks access the same information through `ctx.destination` on the `HookContext` object (see [Hooks](/concepts/models#hooks)).
 
 ## Project variables
 
@@ -85,10 +85,10 @@ If the environment variable is not set, SQLBuild raises a compile error.
 
 Context variables provide access to the current model's destination relation, active target, and run metadata.
 
-**In hooks** (`@@CTX:` syntax):
+**In SQL hooks** (`@@CTX:` syntax):
 
 ```sql
-post_hook ['GRANT SELECT ON @@CTX:destination.qualified TO analyst_role'],
+post_hooks [sql('GRANT SELECT ON @@CTX:destination.qualified TO analyst_role')],
 ```
 
 **In TOML/YAML config values** (`${CTX:...}` syntax):
@@ -150,12 +150,12 @@ This is distinct from `@@name` (project variables) and `@macro()` (macro calls),
 SQLBuild processes authored SQL in this order:
 
 1. **Config templates** (`${CTX:...}`, `${ENV:...}`) in TOML/YAML config values are resolved during config compilation
-2. **Project variables** (`@@name`), **environment variables** (`@@ENV:NAME`), and **context variables** (`@@CTX:name` in hooks) are substituted
+2. **Project variables** (`@@name`), **environment variables** (`@@ENV:NAME`), and **context variables** (`@@CTX:name` in SQL hooks) are substituted
 3. **Macro calls** (`@name(args)`) are expanded
 4. **SQLGlot validation** runs against the fully expanded SQL
 
 This means:
 - Config templates resolve first, before any SQL processing
 - Macros see already-substituted variable values in the SQL
-- `@@CTX:destination.qualified` in hooks sees the final target-overridden destination name because hooks are expanded after destination naming is fully resolved
+- `@@CTX:destination.qualified` in SQL hooks sees the final target-overridden destination name because hooks are expanded after destination naming is fully resolved
 - SQLGlot validates the final expanded SQL, catching syntax errors from both vars and macros
