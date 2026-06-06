@@ -76,7 +76,7 @@ SELECT 1
 
 ## Using macros in hooks
 
-Macros are expanded inside `pre_hook` and `post_hook` strings:
+Macros are expanded inside `sql(...)` hook entries in `pre_hooks` and `post_hooks`:
 
 ```python
 # macros/permissions.py
@@ -87,13 +87,15 @@ def grant_target(target):
 ```sql
 MODEL (
   materialized table,
-  post_hook ['@grant_target(@@CTX:destination.qualified)'],
+  post_hooks [sql('@grant_target(@@CTX:destination.qualified)')],
 );
 
 SELECT 1 AS id
 ```
 
-Hook SQL is validated at compile time using SQLGlot, so invalid hook SQL is caught before execution. Hooks also support `@@CTX:` context variables, `@@name` project variables, and `@@ENV:NAME` environment variables directly without needing a macro wrapper.
+Hook SQL is validated at compile time using SQLGlot, so invalid hook SQL is caught before execution. SQL hooks also support `@@CTX:` context variables, `@@name` project variables, and `@@ENV:NAME` environment variables directly without needing a macro wrapper.
+
+For hooks that need more than string interpolation, use `python(...)` hooks instead. See [Hooks](/concepts/models#hooks) for the full Python hook API.
 
 ## Macro context
 
@@ -172,11 +174,11 @@ def revenue_column(column, alias):
 ## Where macros are allowed
 
 - **Model query SQL** - the SELECT statement after the MODEL() header
-- **Hook strings** - `pre_hook` and `post_hook` values in MODEL() config
+- **Hook strings** - `sql(...)` entries in `pre_hooks` and `post_hooks` in MODEL() config
 - **Test SQL** - unit test CTE bodies
 - **Audit SQL** - singular audit queries
 
-Macros are **not allowed** in MODEL() config values (other than hooks). If a config field contains `@macro()`, SQLBuild raises a compile error.
+Macros are **not allowed** in MODEL() config values (other than SQL hook entries). If a config field contains `@macro()`, SQLBuild raises a compile error.
 
 ## Discovery rules
 
