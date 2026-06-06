@@ -121,6 +121,7 @@
           "cli/test",
           "cli/scenario",
           "cli/audit",
+          "cli/freshness",
           "cli/check",
           "cli/clone",
           "cli/diff",

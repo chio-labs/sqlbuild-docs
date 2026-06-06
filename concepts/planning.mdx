@@ -63,6 +63,8 @@ For timestamp-based freshness, `lag_tolerance` controls how much the observed va
 
 Source freshness observations are stored in `_sqlbuild_source_freshness` in each target schema. Records are appended only after the affected downstream models build successfully -- if a build fails, the previous observation is preserved so the next run still sees the source as changed.
 
+Use [`sqb freshness`](/cli/freshness) to observe source freshness on demand without triggering a build.
+
 ## Changes-only mode
 
 By default, SQLBuild executes all selected models regardless of whether they have changed. `--changes-only` narrows the scope to only models that are actually stale.

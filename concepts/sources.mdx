@@ -188,6 +188,8 @@ Sources without an explicit `freshness:` block are auto-observed using the `adap
 
 This means most unmanaged table sources get freshness tracking automatically on adapters that support it, with no configuration needed.
 
+Use [`sqb freshness`](/cli/freshness) to observe source freshness on demand without triggering a build. See [Planning and Change Detection](/concepts/planning#source-freshness) for how freshness feeds into `--changes-only`.
+
 ### Freshness config reference
 
 | Field | Description |
