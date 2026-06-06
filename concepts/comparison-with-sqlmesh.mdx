@@ -32,21 +32,32 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | Microbatch execution | Configurable batch sizes with per-batch audits | Microbatch (recent addition) | Batch size support |
 | Stateful interval tracking | No - cursor-based (no external state) | No | Yes - tracks which intervals ran |
 | SCD Type 2 models | Timestamp and check strategies, historical input, hard deletes | Snapshots (limited) | Built-in |
+| **Planning and change detection** | | | |
+| Fingerprint-based change detection | Query, config, function, and schema change tracking | manifest.json comparison | Version hash comparison |
+| Source freshness | `sqb freshness` with adapter/column/sql strategies and lag tolerance | `dbt source freshness` | No |
+| Changes-only mode | `--changes-only` prunes unchanged models in both direct and virtual modes | `state:modified` selector (requires manifest) | VDE-based stale detection only |
+| Cascade propagation | Topological walk with backfill policy inheritance and override | No cascade control | Cascades through version hashes |
 | **Environments** | | | |
-| Virtual environments | Pointer swaps with hash-based version reuse | No | Pointer swaps, no compute cost |
-| Environment diffs | Full row-level data comparison | No | Table diff |
+| Virtual environments | Pointer swaps with hash-based version reuse (opt-in) | No | Pointer swaps, no compute cost |
+| Data diffs | Full row-level data comparison across targets or virtual environments | No | Table diff |
 | Zero-copy cloning | `sqb clone` | No | No |
 | **Models** | | | |
 | SQL models | `MODEL()` header with inline config | Jinja-templated SQL + YAML sidecar | `MODEL` DDL |
 | Python models | Coming soon | Limited (remote only) | Pandas, PySpark, Snowpark, BigFrames |
 | Custom materializations | Python with full framework hooks | Jinja-based | Python-based custom model kinds |
+| Lifecycle hooks | Typed `sql()`/`python()` hooks with compile-time validation and `HookContext` | Jinja pre/post hooks | Python pre/post hooks |
+| **Python nodes** | | | |
+| Tasks | `@task` - Python computation as DAG nodes | No | No |
+| Assets | `@asset` - external artifact production/observation | No | No |
+| Checks | `@check` - Python validation of tasks, assets, and loaders | No | No |
+| Factories | `@factory` - programmatic node generation | No | No |
 | **dbt** | | | |
 | dbt interop | Run alongside dbt - reads manifest, no migration | N/A | Jinja compatibility layer plus own macro system |
 | **Sources** | | | |
 | Source loaders | Python `@loader` functions with table/append/delete_insert/merge strategies | No (external to dbt) | No (external to SQLMesh) |
 | Declarative ingestion | ingestr integration - YAML-only config for 50+ sources | No | No |
 | Auto-load during builds | Managed sources loaded before dependent models | No | No |
-| Source deferral | `defer_sources_to` reads source data from another target | No | No |
+| Source deferral | `--defer-sources-to` reads source data from another target | No | No |
 | **Other** | | | |
 | Reference syntax | `__ref()` - parses as valid SQL | `{{ ref() }}` - Jinja template | `model_name` with dependency tracking |
 | Adapters | DuckDB, MotherDuck, Snowflake, BigQuery, Databricks, PostgreSQL, SQL Server | 30+ (community adapters) | DuckDB, Snowflake, BigQuery, Databricks, Spark, Redshift, Postgres, Trino, MySQL |
@@ -58,11 +69,11 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 
 | Tool | Best for |
 |------|----------|
-| **SQLBuild** | Test-first SQL pipelines. Chained unit tests, local E2E scenario replay in DuckDB, pre-promotion audit gating, offline compile-time validation, virtual environments with instant promotion. |
+| **SQLBuild** | Test-first SQL pipelines. Chained unit tests, local E2E scenario replay in DuckDB, pre-promotion audit gating, offline compile-time validation, source freshness tracking, Python nodes (tasks, assets, checks), and opt-in virtual environments. |
 | **dbt** | The most widely adopted SQL transformation framework with the largest adapter and community ecosystem. |
 | **SQLMesh** | State-managed pipelines with virtual environments, interval tracking, and cross-dialect transpilation. |
 
 ## Not yet in SQLBuild
 
-- **Python models** - Pandas, PySpark, Snowpark, BigFrames
+- **Python models** - Define models in Python using Pandas, PySpark, Snowpark, or BigFrames
 - **Broader adapter support** - ClickHouse, Redshift, Trino, Spark, Athena
