@@ -33,6 +33,32 @@ The plan assigns a reason to each model that needs work:
 
 Models with no changes show as `Normal` in the plan output and are executed in their standard mode (views are recreated, incrementals run their delta, etc.).
 
+### Cascade propagation
+
+When a model or function changes, the change signal propagates downstream through the DAG. Every model downstream of a changed node is marked `Upstream changed` in the plan, even if its own SQL and config are identical.
+
+The cascade walk is topological -- it processes models in dependency order, so each model sees the resolved state of all its upstreams before deciding its own effective action.
+
+**What cascades:**
+
+- A query, config, or schema change on any model cascades to all its downstream dependents.
+- A function change cascades to every model that calls it (directly or transitively).
+- Source freshness changes propagate downstream the same way (see [Source freshness](#source-freshness)).
+
+**How materialization types respond:**
+
+- **Views** are recreated on every build regardless, so a cascade has no extra cost.
+- **Tables** are fully rebuilt, same as if they had changed themselves.
+- **Incremental models** receive a backfill window from the cascade. A `full` backfill always cascades. A `bounded` backfill only cascades when the upstream and downstream models share the same `cursor_type` (e.g. both use `timestamp`), so unrelated cursor types don't inherit bounded windows that don't apply. The downstream model's own `query_change_backfill` policy takes precedence over any cascaded signal.
+
+**Resolution when multiple upstreams are stale:**
+
+If a model has multiple stale upstreams with different backfill actions, the most aggressive action wins. `full` beats `bounded`, and among bounded actions, the longer duration wins. Ties are broken alphabetically by model name for determinism.
+
+**Overriding cascaded backfill:**
+
+Downstream incremental models can set their own `query_change_backfill` or `schema_change_backfill` policies to override the cascaded signal. If a downstream model declares its own policy, that policy applies instead of the upstream's. If it has no policy, it inherits the upstream's rebuild scope. See [Incremental Models -- Backfill policies](/concepts/incremental#backfill-policies) for configuration details.
+
 ### Backfill policies
 
 When a change is detected on an incremental model, the **backfill policy** determines how much data to reprocess. See [Incremental Models -- Backfill policies](/concepts/incremental#backfill-policies) for `query_change_backfill` and `schema_change_backfill` configuration.
