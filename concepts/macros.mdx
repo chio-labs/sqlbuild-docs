@@ -93,7 +93,7 @@ MODEL (
 SELECT 1 AS id
 ```
 
-Hook SQL is validated at compile time using SQLGlot, so invalid hook SQL is caught before execution. SQL hooks also support `@@CTX:` context variables, `@@name` project variables, and `@@ENV:NAME` environment variables directly without needing a macro wrapper.
+Hook SQL is validated at compile time, so invalid hook SQL is caught before execution. SQL hooks also support `@@CTX:` context variables, `@@name` project variables, and `@@ENV:NAME` environment variables directly without needing a macro wrapper.
 
 For hooks that need more than string interpolation, use `python(...)` hooks instead. See [Hooks](/concepts/models#hooks) for the full Python hook API.
 
@@ -114,7 +114,7 @@ The macro context provides:
 | Field | Description |
 |-------|-------------|
 | `adapter_name` | The active adapter (e.g. `duckdb`, `snowflake`) |
-| `sqlglot_enabled` | Whether SQLGlot analysis is enabled |
+| `sql_analysis_enabled` | Whether SQL analysis is enabled |
 | `target_name` | The active target name, if any |
 | `vars` | Effective project variables as a dict (merged from project config, target, local config, and CLI `--vars`) |
 

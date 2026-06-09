@@ -122,7 +122,7 @@ def timestamp_trunc(ctx, grain: str, expr: str) -> str:
     return f"DATE_TRUNC('{grain}', {expr})"
 ```
 
-The macro context provides `adapter_name`, `sqlglot_enabled`, `target_name`, and `vars`.
+The macro context provides `adapter_name`, `sql_analysis_enabled`, `target_name`, and `vars`.
 
 ## Deferred placeholders
 
@@ -152,10 +152,10 @@ SQLBuild processes authored SQL in this order:
 1. **Config templates** (`${CTX:...}`, `${ENV:...}`) in TOML/YAML config values are resolved during config compilation
 2. **Project variables** (`@@name`), **environment variables** (`@@ENV:NAME`), and **context variables** (`@@CTX:name` in SQL hooks) are substituted
 3. **Macro calls** (`@name(args)`) are expanded
-4. **SQLGlot validation** runs against the fully expanded SQL
+4. **SQL analysis validation** runs against the fully expanded SQL
 
 This means:
 - Config templates resolve first, before any SQL processing
 - Macros see already-substituted variable values in the SQL
 - `@@CTX:destination.qualified` in SQL hooks sees the final target-overridden destination name because hooks are expanded after destination naming is fully resolved
-- SQLGlot validates the final expanded SQL, catching syntax errors from both vars and macros
+- SQL analysis validates the final expanded SQL, catching syntax errors from both vars and macros
