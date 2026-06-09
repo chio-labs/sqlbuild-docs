@@ -210,7 +210,7 @@ This:
 1. Checks snapshot freshness via the input fingerprint (missing/stale snapshots are skipped by default)
 2. Creates a temporary DuckDB database at `target/run/scenarios/<scenario_name>/local.duckdb`
 3. Loads JSONL snapshots into typed DuckDB tables using column metadata from `scenario.json`
-4. Transpiles model and check SQL from the project adapter dialect to DuckDB via SQLGlot
+4. Transpiles model and check SQL from the project adapter dialect to DuckDB
 5. Builds functions, models, and runs expected/assertion checks in DuckDB
 6. Keeps the local DuckDB file for inspection (it lives under `target/`, so it's always retained)
 
@@ -238,7 +238,7 @@ sqb scenario test --local --strict
 
 ### Local type overrides
 
-When SQLGlot's automatic warehouse-to-DuckDB type conversion produces an incompatible type, you can override it in `sqlbuild_project.toml`:
+When the automatic warehouse-to-DuckDB type conversion produces an incompatible type, you can override it in `sqlbuild_project.toml`:
 
 ```toml
 [scenario.local_type_overrides.snowflake]
@@ -269,4 +269,4 @@ See the [CLI reference](/cli/scenario) for full command documentation.
 ## Limitations
 
 - Custom materializations are not supported in scenarios yet. Scenario models using custom materializations will fail with a clear error.
-- Local replay transpiles SQL from the project adapter dialect to DuckDB via SQLGlot. Adapter-specific SQL that SQLGlot cannot translate will produce a clear error with the failing resource name and reason.
+- Local replay transpiles SQL from the project adapter dialect to DuckDB. Adapter-specific SQL that cannot be translated will produce a clear error with the failing resource name and reason.

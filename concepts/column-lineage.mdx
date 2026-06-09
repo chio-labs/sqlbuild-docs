@@ -13,9 +13,9 @@ description: "Trace individual columns through your SQL pipeline - understand wh
 
 ## How it works
 
-SQLBuild analyzes column lineage statically at compile time using [SQLGlot](https://github.com/tobymao/sqlglot). No warehouse connection is needed. The analyzer parses each model's SQL, resolves `ref()` and `source()` calls, and traces columns through `SELECT` lists, CTEs, JOINs, subqueries, and expressions.
+SQLBuild analyzes column lineage statically at compile time. No warehouse connection is needed. The analyzer parses each model's SQL, resolves `ref()` and `source()` calls, and traces columns through `SELECT` lists, CTEs, JOINs, subqueries, and expressions.
 
-Column lineage requires SQLGlot to be enabled in project settings (it is by default).
+Column lineage requires SQL analysis to be enabled in project settings (it is by default).
 
 ## Transform types
 
@@ -46,7 +46,7 @@ Each edge also carries a confidence level indicating how certain the analyzer is
 
 Column lineage supports two analysis modes that trade off speed against depth of analysis.
 
-**Rich mode** uses SQLGlot's lineage module and optimizer to resolve columns through CTEs, subqueries, and multi-level nesting with full transform classification. Thorough, but slower because the optimizer runs per column per model.
+**Rich mode** uses the SQL analysis optimizer to resolve columns through CTEs, subqueries, and multi-level nesting with full transform classification. Thorough, but slower because the optimizer runs per column per model.
 
 **Fast mode** parses the SQL AST directly to extract column mappings, resolve CTE references, and classify transforms. It handles the same SQL patterns that most column lineage tools support and is fast enough to run on every compile.
 
@@ -114,7 +114,7 @@ These checks run automatically during `sqb compile` and report diagnostics with 
 
 ## Limitations
 
-- Column lineage requires SQLGlot to be enabled (`sqlglot = true` in settings, which is the default)
+- Column lineage requires SQL analysis to be enabled (`sql_analysis = true` in settings, which is the default)
 - Complex SQL patterns (deeply nested correlated subqueries, dynamic SQL, adapter-specific functions) may reduce accuracy or confidence
 - `SELECT *` is tracked as a `star` transform - the analyzer knows the column passes through but the mapping is less precise than explicit column references
 - Column lineage is computed statically from SQL text. Runtime-only column additions (e.g. from dynamic UDFs) are not tracked

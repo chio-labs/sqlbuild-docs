@@ -27,14 +27,14 @@ sqb --project-dir <path> compile [flags]
 
 1. **Discovery** - finds `sqlbuild_project.toml`, scans for models, sources, seeds, functions, audits, tests, and macros
 2. **Graph resolution** - resolves `ref()` and `source()` calls, expands macros, orders models by dependency
-3. **SQL validation** - validates SQL syntax using SQLGlot (when enabled)
+3. **SQL validation** - validates SQL syntax (when SQL analysis is enabled)
 4. **Column lineage** - analyzes column-level dependencies across models (fast mode by default)
 5. **Contract validation** - checks declared column contracts against inferred query output
 6. **Artifact write** - writes compiled SQL to `target/compiled/`
 
 ## Static analysis
 
-When SQLGlot is enabled (default), compile performs static analysis on your models without connecting to the warehouse:
+When SQL analysis is enabled (default), compile performs static analysis on your models without connecting to the warehouse:
 
 - **Column inference**: Infers output columns from each model's SQL, including through CTEs, subqueries, and JOINs
 - **Column contract validation**: If a model declares columns in its `MODEL()` header, compile checks that every declared column exists in the query output. If a column declares a type and `type_enforcement` is enabled, compile also verifies the inferred type matches the declared type
@@ -110,7 +110,7 @@ The `--lineage-mode` flag controls how column lineage is computed during compile
 | Mode | Description |
 |------|-------------|
 | `fast` | Default. Lightweight column extraction using SQL model metadata. |
-| `rich` | Full SQLGlot-based analysis with transform classification and deeper tracing. Slower on large projects. |
+| `rich` | Full SQL analysis with transform classification and deeper tracing. Slower on large projects. |
 | `none` | Skip column lineage entirely. |
 
 Column lineage results are included in the JSON compile report under each model's `lineage` field. See [Column Lineage](/concepts/column-lineage) for details on analysis modes and transform types.

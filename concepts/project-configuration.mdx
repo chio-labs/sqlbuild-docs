@@ -178,7 +178,7 @@ Global feature toggles:
 
 ```toml
 [settings]
-sqlglot = true
+sql_analysis = true
 query_change_tracking = true
 sql_validation = true
 concurrency = 1
@@ -190,7 +190,7 @@ default_audit_run_scope = "final"
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `sqlglot` | `true` | Enable SQLGlot-based SQL validation and static analysis at compile time |
+| `sql_analysis` | `true` | Enable SQL validation and static analysis at compile time |
 | `virtual_environments` | `false` | Enable [virtual environments](/concepts/advanced/virtual-environments) (versioned model outputs, promotion, rollback, state management). When `false`, the project runs in direct mode. |
 | `query_change_tracking` | `true` | Track query fingerprints for change detection |
 | `sql_validation` | `true` | Validate SQL syntax during compilation |

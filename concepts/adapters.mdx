@@ -69,7 +69,7 @@ from sqlbuild.adapter.base.base_adapter import BaseAdapter
 
 class MyDatabaseAdapter(BaseAdapter):
     adapter_name = "my_database"
-    sqlglot_dialect_name = "postgres"  # SQLGlot dialect for SQL validation and lineage
+    sql_analysis_dialect_name = "postgres"  # SQL dialect for validation and lineage
 
     def connect(self, config):
         ...
@@ -81,7 +81,7 @@ class MyDatabaseAdapter(BaseAdapter):
         ...
 ```
 
-Set `sqlglot_dialect_name` to the [SQLGlot dialect](https://github.com/tobymao/sqlglot/tree/main/sqlglot/dialects) that matches your engine's SQL syntax. This enables compile-time SQL validation, column inference, column lineage, and local scenario replay for your adapter. If omitted, SQLBuild uses generic SQL parsing.
+Set `sql_analysis_dialect_name` to the SQL dialect name that matches your engine's SQL syntax. This enables compile-time SQL validation, column inference, column lineage, and local scenario replay for your adapter. If omitted, SQLBuild uses generic SQL parsing.
 
 For full control with no inherited defaults, subclass `StrictAdapter` instead. Every method is abstract and must be implemented explicitly. SQLBuild raises a clear error listing any unimplemented methods.
 
