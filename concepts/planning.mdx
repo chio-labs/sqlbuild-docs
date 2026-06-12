@@ -138,7 +138,7 @@ The planner checks each model against the `reuse_from` target's fingerprints and
 - The relation exists in the `reuse_from` target.
 - Source freshness in the `reuse_from` target is current.
 
-For incremental models, reuse seeds the dev relation from the prod relation and then runs the incremental delta on top.
+For incremental models, reuse clones or copies the prod relation as a baseline, then runs the incremental delta on top.
 
 Use `reuse_hard_copy = true` on the target to force a full data copy instead of a zero-copy clone (useful when the adapter doesn't support cloning or when you need an independent copy).
 
