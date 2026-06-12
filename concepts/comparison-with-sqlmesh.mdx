@@ -35,7 +35,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | **Planning and change detection** | | | |
 | Change-aware by default | Fingerprints models, seeds, functions, Python nodes; skips unchanged work including audits | dbt State (paid add-on) or external orchestrator | Version hash comparison |
 | Warehouse-native state | Append-only tables in the warehouse; no external state database | manifest.json artifacts | Requires external state store (SQLite/PostgreSQL) |
-| Source freshness | `sqb freshness` with adapter/column/sql strategies and lag tolerance | `dbt source freshness` | No |
+| Source freshness | `sqb freshness` with adapter/column/sql strategies, lag tolerance, and CI gating | `dbt source freshness` | Adapter-metadata signal for external sources (no standalone command, no per-source config) |
 | Reuse from production | `reuse_from` clones/copies unchanged relations from another target | dbt State clone (paid) | N/A |
 | Cascade propagation | Topological walk with `replay_on_change` policy inheritance and override | No cascade control | Cascades through version hashes |
 | **Environments** | | | |
