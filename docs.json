@@ -116,7 +116,6 @@
           "cli/compile",
           "cli/plan",
           "cli/build",
-          "cli/run",
           "cli/load",
           "cli/seed",
           "cli/test",

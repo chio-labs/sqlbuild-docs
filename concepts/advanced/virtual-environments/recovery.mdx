@@ -66,7 +66,7 @@ SQLBuild blocks operations that don't apply to the current mode:
 | Operation | Direct mode | Virtual mode |
 |-----------|-------------|--------------|
 | `sqb state` subcommands | Blocked | Allowed |
-| `sqb run` | Allowed | Blocked (use `sqb build`) |
+| `sqb build --no-tests --no-audits` | Allowed | Blocked (use `sqb build`) |
 | `sqb build --defer-to` | Allowed | Blocked (VDE refs handle upstream resolution) |
 | `sqb promote` | Blocked | Allowed |
 | `sqb rollback` | Blocked | Allowed |

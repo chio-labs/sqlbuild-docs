@@ -125,10 +125,10 @@ The default is no retry. Set `retry_on` explicitly rather than relying on the br
 
 ```bash
 # Run a task and its required graph
-sqb run --select export_orders
+sqb build --select export_orders --no-tests --no-audits
 
 # Include in a full build
 sqb build --select export_orders
 ```
 
-Tasks run during `sqb build` and `sqb run`. They are not validated by checks unless you also write a [check](/concepts/python-nodes/checks) that depends on them.
+Tasks run during `sqb build`. They are not validated by checks unless you also write a [check](/concepts/python-nodes/checks) that depends on them.

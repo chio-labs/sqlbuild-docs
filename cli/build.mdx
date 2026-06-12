@@ -1,11 +1,11 @@
 ---
 title: "build"
-description: "Execute the full build lifecycle: seeds, tests, models, and audits."
+description: "Execute the build lifecycle: compile, plan, and build what changed."
 ---
 
 # sqb build
 
-Compiles, plans, and executes the full build lifecycle including seeds, SQL unit tests, model materialization, and audits.
+Compiles, plans, and executes the build lifecycle. By default, only stale work runs -- unchanged models, seeds, audits, and Python nodes are skipped automatically. Use `--no-tests` and `--no-audits` to skip validation for fast iteration.
 
 ## Usage
 
@@ -17,9 +17,14 @@ sqb --project-dir <path> build [flags]
 
 | Flag | Description |
 |------|-------------|
+| `--force` | Override change detection and build all selected models regardless of state |
+| `--no-tests` | Skip SQL unit tests |
+| `--no-audits` | Skip audits |
+| `--no-python` | Skip read-side Python tasks and assets (loader-side Python still runs for selected sources) |
 | `--no-sql-validation` | Skip compile-time SQL syntax validation |
-| `--defer-to` | Resolve unselected model references against another target |
 | `--full-refresh` | Drop and rebuild all selected models from scratch |
+| `--defer-to` | Resolve unselected model references against another target |
+| `--defer-sources-to` | Read managed source data from another target |
 | `--fail-fast` | Stop on first failure and skip remaining nodes |
 | `--concurrency` | Number of worker connections (default: 1) |
 | `--verbose`, `-v` | Show lifecycle SQL inline after each model |
@@ -29,21 +34,29 @@ sqb --project-dir <path> build [flags]
 | `--end-cursor-int` | Override end cursor for integer incremental models |
 | `--load` | Explicitly load managed sources before building |
 | `--no-load` | Skip automatic source loading |
-| `--force` | Override change detection and build all selected models regardless of state |
-| `--no-python` | Skip read-side Python tasks and assets (loader-side Python still runs for selected sources) |
 | `--reload` | Reload managed sources (passes `is_reload=True` to loaders) |
-| `--defer-sources-to` | Read managed source data from another target |
+| `--include-stale-upstreams` | Expand selection to include stale upstream models needed for coherence |
 | `--select`, `-s` | Select specific models |
 | `--exclude` | Exclude specific models |
+
+## Fast iteration
+
+Use `--no-tests` and `--no-audits` to skip validation when you only want to materialize models:
+
+```bash
+sqb build --no-tests --no-audits
+```
+
+This replaces the former `sqb run` command. The full lifecycle (tests + audits) is always the default; skip flags opt out of specific phases when you need speed.
 
 ## Execution order
 
 1. Managed sources are loaded (unless `--no-load`)
-2. Seeds are loaded
-3. Source audits run before their dependent models
-3. SQL unit tests run before their target model
-4. Models are materialized in DAG topological order
-5. Error-severity audits run against the staging table before promotion to the target
+2. Seeds are loaded (if changed)
+3. Source audits run before their dependent models (unless `--no-audits`)
+4. SQL unit tests run before their target model (unless `--no-tests`)
+5. Models are materialized in DAG topological order (unchanged models are skipped)
+6. Error-severity audits run against the staging table before promotion to the target (unless `--no-audits`)
 
 ## Output
 
@@ -87,7 +100,7 @@ When a model fails:
 
 ## Fingerprints
 
-After a successful build, SQLBuild writes query fingerprints to `_sqlbuild_fingerprints` in the target schema. These are used by `plan` to detect query changes on subsequent runs.
+After a successful build, SQLBuild writes version identities to `_sqlbuild_fingerprints` in the target schema. These are used on subsequent runs to detect changes and skip unchanged work. See [Planning and Change Detection](/concepts/planning) for details.
 
 ## Runtime artifacts
 

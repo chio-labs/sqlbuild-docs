@@ -3,7 +3,7 @@ title: "Python Nodes"
 description: "Tasks, assets, loaders, and checks as first-class nodes in the SQLBuild graph."
 ---
 
-Python nodes let your project grow beyond warehouse-only SQL while keeping the SQL graph clean. They are ordinary Python functions, decorated to become nodes in the same DAG as your SQL models, and they run as part of `sqb run` and `sqb build`.
+Python nodes let your project grow beyond warehouse-only SQL while keeping the SQL graph clean. They are ordinary Python functions, decorated to become nodes in the same DAG as your SQL models, and they run as part of `sqb build`.
 
 There are four kinds, authored in dedicated top-level folders:
 
@@ -134,14 +134,14 @@ The commands differ in what they include by default:
 | Command | SQL | Loaders / tasks / assets | Checks | Audits |
 |---------|-----|--------------------------|--------|--------|
 | `sqb build` | Yes | Yes | Yes | Yes |
-| `sqb run` | Yes | Yes | No | No |
+| `sqb build --no-tests --no-audits` | Yes | Yes | No | No |
 | `sqb check` | No | No | Selected checks only | No |
 
 - `sqb build` is the complete build-and-validate command: it runs SQL, the required Python nodes, SQL audits, and Python checks.
-- `sqb run` executes the DAG without validation (no checks, no audits).
+- `sqb build --no-tests --no-audits` executes the DAG without validation, for fast iteration.
 - `sqb check` runs Python checks only. See [`sqb check`](/cli/check).
 
-Use `--no-python` on `plan`, `run`, and `build` to suppress read-side tasks/assets. Loader-side Python required to populate selected sources still runs (use `--no-load` to skip source loading). See the [`sqb build`](/cli/build) and [`sqb run`](/cli/run) references.
+Use `--no-python` on `plan` and `build` to suppress read-side tasks/assets. Loader-side Python required to populate selected sources still runs (use `--no-load` to skip source loading). See the [`sqb build`](/cli/build) reference.
 
 ## Try it
 

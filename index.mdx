@@ -157,7 +157,7 @@ Virtual environments store the same identity and freshness data in the VDE state
 
 ### Python nodes
 
-Grow beyond warehouse-only SQL without leaving the graph. Python nodes are ordinary functions, decorated to become first-class nodes in the same DAG as your SQL models, and they run as part of `sqb run` and `sqb build`. There are four kinds:
+Grow beyond warehouse-only SQL without leaving the graph. Python nodes are ordinary functions, decorated to become first-class nodes in the same DAG as your SQL models, and they run as part of `sqb build`. There are four kinds:
 
 - **Loaders** (`@loader`) load external data into managed sources, with incremental write strategies (table, append, delete_insert, merge), cursor-based loading, and concurrent execution.
 - **Tasks** (`@task`) run Python computation or side effects as graph nodes.
