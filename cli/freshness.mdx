@@ -99,7 +99,7 @@ Summary: observed=0 changed=1 unchanged=1 tolerated=1 unknown=0 errors=0
 
 ### Virtual environment state
 
-To compare against state stored in a virtual environment instead of direct mode state:
+To compare against state stored in a virtual environment instead of standard mode state:
 
 ```bash
 sqb freshness --state --virtual-env pr_123
@@ -160,4 +160,4 @@ sqb freshness --json
 ## See also
 
 - [Sources -- Source freshness](/concepts/sources#source-freshness) for freshness configuration
-- [Planning and Change Detection](/concepts/planning) for how freshness feeds into `--changes-only`
+- [Planning and Change Detection](/concepts/planning) for how freshness feeds into change-aware builds

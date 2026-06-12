@@ -1,15 +1,17 @@
 ---
 title: "Planning and Change Detection"
-description: "How SQLBuild decides what to build: fingerprints, source freshness, and changes-only mode."
+description: "How SQLBuild decides what to build: fingerprints, source freshness, and warehouse-native state."
 ---
 
-When you run `sqb plan`, `sqb build`, or `sqb run`, SQLBuild compiles your project, compares it against the current warehouse state, and produces a plan. The plan determines which models need work and why.
+When you run `sqb plan`, `sqb build`, or `sqb run`, SQLBuild compiles your project, compares it against the current warehouse state, and produces a plan. By default, only stale work runs. Unchanged models, seeds, audits, and Python nodes are skipped automatically.
 
-## Change detection
+Use `--force` to override change detection and run everything selected, regardless of state.
 
-SQLBuild detects changes by comparing the compiled project against fingerprints stored in the warehouse from the last successful build.
+## What is tracked
 
-### What is tracked
+Every node in the graph has a versioned identity stored in `_sqlbuild_fingerprints` in the target schema. The planner reads these on every run and compares them against the compiled project.
+
+### Models and functions
 
 Each model and function has a **fingerprint** derived from:
 
@@ -17,11 +19,29 @@ Each model and function has a **fingerprint** derived from:
 - **Config hash** -- version-identity config values (materialization settings, contracts, hooks, custom config/placeholders).
 - **Function hashes** -- for models that depend on user-defined functions, the function's own fingerprint is included. A function change cascades to all dependent models.
 
-After a successful build, SQLBuild writes these fingerprints to `_sqlbuild_fingerprints` in the target schema. On the next run, the planner reads them back and compares.
+### Seeds
 
-### Change reasons
+Seeds are fingerprinted by content hash and load-affecting config. Unchanged seeds are not reloaded.
 
-The plan assigns a reason to each model that needs work:
+### Python nodes
+
+Loaders, tasks, assets, checks, and hooks are fingerprinted by:
+
+- **Source code hash** -- the normalized source of the decorated function.
+- **Dependency hashes** -- transitive hashes of imported project modules, scoped to the git root. Changes to third-party packages (in `.venv`, `site-packages`, etc.) do not affect the identity; changes to your project's own helper modules do.
+- **Decorator config hash** -- the arguments passed to the decorator.
+
+Python identity tracking is primarily a **visual indicator** in the plan output. When a node's identity changes, the plan shows source and dependency diffs so you can see exactly what changed. However, unlike SQL models where SQLBuild can observe inputs (fingerprints, source freshness) and skip unchanged work automatically, Python nodes may depend on external inputs that the framework cannot observe -- an API, a file on disk, a third-party service.
+
+For this reason, skip/run decisions for Python nodes are **user-controlled** via `ctx.skip()`. The node's own logic decides whether it needs to run based on whatever semantics are appropriate -- checking an API timestamp, comparing a file hash, querying a metadata table. If the condition is met, `ctx.skip()` short-circuits the node (and optionally its downstream dependents via soft or hard skip mode). This keeps the mechanism flexible and powerful without requiring the framework to infer things it cannot know.
+
+### Audits
+
+Audits that already passed for the same model version identity are not re-run. When a model's version changes, its audits are re-validated. This avoids redundant audit work on unchanged models while ensuring changed models are always fully validated.
+
+## Change reasons
+
+The plan assigns a reason to each node that needs work:
 
 | Reason | Meaning |
 |--------|---------|
@@ -30,42 +50,13 @@ The plan assigns a reason to each model that needs work:
 | Config changed | Version-identity config values differ |
 | Schema changed | Upstream schema changes detected (column additions, removals, type changes) |
 | Upstream changed | An upstream model's change cascades downstream |
+| Run despite unchanged | The model is configured to run periodically even without changes (see [Run despite unchanged](#run-despite-unchanged)) |
 
-Models with no changes show as `Normal` in the plan output and are executed in their standard mode (views are recreated, incrementals run their delta, etc.).
-
-### Cascade propagation
-
-When a model or function changes, the change signal propagates downstream through the DAG. Every model downstream of a changed node is marked `Upstream changed` in the plan, even if its own SQL and config are identical.
-
-The cascade walk is topological -- it processes models in dependency order, so each model sees the resolved state of all its upstreams before deciding its own effective action.
-
-**What cascades:**
-
-- A query, config, or schema change on any model cascades to all its downstream dependents.
-- A function change cascades to every model that calls it (directly or transitively).
-- Source freshness changes propagate downstream the same way (see [Source freshness](#source-freshness)).
-
-**How materialization types respond:**
-
-- **Views** are recreated on every build regardless, so a cascade has no extra cost.
-- **Tables** are fully rebuilt, same as if they had changed themselves.
-- **Incremental models** receive a backfill window from the cascade. A `full` backfill always cascades. A `bounded` backfill only cascades when the upstream and downstream models share the same `cursor_type` (e.g. both use `timestamp`), so unrelated cursor types don't inherit bounded windows that don't apply. The downstream model's own `query_change_backfill` policy takes precedence over any cascaded signal.
-
-**Resolution when multiple upstreams are stale:**
-
-If a model has multiple stale upstreams with different backfill actions, the most aggressive action wins. `full` beats `bounded`, and among bounded actions, the longer duration wins. Ties are broken alphabetically by model name for determinism.
-
-**Overriding cascaded backfill:**
-
-Downstream incremental models can set their own `query_change_backfill` or `schema_change_backfill` policies to override the cascaded signal. If a downstream model declares its own policy, that policy applies instead of the upstream's. If it has no policy, it inherits the upstream's rebuild scope. See [Incremental Models -- Backfill policies](/concepts/incremental#backfill-policies) for configuration details.
-
-### Backfill policies
-
-When a change is detected on an incremental model, the **backfill policy** determines how much data to reprocess. See [Incremental Models -- Backfill policies](/concepts/incremental#backfill-policies) for `query_change_backfill` and `schema_change_backfill` configuration.
+Unchanged nodes are skipped and show as `Normal` in the plan output.
 
 ## Source freshness
 
-Source freshness lets SQLBuild observe whether external source data has actually changed between runs. When combined with `--changes-only`, this allows the planner to skip models whose upstream sources haven't moved.
+Source freshness lets SQLBuild observe whether external source data has actually changed between runs. Models downstream of unchanged sources are skipped automatically.
 
 ### Configuration
 
@@ -89,35 +80,112 @@ For timestamp-based freshness, `lag_tolerance` controls how much the observed va
 
 Source freshness observations are stored in `_sqlbuild_source_freshness` in each target schema. Records are appended only after the affected downstream models build successfully -- if a build fails, the previous observation is preserved so the next run still sees the source as changed.
 
+Observations are resolved across all target schemas in the project, so a source referenced by models in different schemas is tracked consistently.
+
 Use [`sqb freshness`](/cli/freshness) to observe source freshness on demand without triggering a build.
 
-## Changes-only mode
+## Cascade propagation
 
-By default, SQLBuild executes all selected models regardless of whether they have changed. `--changes-only` narrows the scope to only models that are actually stale.
+When a model or function changes, the change signal propagates downstream through the DAG. Every model downstream of a changed node is marked `Upstream changed` in the plan, even if its own SQL and config are identical.
 
-```bash
-sqb build --changes-only
-sqb build --select path:marts --changes-only
-sqb plan --changes-only
-sqb run --changes-only
+The cascade walk is topological -- it processes models in dependency order, so each model sees the resolved state of all its upstreams before deciding its own effective action.
+
+**What cascades:**
+
+- A query, config, or schema change on any model cascades to all its downstream dependents.
+- A function change cascades to every model that calls it (directly or transitively).
+- Source freshness changes propagate downstream the same way.
+
+**How materialization types respond:**
+
+- **Views** are recreated on every build regardless, so a cascade has no extra cost.
+- **Tables** are fully rebuilt, same as if they had changed themselves.
+- **Incremental models** receive a replay window from the cascade. A `full` replay always cascades. A `bounded` replay only cascades when the upstream and downstream models share the same `cursor_type` (e.g. both use `timestamp`), so unrelated cursor types don't inherit bounded windows that don't apply. The downstream model's own `replay_on_change` policy takes precedence over any cascaded signal.
+
+**Resolution when multiple upstreams are stale:**
+
+If a model has multiple stale upstreams with different replay actions, the most aggressive action wins. `full` beats `bounded`, and among bounded actions, the longer duration wins. Ties are broken alphabetically by model name for determinism.
+
+**Overriding cascaded replay:**
+
+Downstream incremental models can set their own `replay_on_change` policy to override the cascaded signal. If a downstream model declares its own policy, that policy applies instead of the upstream's. If it has no policy, it inherits the upstream's replay scope. See [Incremental Models -- Replay on change](/concepts/incremental#replay-on-change) for configuration details.
+
+## Replay on change
+
+When a change is detected on an incremental model, `replay_on_change` controls how much data to reprocess:
+
+- **`forward`** (default) -- run the normal incremental delta from the cursor. No reprocessing.
+- **`bounded-<duration>`** (e.g. `bounded-14d`) -- replay the specified window of data.
+- **`full`** -- drop and rebuild the entire table.
+
+See [Incremental Models -- Replay on change](/concepts/incremental#replay-on-change) for configuration details.
+
+## Reuse from production
+
+Dev targets can opt into reusing relations from another target (e.g. prod) instead of rebuilding from scratch. When a model's version identity in dev matches the version already built in prod, SQLBuild clones or copies the relation rather than re-executing the query.
+
+Configure this on the target:
+
+```toml
+[targets.dev]
+schema = "dev"
+reuse_from = "prod"
 ```
 
-### What gets pruned
+The planner checks each model against the `reuse_from` target's fingerprints and relation state. Models are reused when:
 
-When `--changes-only` is active, the planner removes models and functions from the selected scope if they have no pending work:
+- The expected version identity matches the `reuse_from` target's built version.
+- The relation exists in the `reuse_from` target.
+- Source freshness in the `reuse_from` target is current.
 
-- **Models** are kept if they have any change reason (query changed, config changed, schema changed, first run, upstream cascade), a pending backfill, or are downstream of a source with changed freshness. Models with no changes and no stale sources are pruned.
-- **Functions** are kept if their fingerprint changed or they have a pending backfill. Unchanged functions are pruned.
-- **Sources, seeds, and other non-model resources** are always kept.
+For incremental models, reuse seeds the dev relation from the prod relation and then runs the incremental delta on top.
 
-### Python nodes
+Use `reuse_hard_copy = true` on the target to force a full data copy instead of a zero-copy clone (useful when the adapter doesn't support cloning or when you need an independent copy).
 
-When `--changes-only` prunes SQL models from the scope, read-side Python nodes (tasks, assets, checks) that depend on the pruned models are also dropped. Loaders always run regardless of pruning.
+`reuse_from` cannot be used together with `defer_sources_to` on the same target.
 
-### Source freshness integration
+## Run despite unchanged
 
-Source freshness feeds directly into `--changes-only` decisions. Even if a model's own SQL and config haven't changed, it is kept in scope if any of its upstream sources have new data (or if freshness is unknown for a source). This means `--changes-only` respects both code changes and data changes.
+Some models depend on external data that isn't tracked by source freshness -- for example, a table model that reads from an API-populated staging area. `run_despite_unchanged` forces a model to run periodically even when its version identity hasn't changed.
 
-### Virtual environments
+```sql
+MODEL (
+  materialized table,
+  run_despite_unchanged "always",
+);
+```
 
-Virtual environments have their own `--changes-only` behavior based on version hash comparison rather than fingerprints. See [Virtual Environments -- Changes only](/concepts/advanced/virtual-environments/building#changes-only) for details.
+```sql
+MODEL (
+  materialized table,
+  run_despite_unchanged "24h",
+);
+```
+
+- **`always`** -- run on every build regardless of state.
+- **Duration** (e.g. `24h`, `30d`, `90m`) -- run if at least the specified time has passed since the model's upstream source freshness was last observed. Requires at least one upstream source with timestamp freshness tracking.
+
+Only table materializations support `run_despite_unchanged`. When triggered, downstream models are also marked as stale.
+
+## Python node pruning
+
+When unchanged SQL models are skipped, read-side Python nodes (tasks, assets, checks) that depend on those models are also skipped. Loaders always run regardless of pruning, since they populate sources that the SQL graph depends on.
+
+Python nodes also have their own identity fingerprints. If a node's source code or dependencies change, it runs even if its SQL dependencies haven't changed.
+
+## Warehouse-native state (standard mode)
+
+In standard mode, all change-tracking state lives in the warehouse as append-only tables in the same schemas as your data:
+
+- **`_sqlbuild_fingerprints`** -- stores version identities for models, functions, seeds, and Python nodes. One row per successful build per identity.
+- **`_sqlbuild_source_freshness`** -- stores source freshness observations. One row per successful build per source identity.
+
+There is no external state database, no manifest files, and no state machine with transitions that can corrupt. The planner reads the latest row per identity, compares it against the compiled project, and writes new rows after successful builds. Old rows are retained as immutable history.
+
+State tables are read across all target schemas in the project, so fingerprints and freshness observations are resolved consistently regardless of which schema a model targets.
+
+Use `sqb janitor` to prune old state history rows while retaining the latest per identity.
+
+## Virtual environments
+
+Virtual environments store identities and change-tracking state in the VDE state backend (PostgreSQL or DuckDB) rather than in warehouse fingerprint tables. Identities are scoped per virtual environment, so each environment tracks its own version hashes, source freshness observations, and Python node identities independently. Change detection uses version hash comparison and VDE state refs. See [Virtual Environments -- Building](/concepts/advanced/virtual-environments/building) for details.

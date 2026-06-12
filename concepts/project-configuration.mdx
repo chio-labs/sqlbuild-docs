@@ -80,6 +80,8 @@ A target is a named build context - the schema, database, or connection you buil
 | `connection` | Override the base connection config |
 | `vars` | Target-specific project variables |
 | `defer_sources_to` | Target name to read managed source data from (see [Loaders](/concepts/python-nodes/loaders#source-deferral)) |
+| `reuse_from` | Target name to reuse relations from when version identities match (see [Planning -- Reuse from production](/concepts/planning#reuse-from-production)) |
+| `reuse_hard_copy` | Force a full data copy instead of zero-copy clone when reusing (default: `false`) |
 | `clone` | Clone policy (see below) |
 
 ```toml
@@ -139,7 +141,7 @@ Project-wide model defaults. Any field you can set in a `MODEL()` header can be 
 [defaults]
 materialized = "table"
 incremental_strategy = "delete_insert"
-query_change_backfill = "full"
+replay_on_change = "full"
 tags = ["managed"]
 ```
 
@@ -157,7 +159,7 @@ tags = ["staging"]
 [path_defaults."models/marts"]
 materialized = "table"
 tags = ["marts"]
-query_change_backfill = "full"
+replay_on_change = "full"
 ```
 
 Path matching uses the model's relative file path. A model at `models/staging/stg_orders.sql` matches the `models/staging` path default.
@@ -191,7 +193,7 @@ default_audit_run_scope = "final"
 | Field | Default | Description |
 |-------|---------|-------------|
 | `sql_analysis` | `true` | Enable SQL validation and static analysis at compile time |
-| `virtual_environments` | `false` | Enable [virtual environments](/concepts/advanced/virtual-environments) (versioned model outputs, promotion, rollback, state management). When `false`, the project runs in direct mode. |
+| `virtual_environments` | `false` | Enable [virtual environments](/concepts/advanced/virtual-environments) (versioned model outputs, promotion, rollback, state management). When `false`, the project runs in standard mode. |
 | `query_change_tracking` | `true` | Track query fingerprints for change detection |
 | `sql_validation` | `true` | Validate SQL syntax during compilation |
 | `concurrency` | `1` | Maximum parallel model execution (currently serial only) |

@@ -81,7 +81,7 @@ class MyDatabaseAdapter(BaseAdapter):
         ...
 ```
 
-Set `sql_analysis_dialect_name` to the SQL dialect name that matches your engine's SQL syntax. This enables compile-time SQL validation, column inference, column lineage, and local scenario replay for your adapter. If omitted, SQLBuild uses generic SQL parsing.
+Set `sql_analysis_dialect_name` to the SQL dialect name that matches your engine's SQL syntax. This enables compile-time SQL validation, column inference, column lineage, and local scenario replay for your adapter. If omitted, SQLBuild uses generic SQL parsing. SQL analysis is powered by [Polyglot](https://github.com/tobilg/polyglot), a Rust reimplementation of SQLGlot supporting 32+ dialects.
 
 For full control with no inherited defaults, subclass `StrictAdapter` instead. Every method is abstract and must be implemented explicitly. SQLBuild raises a clear error listing any unimplemented methods.
 

@@ -63,6 +63,6 @@ sqb clone --from prod --to dev --skip-locked
 
 Clone is a physical-layer operation. VDE pointer management is handled by [build](/concepts/advanced/virtual-environments/building) and [promote](/concepts/advanced/virtual-environments/promotion).
 
-## Comparison with direct-mode clone
+## Comparison with standard-mode clone
 
-In direct mode, `sqb clone` copies model relations between targets using zero-copy cloning where supported. In virtual mode, clone hydrates versioned physical relations instead. The source and target are still physical targets, but the copied objects are physical version relations rather than normal model targets.
+In standard mode, `sqb clone` copies model relations between targets using zero-copy cloning where supported. In virtual mode, clone hydrates versioned physical relations instead. The source and target are still physical targets, but the copied objects are physical version relations rather than normal model targets.

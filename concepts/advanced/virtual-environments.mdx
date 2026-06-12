@@ -16,7 +16,7 @@ Virtual environments (VDEs) let you build, preview, and promote SQL pipeline cha
 - **Multi-developer isolation** - each developer works in their own VDE without conflicting with others, sharing physical versions when code is identical
 - **Instant rollback** - revert production to a prior finalized state by restoring a checkpoint's pointer set
 
-Virtual environments are opt-in via `virtual_environments = true` (under `[settings]`) and require a state store. Projects that don't need environment isolation or promotion workflows should use the default direct mode.
+Virtual environments are opt-in via `virtual_environments = true` (under `[settings]`) and require a state store. Projects that don't need environment isolation or promotion workflows should use the default standard mode.
 
 ## How it works
 
