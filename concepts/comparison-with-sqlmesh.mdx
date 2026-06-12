@@ -71,7 +71,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 
 | Tool | Best for |
 |------|----------|
-| **SQLBuild** | Test-first SQL pipelines. Chained unit tests, local E2E scenario replay in DuckDB, pre-promotion audit gating, offline compile-time validation, source freshness tracking, Python nodes (tasks, assets, checks), and opt-in virtual environments. |
+| **SQLBuild** | Change-aware SQL pipelines with warehouse-native state. Skips unchanged work by default, tracks source freshness, and keeps all state as append-only tables in the warehouse. Adds ingestion, Python nodes, pre-promotion audit gating, chained unit tests, local E2E replay, and opt-in virtual environments. |
 | **dbt** | The most widely adopted SQL transformation framework with the largest adapter and community ecosystem. |
 | **SQLMesh** | State-managed pipelines with virtual environments, interval tracking, and cross-dialect transpilation. |
 
