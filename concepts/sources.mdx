@@ -99,7 +99,7 @@ See [Loaders](/concepts/python-nodes/loaders) for the full guide on writing load
 
 ## Source freshness
 
-Source freshness lets SQLBuild observe whether a source's data has changed between runs. This feeds into [planning and change detection](/concepts/planning) -- models downstream of unchanged sources are skipped automatically.
+Source freshness lets SQLBuild observe whether a source's data has changed between runs. This feeds into [planning and change detection](/concepts/planning): models downstream of unchanged sources are skipped automatically.
 
 Configure freshness per source with a `freshness:` block:
 
@@ -141,7 +141,7 @@ freshness:
   type: timestamp
 ```
 
-Queries `MAX(column)` from the source table. The column must be a plain column name (no expressions -- use `sql` strategy for those). Requires `type`.
+Queries `MAX(column)` from the source table. The column must be a plain column name (no expressions; use `sql` strategy for those). Requires `type`.
 
 #### sql
 

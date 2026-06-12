@@ -27,7 +27,7 @@ FROM __source("raw_events")
 
 When `append_cursor_inclusive` is `true` (the default), the lower bound uses `>=`, which may duplicate the boundary row but avoids missing late-arriving data with the same cursor value. Set to `false` for an exclusive (`>`) lower bound if your cursor values are guaranteed unique.
 
-Append without a cursor is also valid -- the model simply inserts all rows from the source query on every run.
+Append without a cursor is also valid. The model simply inserts all rows from the source query on every run.
 
 ### delete_insert
 
@@ -85,7 +85,7 @@ Cursors define the incremental replay boundary. SQLBuild queries `MAX(cursor)` f
 | `cursor` | Output column used to track incremental position |
 | `cursor_type` | `timestamp` or `integer` |
 | `cursor_grain` | Time grain for timestamp cursors: `second`, `minute`, `hour`, `day`, `month`, `year` |
-| `cursor_start` | Lower bound floor -- the cursor will never replay before this value |
+| `cursor_start` | Lower bound floor; the cursor will never replay before this value |
 | `cursor_inputs` | Map of upstream ref/source names to their cursor columns |
 
 ### cursor_inputs
@@ -206,7 +206,7 @@ MODEL (
 );
 ```
 
-See [Planning and Change Detection -- Cascade propagation](/concepts/planning#cascade-propagation) for how replay policies propagate through the DAG and how downstream models can override inherited replay behavior.
+See [Planning and Change Detection: Cascade propagation](/concepts/planning#cascade-propagation) for how replay policies propagate through the DAG and how downstream models can override inherited replay behavior.
 
 ### on_schema_change
 
