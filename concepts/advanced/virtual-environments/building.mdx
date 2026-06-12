@@ -3,7 +3,7 @@ title: "Building"
 description: "Virtual builds, VDE creation, partial builds, and seeded incrementals."
 ---
 
-Virtual builds create versioned physical relations and update VDE pointer sets. The build lifecycle is the same as direct mode (seeds, tests, models, audits), but model outputs are written to versioned physical tables and exposed through logical VDE views.
+Virtual builds create versioned physical relations and update VDE pointer sets. The build lifecycle is the same as standard mode (seeds, tests, models, audits), but model outputs are written to versioned physical tables and exposed through logical VDE views.
 
 ## Default VDE
 
@@ -84,29 +84,31 @@ Pass `--include-stale-upstreams` to expand the selection to the minimal set of s
 sqb build --virtual-env pr_123 --select fact_orders --include-stale-upstreams
 ```
 
-### Changes only
+### Stale-driven selection
 
-Use `--changes-only` to narrow the selection to only models that are both selected and stale:
+Virtual environment builds are change-aware by default. When combined with `--select`, only models that are both selected and stale are built:
 
 ```bash
-sqb build --virtual-env pr_123 --select path:marts --changes-only
+sqb build --virtual-env pr_123 --select path:marts
 ```
 
-This intersects the user selection with the default stale-driven selection, useful when the stale cascade is large and you want to build a coherent subgraph without running unchanged models.
+This intersects the user selection with the stale-driven selection, useful when the stale cascade is large and you want to build a coherent subgraph without running unchanged models. Use `--force` to override and build all selected models regardless of state.
 
-For `--changes-only` behavior in direct (non-virtual) mode, see [Planning and Change Detection](/concepts/planning#changes-only-mode).
+Standard mode is change-aware by default. See [Planning and Change Detection](/concepts/planning) for how fingerprints, source freshness, and identity tracking determine what gets built.
 
 ## Stale detection
 
-SQLBuild determines which models need rebuilding by comparing expected version hashes against bound version hashes in the VDE refs:
+SQLBuild determines which models and seeds need rebuilding by comparing expected version hashes against bound version hashes in the VDE refs:
 
-1. **Expected local hash** - derived from the model's query SQL, version-identity config, and source freshness hashes
+1. **Expected local hash** - derived from the node's query SQL (for models), content hash (for seeds), version-identity config, and source freshness hashes
 2. **Expected version hash** - local hash propagated through upstream dependencies (upstream hash changes cascade downstream)
 3. **Bound version hash** - the hash currently stored in the VDE refs from the last successful build
 
-A model is stale when `bound != expected`. Stale models whose own local hash changed are roots (`query changed`, `config changed`, `function changed`). Others are stale due to `upstream changed`.
+A node is stale when `bound != expected`. Stale nodes whose own local hash changed are roots (`query changed`, `config changed`, `function changed`). Others are stale due to `upstream changed`.
 
-Source freshness observations are persisted per virtual environment and included in version hash computation. When a source's observed data version changes, its downstream models become stale. See [Sources -- Source freshness](/concepts/sources#source-freshness) for configuration.
+Seeds participate in version identity the same way as models. They are loaded into versioned physical tables with logical VDE views on top, and their version hashes and refs are tracked per virtual environment in the state backend. Unchanged seeds are not reloaded.
+
+Source freshness observations and Python node identities are also persisted per virtual environment and included in version hash computation. When a source's observed data version changes, its downstream models become stale. See [Sources -- Source freshness](/concepts/sources#source-freshness) for configuration.
 
 ## Seeded incremental builds
 
@@ -119,7 +121,7 @@ When an incremental model's version hash changes, SQLBuild seeds the new physica
 | Databricks | Deep clone |
 | DuckDB, Postgres, SQL Server | CTAS copy |
 
-For append models with bounded replay (`query_change_backfill bounded-7d`), the seed copies only rows before the replay window cutoff. The incremental delta then appends the bounded range without duplicating rows.
+For append models with bounded replay (`replay_on_change bounded-7d`), the seed copies only rows before the replay window cutoff. The incremental delta then appends the bounded range without duplicating rows.
 
 ## Custom materializations
 

@@ -47,6 +47,10 @@ sqb janitor --auto-approve
 sqb janitor --retention-days 7
 ```
 
+## State history pruning
+
+In addition to cleaning up stale relations, the janitor prunes old rows from `_sqlbuild_fingerprints` and `_sqlbuild_source_freshness` tables, retaining only the latest record per identity. This keeps state tables compact without affecting change detection.
+
 ## Safety
 
 Janitor prompts for confirmation before deleting. The confirmation requires typing an exact string to prevent accidental deletion. Use `--auto-approve` only in CI or when you're certain.

@@ -99,7 +99,7 @@ See [Loaders](/concepts/python-nodes/loaders) for the full guide on writing load
 
 ## Source freshness
 
-Source freshness lets SQLBuild observe whether a source's data has changed between runs. This feeds into [planning and change detection](/concepts/planning) -- when combined with `--changes-only`, models downstream of unchanged sources can be skipped.
+Source freshness lets SQLBuild observe whether a source's data has changed between runs. This feeds into [planning and change detection](/concepts/planning) -- models downstream of unchanged sources are skipped automatically.
 
 Configure freshness per source with a `freshness:` block:
 
@@ -188,7 +188,7 @@ Sources without an explicit `freshness:` block are auto-observed using the `adap
 
 This means most unmanaged table sources get freshness tracking automatically on adapters that support it, with no configuration needed.
 
-Use [`sqb freshness`](/cli/freshness) to observe source freshness on demand without triggering a build. See [Planning and Change Detection](/concepts/planning#source-freshness) for how freshness feeds into `--changes-only`.
+Use [`sqb freshness`](/cli/freshness) to observe source freshness on demand without triggering a build. See [Planning and Change Detection](/concepts/planning#source-freshness) for how freshness feeds into change-aware builds.
 
 ### Freshness config reference
 

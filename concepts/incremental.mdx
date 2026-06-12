@@ -183,44 +183,34 @@ MODEL (
 );
 ```
 
-## Backfill policies
+## Replay on change
 
-### query_change_backfill
-
-Controls what happens when the model SQL changes between runs. SQLBuild detects query changes via fingerprint-based tracking.
+When a model's version identity changes (query, config, upstream cascade, or any other change reason), `replay_on_change` controls how much data to reprocess:
 
 | Value | Effect |
 |-------|--------|
-| `full` | Full table rebuild when query changes |
-| `bounded-14d` | Rebuild the last 14 days of data |
-| *(omitted)* | Warn only; no automatic rebuild |
+| `forward` | Run the normal incremental delta from the cursor (default) |
+| `full` | Full table rebuild |
+| `bounded-14d` | Replay the last 14 days of data |
 
 The bounded duration supports `d` (days), `h` (hours), `m` (minutes), and `s` (seconds). For example: `bounded-7d`, `bounded-24h`, `bounded-30m`.
 
 ```sql
 MODEL (
-  ...
-  query_change_backfill full,
+  materialized incremental,
+  incremental_strategy delete_insert,
+  cursor activity_hour,
+  cursor_type timestamp,
+  cursor_grain hour,
+  replay_on_change full,
 );
 ```
 
-### schema_change_backfill
-
-Controls response to schema differences between expected and warehouse columns, with per-change-type policies:
-
-```sql
-MODEL (
-  ...
-  schema_change_backfill (
-    add_column bounded-7d,
-    type_change full,
-  ),
-);
-```
+See [Planning and Change Detection -- Cascade propagation](/concepts/planning#cascade-propagation) for how replay policies propagate through the DAG and how downstream models can override inherited replay behavior.
 
 ### on_schema_change
 
-Controls how schema differences are handled at execution time:
+Controls how schema differences are handled at execution time when the incremental delta has different columns than the target table:
 
 | Value | Effect |
 |-------|--------|
@@ -228,9 +218,3 @@ Controls how schema differences are handled at execution time:
 | `sync_all_columns` | Add, drop, and alter columns to match the delta |
 | `ignore` | Log and continue without schema changes |
 | `fail` | Reject the build with an error |
-
-## Cascade behavior
-
-When an upstream model has a backfill policy and its query or schema changes, the backfill signal cascades to all downstream incremental models. The plan shows these as `Upstream changed` with the root cause and effective rebuild window.
-
-Downstream models can override the cascaded behavior by setting their own `query_change_backfill` or `schema_change_backfill` policies. If a downstream model has its own policy, that takes precedence over the cascaded signal. If it has no policy, it inherits the upstream's rebuild scope.

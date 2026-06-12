@@ -63,6 +63,12 @@ Every decorator accepts the same organizational metadata:
 
 `@task` and `@asset` also accept a `retry` policy. `@asset` additionally accepts `columns` and `column_lineage`. Node kind is inferred from the decorator - you never pass `kind=`.
 
+## Identity tracking
+
+Every Python node is fingerprinted by source code hash, decorator config hash, and transitive dependency hashes (scoped to the git root, so third-party package updates don't affect identities). The plan shows source and dependency diffs when a node's identity changes, giving you visibility into what changed in your Python code.
+
+Unlike SQL models, Python nodes may depend on external inputs the framework cannot observe (APIs, files, third-party services). Skip/run decisions are therefore user-controlled via `ctx.skip()` -- the node's own logic decides whether it needs to run. See [Planning and Change Detection](/concepts/planning#python-nodes) for details.
+
 ## Runtime context
 
 Each node receives a context object as its first argument (`TaskContext`, `AssetContext`, `CheckContext`, or `LoaderContext`). They share these helpers:

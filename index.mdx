@@ -1,9 +1,11 @@
 ---
 title: "Introduction"
-description: "A SQL-first data framework: transformation, ingestion, Python tasks and assets, and testing in one tool."
+description: "A change-aware SQL framework: only rebuild what changed, with all state in the warehouse."
 ---
 
-SQLBuild keeps a low, dbt-like floor for SQL models and can run alongside an existing dbt project. It adds ingestion, Python nodes, and opt-in virtual environments for more advanced use cases, letting you expand scope as your project naturally grows.
+SQLBuild is change-aware by default. Every build fingerprints models, seeds, functions, and Python nodes, tracks source freshness, and skips anything that hasn't changed -- including audits that already passed for the same version. All state is persisted as append-only tables in the warehouse alongside your data. No external state database, no manifest files, no paid add-on.
+
+It keeps a low, dbt-like floor for SQL models and can run alongside an existing dbt project. It adds ingestion, Python nodes, and opt-in virtual environments for more advanced use cases, letting you expand scope as your project naturally grows.
 
 ## Supported adapters
 
@@ -15,8 +17,8 @@ DuckDB runs entirely locally, so you can try SQLBuild and run full E2E tests wit
 
 1. **Define** your models as SQL files with `MODEL()` headers that declare configuration, schema, and audits inline
 2. **Compile** to resolve references, validate SQL, infer column types, check contracts, and compute column lineage - all offline
-3. **Plan** what needs to change based on fingerprints, schema diffs, and backfill policies
-4. **Build** by executing the plan: materializing models, validating data before promotion, and ensuring bad data never reaches production
+3. **Plan** what needs to change by comparing fingerprints, source freshness, seed content, and Python node identities against the warehouse state. Unchanged models, seeds, audits, and Python nodes are skipped. Production relations can optionally be reused when version identities match.
+4. **Build** by executing the plan: materializing only what changed, validating data before promotion, and ensuring bad data never reaches production
 5. **Test** with chained unit tests, E2E scenario tests, and local replay through DuckDB - no warehouse required
 
 ## Why SQLBuild?
@@ -100,6 +102,10 @@ SELECT 1
 - **Full table builds:** SQLBuild materializes into a staging table and runs `error`-severity audits before promotion. If any fail, the swap is blocked and the production table is untouched.
 - **Incremental models:** Delta-phase audits validate each batch before DML is applied. Bad data is caught before it reaches the target.
 
+### Python you can read, Rust where it counts
+
+The framework is Python -- adapters, macros, hooks, providers, custom materializations, and Python nodes are all plain Python you can read and extend. For SQL parsing, validation, column inference, lineage, and transpilation, SQLBuild uses [Polyglot](https://github.com/tobilg/polyglot), a Rust reimplementation of SQLGlot's SQL analysis capabilities (MIT, 32+ dialects). This keeps compile fast even on large projects while the code you actually work with stays Python.
+
 ### Python macros, not Jinja
 
 - **Real Python functions:** Macros are plain Python, called with `@macro()` in SQL. Testable, debuggable, and composable with standard tooling - no Jinja, no string-templating language to wrangle.
@@ -110,17 +116,29 @@ def grant_target(target):
     return f"GRANT SELECT ON {target} TO analyst_role"
 ```
 
-### Change-aware incremental rebuilds
+### Change-aware builds
 
-- **Query-change detection:** Fingerprint-based tracking detects when model SQL has actually changed and triggers bounded or full rebuilds automatically.
-- **Backfill cascade:** Upstream query or schema changes propagate rebuild signals downstream through the DAG, with per-model control over rebuild windows.
-- **Schema diffs in the plan:** The plan shows column additions, removals, and type changes before anything executes, with configurable policies to block or adapt.
-- **Controlled rebuild windows:** `query_change_backfill` and `schema_change_backfill` policies let you choose between full rebuild and bounded replay (e.g. `bounded-14d`).
+Every node in the graph has a versioned identity. SQLBuild compares identities against warehouse state on every build and only runs what has actually changed.
+
+- **Models and functions:** Fingerprinted by query hash, config, and upstream function hashes. Unchanged models are skipped entirely.
+- **Seeds:** Content and load-affecting config are hashed. Unchanged seeds are not reloaded.
+- **Python nodes:** Loaders, tasks, assets, checks, and hooks are fingerprinted by source code hash and dependency hashes (scoped to the git root). The plan shows source and dependency diffs when a node's identity changes. Skip/run decisions are user-controlled via `ctx.skip()`, since only the node's own logic knows whether its external inputs have changed.
+- **Audits:** Audits that already passed for the same model version are not re-run. A version identity change triggers re-validation.
+- **Source freshness:** External source data versions are tracked automatically (via adapter metadata, column queries, or custom SQL). Models downstream of unchanged sources are skipped. Lag tolerance prevents jitter from triggering unnecessary rebuilds.
+- **Cascade propagation:** When a model does change, the signal propagates downstream through the DAG. Upstream changes cascade with configurable replay windows (`replay_on_change`).
+- **Reuse from production:** Dev targets can opt into `reuse_from` to clone or copy relations from another target (e.g. prod) when version identities match, instead of rebuilding from scratch.
+
+### Warehouse-native state
+
+In standard mode, all change-tracking state lives in the warehouse as append-only tables (`_sqlbuild_fingerprints`, `_sqlbuild_source_freshness`) in the same schemas as your data. There is no external state database, no manifest files, and no state machine with transitions that can corrupt. The planner reads the latest row per identity, compares it against the compiled project, and writes new rows after successful builds. Old rows are retained as history and can be pruned by the janitor.
+
+Virtual environments store the same identity and freshness data in the VDE state backend (PostgreSQL or DuckDB), scoped per environment.
 
 ### Incremental processing
 
-- **Cursor-based replay:** SQLBuild resumes by reading the highest timestamp or integer value already in the target table, so there is no state store or checkpoint to maintain. If a model fails for several runs, the next successful build picks up from the last data it actually wrote, with no manual backfilling.
+- **Cursor-based replay:** SQLBuild resumes by reading the highest timestamp or integer value already in the target table. If a model fails for several runs, the next successful build picks up from the last data it actually wrote, with no manual backfilling.
 - **Microbatch mode:** Split large replay windows into configurable batches, each with its own audit cycle. Or process the full range in one pass, the choice is per-model.
+- **Replay on change:** When a model's version identity changes, `replay_on_change` controls how much data to reprocess: `forward` (default, just run the next delta), `bounded-14d` (replay a window), or `full` (rebuild the table).
 
 ### Multi-target workflows
 
@@ -135,7 +153,7 @@ def grant_target(target):
 
 ### Virtual environments
 
-- **Opt-in, not forced:** Virtual environments give you instant low-copy branching, promotion, and rollback - but they are an opt-in mode, not a tax you pay upfront. Stateless direct mode stays the default, so the floor stays low and you reach for state only when a workflow actually needs it. See [Virtual Environments](/concepts/advanced/virtual-environments).
+- **Opt-in, not forced:** Virtual environments give you instant low-copy branching, promotion, and rollback - but they are an opt-in mode, not a tax you pay upfront. Standard mode stays the default, so the floor stays low and you reach for virtual environments only when a workflow actually needs them. See [Virtual Environments](/concepts/advanced/virtual-environments).
 
 ### Python nodes
 

@@ -485,8 +485,8 @@ At compile time, SQLBuild validates every `python("hook_name")` reference:
 | `batch_size` | Batch window size (e.g. `1d`, `1h`, or an integer) |
 | `lookback` | Extend the replay window backwards to re-process recent data |
 | `on_schema_change` | `append_new_columns`, `sync_all_columns`, `ignore`, or `fail` |
-| `query_change_backfill` | `full` or `bounded-14d` (hyphenated duration) |
-| `schema_change_backfill` | Per-change-type backfill policies (e.g. `add_column bounded-7d`, `type_change full`) |
+| `replay_on_change` | `forward` (default), `full`, or `bounded-<duration>` (e.g. `bounded-14d`) |
+| `run_despite_unchanged` | Force periodic rebuilds: `always` or a duration (e.g. `24h`, `30d`). Table materializations only. |
 
 See [Incremental](/concepts/incremental) for detailed usage.
 

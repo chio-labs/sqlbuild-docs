@@ -33,10 +33,11 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | Stateful interval tracking | No - cursor-based (no external state) | No | Yes - tracks which intervals ran |
 | SCD Type 2 models | Timestamp and check strategies, historical input, hard deletes | Snapshots (limited) | Built-in |
 | **Planning and change detection** | | | |
-| Fingerprint-based change detection | Query, config, function, and schema change tracking | manifest.json comparison | Version hash comparison |
+| Change-aware by default | Fingerprints models, seeds, functions, Python nodes; skips unchanged work including audits | dbt State (paid add-on) or external orchestrator | Version hash comparison |
+| Warehouse-native state | Append-only tables in the warehouse; no external state database | manifest.json artifacts | Requires external state store (SQLite/PostgreSQL) |
 | Source freshness | `sqb freshness` with adapter/column/sql strategies and lag tolerance | `dbt source freshness` | No |
-| Changes-only mode | `--changes-only` prunes unchanged models in both direct and virtual modes | `state:modified` selector (requires manifest) | VDE-based stale detection only |
-| Cascade propagation | Topological walk with backfill policy inheritance and override | No cascade control | Cascades through version hashes |
+| Reuse from production | `reuse_from` clones/copies unchanged relations from another target | dbt State clone (paid) | N/A |
+| Cascade propagation | Topological walk with `replay_on_change` policy inheritance and override | No cascade control | Cascades through version hashes |
 | **Environments** | | | |
 | Virtual environments | Pointer swaps with hash-based version reuse (opt-in) | No | Pointer swaps, no compute cost |
 | Data diffs | Full row-level data comparison across targets or virtual environments | No | Table diff |
