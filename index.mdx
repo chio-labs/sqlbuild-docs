@@ -21,6 +21,23 @@ DuckDB runs entirely locally, so you can try SQLBuild and run full E2E tests wit
 
 ## Why SQLBuild?
 
+### Change-aware builds
+
+Every node in the graph has a versioned identity. SQLBuild compares identities against warehouse state on every build and only runs what has actually changed.
+
+- **Models and functions:** Fingerprinted by query hash, config, and upstream function hashes. Unchanged models are skipped entirely.
+- **Seeds:** Content and load-affecting config are hashed. Unchanged seeds are not reloaded.
+- **Python nodes:** Loaders, tasks, assets, checks, and hooks are fingerprinted by source code hash and dependency hashes (scoped to the git root). The plan shows source and dependency diffs when a node's identity changes. Skip/run decisions are user-controlled via `ctx.skip()`, since only the node's own logic knows whether its external inputs have changed.
+- **Audits:** Audits that already passed for the same model version are not re-run. A version identity change triggers re-validation.
+- **Source freshness:** External source data versions are tracked automatically (via adapter metadata, column queries, or custom SQL). Models downstream of unchanged sources are skipped. Lag tolerance prevents jitter from triggering unnecessary rebuilds.
+- **Cascade propagation:** When a model does change, the signal propagates downstream through the DAG. Upstream changes cascade with configurable replay windows (`replay_on_change`).
+- **Reuse from production:** Dev targets can opt into `reuse_from` to clone or copy relations from another target (e.g. prod) when version identities match, instead of rebuilding from scratch.
+
+### Warehouse-native state
+
+- **Standard mode:** all change-tracking state lives in the warehouse as append-only tables (`_sqlbuild_fingerprints`, `_sqlbuild_source_freshness`) in the same schemas as your data. No external state database, no manifest files, no state machine that can corrupt. The planner reads the latest row per identity, compares it against the compiled project, and writes new rows after successful builds. Old rows are retained as history and can be pruned by the janitor.
+- **Virtual environments:** the same identity and freshness data is stored in the VDE state backend (PostgreSQL or DuckDB), scoped per environment.
+
 ### Familiar SQL models
 
 Models are SQL files with a `MODEL()` header and a `SELECT`. References to other models and sources use `__ref()` and `__source()`, and configuration, schema, and audits are declared inline in the header. If you know dbt or SQLMesh, you already know the shape.
@@ -42,6 +59,32 @@ SELECT
 FROM __ref("stg_orders") o
 JOIN __ref("stg_payments") p USING (order_id)
 ```
+
+### Python macros, not Jinja
+
+- **Real Python functions:** Macros are plain Python, called with `@macro()` in SQL. Testable, debuggable, and composable with standard tooling - no Jinja, no string-templating language to wrangle.
+
+```python
+# macros/grant_target.py
+def grant_target(target):
+    return f"GRANT SELECT ON {target} TO analyst_role"
+```
+
+### Audits that block bad data
+
+- **Full table builds:** SQLBuild materializes into a staging table and runs `error`-severity audits before promotion. If any fail, the swap is blocked and the production table is untouched.
+- **Incremental models:** Delta-phase audits validate each batch before DML is applied. Bad data is caught before it reaches the target.
+
+### Incremental processing
+
+- **Cursor-based replay:** SQLBuild resumes by reading the highest timestamp or integer value already in the target table. If a model fails for several runs, the next successful build picks up from the last data it actually wrote, with no manual backfilling.
+- **Microbatch mode:** Split large replay windows into configurable batches, each with its own audit cycle. Or process the full range in one pass, the choice is per-model.
+- **Replay on change:** When a model's version identity changes, `replay_on_change` controls how much data to reprocess: `forward` (default, just run the next delta), `bounded-14d` (replay a window), or `full` (rebuild the table).
+
+### Python you can read, Rust where it counts
+
+- **The framework is Python.** Adapters, macros, hooks, providers, custom materializations, and Python nodes are all plain Python you can read and extend.
+- **SQL analysis is Rust.** For SQL parsing, validation, column inference, lineage, and transpilation, SQLBuild uses [Polyglot](https://github.com/tobilg/polyglot), a Rust reimplementation of SQLGlot's SQL analysis capabilities (MIT, 32+ dialects). This keeps compile fast even on large projects while the code you actually work with stays Python.
 
 ### SQL unit tests that scale
 
@@ -95,64 +138,6 @@ __assert__all_orders_have_payments AS (
 SELECT 1
 ```
 
-### Audits that block bad data
-
-- **Full table builds:** SQLBuild materializes into a staging table and runs `error`-severity audits before promotion. If any fail, the swap is blocked and the production table is untouched.
-- **Incremental models:** Delta-phase audits validate each batch before DML is applied. Bad data is caught before it reaches the target.
-
-### Python you can read, Rust where it counts
-
-- **The framework is Python.** Adapters, macros, hooks, providers, custom materializations, and Python nodes are all plain Python you can read and extend.
-- **SQL analysis is Rust.** For SQL parsing, validation, column inference, lineage, and transpilation, SQLBuild uses [Polyglot](https://github.com/tobilg/polyglot), a Rust reimplementation of SQLGlot's SQL analysis capabilities (MIT, 32+ dialects). This keeps compile fast even on large projects while the code you actually work with stays Python.
-
-### Python macros, not Jinja
-
-- **Real Python functions:** Macros are plain Python, called with `@macro()` in SQL. Testable, debuggable, and composable with standard tooling - no Jinja, no string-templating language to wrangle.
-
-```python
-# macros/grant_target.py
-def grant_target(target):
-    return f"GRANT SELECT ON {target} TO analyst_role"
-```
-
-### Change-aware builds
-
-Every node in the graph has a versioned identity. SQLBuild compares identities against warehouse state on every build and only runs what has actually changed.
-
-- **Models and functions:** Fingerprinted by query hash, config, and upstream function hashes. Unchanged models are skipped entirely.
-- **Seeds:** Content and load-affecting config are hashed. Unchanged seeds are not reloaded.
-- **Python nodes:** Loaders, tasks, assets, checks, and hooks are fingerprinted by source code hash and dependency hashes (scoped to the git root). The plan shows source and dependency diffs when a node's identity changes. Skip/run decisions are user-controlled via `ctx.skip()`, since only the node's own logic knows whether its external inputs have changed.
-- **Audits:** Audits that already passed for the same model version are not re-run. A version identity change triggers re-validation.
-- **Source freshness:** External source data versions are tracked automatically (via adapter metadata, column queries, or custom SQL). Models downstream of unchanged sources are skipped. Lag tolerance prevents jitter from triggering unnecessary rebuilds.
-- **Cascade propagation:** When a model does change, the signal propagates downstream through the DAG. Upstream changes cascade with configurable replay windows (`replay_on_change`).
-- **Reuse from production:** Dev targets can opt into `reuse_from` to clone or copy relations from another target (e.g. prod) when version identities match, instead of rebuilding from scratch.
-
-### Warehouse-native state
-
-- **Standard mode:** all change-tracking state lives in the warehouse as append-only tables (`_sqlbuild_fingerprints`, `_sqlbuild_source_freshness`) in the same schemas as your data. No external state database, no manifest files, no state machine that can corrupt. The planner reads the latest row per identity, compares it against the compiled project, and writes new rows after successful builds. Old rows are retained as history and can be pruned by the janitor.
-- **Virtual environments:** the same identity and freshness data is stored in the VDE state backend (PostgreSQL or DuckDB), scoped per environment.
-
-### Incremental processing
-
-- **Cursor-based replay:** SQLBuild resumes by reading the highest timestamp or integer value already in the target table. If a model fails for several runs, the next successful build picks up from the last data it actually wrote, with no manual backfilling.
-- **Microbatch mode:** Split large replay windows into configurable batches, each with its own audit cycle. Or process the full range in one pass, the choice is per-model.
-- **Replay on change:** When a model's version identity changes, `replay_on_change` controls how much data to reprocess: `forward` (default, just run the next delta), `bounded-14d` (replay a window), or `full` (rebuild the table).
-
-### Multi-target workflows
-
-- **Data diffs:** Compare schemas and row-level data between targets (or virtual environments) with `sqb diff prod:dev`.
-
-<Frame>
-  <img src="/sqlbuild_diff_hq.png" alt="SQLBuild diff output showing schema comparison, row-level differences, and changed column values between prod and dev targets" />
-</Frame>
-- **Zero-copy cloning:** Branch targets instantly with `sqb clone` without duplicating data.
-- **Deferred references:** Compile and plan against a production target with `--defer-to` while building in dev.
-- **No manifest required:** Clone, diff, and defer work directly against live targets. No `manifest.json` generation, no artifact management, no stale state.
-
-### Virtual environments
-
-- **Opt-in, not forced:** Virtual environments give you instant low-copy branching, promotion, and rollback - but they are an opt-in mode, not a tax you pay upfront. Standard mode stays the default, so the floor stays low and you reach for virtual environments only when a workflow actually needs them. See [Virtual Environments](/concepts/advanced/virtual-environments).
-
 ### Python nodes
 
 Grow beyond warehouse-only SQL without leaving the graph. Python nodes are ordinary functions, decorated to become first-class nodes in the same DAG as your SQL models, and they run as part of `sqb build`. There are four kinds:
@@ -174,6 +159,21 @@ def raw_orders(ctx: LoaderContext):
 ```
 
 SQL models never depend on Python nodes - the only path from Python into SQL is a loader populating a source - so the SQL graph stays fully analyzable on its own. Nodes can also be generated programmatically with `@factory`. See [Python Nodes](/concepts/python-nodes/overview).
+
+### Multi-target workflows
+
+- **Data diffs:** Compare schemas and row-level data between targets (or virtual environments) with `sqb diff prod:dev`.
+
+<Frame>
+  <img src="/sqlbuild_diff_hq.png" alt="SQLBuild diff output showing schema comparison, row-level differences, and changed column values between prod and dev targets" />
+</Frame>
+- **Zero-copy cloning:** Branch targets instantly with `sqb clone` without duplicating data.
+- **Deferred references:** Compile and plan against a production target with `--defer-to` while building in dev.
+- **No manifest required:** Clone, diff, and defer work directly against live targets. No `manifest.json` generation, no artifact management, no stale state.
+
+### Virtual environments
+
+- **Opt-in, not forced:** Virtual environments give you instant low-copy branching, promotion, and rollback - but they are an opt-in mode, not a tax you pay upfront. Standard mode stays the default, so the floor stays low and you reach for virtual environments only when a workflow actually needs them. See [Virtual Environments](/concepts/advanced/virtual-environments).
 
 ### Extensibility
 
