@@ -3,9 +3,7 @@ title: "Introduction"
 description: "A change-aware SQL framework: only rebuild what changed, with all state in the warehouse."
 ---
 
-SQLBuild is change-aware by default. Every build fingerprints models, seeds, functions, and Python nodes, tracks source freshness, and skips anything that hasn't changed -- including audits that already passed for the same version. All state is persisted as append-only tables in the warehouse alongside your data. No external state database, no manifest files, no paid add-on.
-
-It keeps a low, dbt-like floor for SQL models and can run alongside an existing dbt project. It adds ingestion, Python nodes, and opt-in virtual environments for more advanced use cases, letting you expand scope as your project naturally grows.
+Every build fingerprints models, seeds, functions, and Python nodes, tracks source freshness, and skips anything that hasn't changed, including audits that already passed for the same version. It keeps a low, dbt-like floor for SQL models, can run alongside an existing dbt project, and adds ingestion, Python nodes, and opt-in virtual environments for more advanced use cases.
 
 ## Supported adapters
 
@@ -104,7 +102,8 @@ SELECT 1
 
 ### Python you can read, Rust where it counts
 
-The framework is Python -- adapters, macros, hooks, providers, custom materializations, and Python nodes are all plain Python you can read and extend. For SQL parsing, validation, column inference, lineage, and transpilation, SQLBuild uses [Polyglot](https://github.com/tobilg/polyglot), a Rust reimplementation of SQLGlot's SQL analysis capabilities (MIT, 32+ dialects). This keeps compile fast even on large projects while the code you actually work with stays Python.
+- **The framework is Python.** Adapters, macros, hooks, providers, custom materializations, and Python nodes are all plain Python you can read and extend.
+- **SQL analysis is Rust.** For SQL parsing, validation, column inference, lineage, and transpilation, SQLBuild uses [Polyglot](https://github.com/tobilg/polyglot), a Rust reimplementation of SQLGlot's SQL analysis capabilities (MIT, 32+ dialects). This keeps compile fast even on large projects while the code you actually work with stays Python.
 
 ### Python macros, not Jinja
 
@@ -130,9 +129,8 @@ Every node in the graph has a versioned identity. SQLBuild compares identities a
 
 ### Warehouse-native state
 
-In standard mode, all change-tracking state lives in the warehouse as append-only tables (`_sqlbuild_fingerprints`, `_sqlbuild_source_freshness`) in the same schemas as your data. There is no external state database, no manifest files, and no state machine with transitions that can corrupt. The planner reads the latest row per identity, compares it against the compiled project, and writes new rows after successful builds. Old rows are retained as history and can be pruned by the janitor.
-
-Virtual environments store the same identity and freshness data in the VDE state backend (PostgreSQL or DuckDB), scoped per environment.
+- **Standard mode:** all change-tracking state lives in the warehouse as append-only tables (`_sqlbuild_fingerprints`, `_sqlbuild_source_freshness`) in the same schemas as your data. No external state database, no manifest files, no state machine that can corrupt. The planner reads the latest row per identity, compares it against the compiled project, and writes new rows after successful builds. Old rows are retained as history and can be pruned by the janitor.
+- **Virtual environments:** the same identity and freshness data is stored in the VDE state backend (PostgreSQL or DuckDB), scoped per environment.
 
 ### Incremental processing
 

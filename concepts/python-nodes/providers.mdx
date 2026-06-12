@@ -117,15 +117,15 @@ def export_orders(ctx):
     client.session.upload(ctx.query("SELECT * FROM orders"))
 ```
 
-Both approaches -- parameter injection and `ctx.providers` -- are equivalent. Parameter injection is more explicit and enables type checking; `ctx.providers` is useful when provider access is conditional or dynamic.
+Both approaches (parameter injection and `ctx.providers`) are equivalent. Parameter injection is more explicit and enables type checking; `ctx.providers` is useful when provider access is conditional or dynamic.
 
 ## Lifecycle
 
 Providers follow a lazy setup, reverse-teardown lifecycle scoped to the command invocation:
 
-1. **Discovery** -- on compile, SQLBuild discovers all `Provider` subclasses under `providers/` and validates their settings (from environment variables or field defaults).
-2. **Lazy setup** -- `setup(ctx)` is called the first time a provider is accessed during a build, not at startup. Providers that are never used are never set up.
-3. **Teardown** -- after the command completes, `teardown()` is called on all providers that were set up, in reverse setup order. Teardown runs even if the build failed.
+1. **Discovery** - on compile, SQLBuild discovers all `Provider` subclasses under `providers/` and validates their settings (from environment variables or field defaults).
+2. **Lazy setup** - `setup(ctx)` is called the first time a provider is accessed during a build, not at startup. Providers that are never used are never set up.
+3. **Teardown** - after the command completes, `teardown()` is called on all providers that were set up, in reverse setup order. Teardown runs even if the build failed.
 
 ```python
 class WarehouseClient(Provider):
@@ -140,7 +140,7 @@ class WarehouseClient(Provider):
         self.connection.close()
 ```
 
-Both `setup` and `teardown` are optional. A provider with only field declarations and no lifecycle methods is valid -- it acts as a validated configuration object.
+Both `setup` and `teardown` are optional. A provider with only field declarations and no lifecycle methods is valid; it acts as a validated configuration object.
 
 ## Configuration from environment variables
 
@@ -160,7 +160,7 @@ See the [pydantic-settings documentation](https://docs.pydantic.dev/latest/conce
 - Files named `__init__.py` or starting with `_` are skipped
 - Each concrete (non-abstract) subclass of `Provider` is registered
 - Provider names must be unique across all provider files
-- Settings are validated at discovery time -- missing required fields (without environment variables set) raise a discovery error immediately, not at runtime
+- Settings are validated at discovery time. Missing required fields (without environment variables set) raise a discovery error immediately, not at runtime
 
 ## Plan output
 

@@ -15,9 +15,9 @@ Every node in the graph has a versioned identity stored in `_sqlbuild_fingerprin
 
 Each model and function has a **fingerprint** derived from:
 
-- **Query hash** -- the normalized SQL after macro expansion and reference resolution.
-- **Config hash** -- version-identity config values (materialization settings, contracts, hooks, custom config/placeholders).
-- **Function hashes** -- for models that depend on user-defined functions, the function's own fingerprint is included. A function change cascades to all dependent models.
+- **Query hash** - the normalized SQL after macro expansion and reference resolution.
+- **Config hash** - version-identity config values (materialization settings, contracts, hooks, custom config/placeholders).
+- **Function hashes** - for models that depend on user-defined functions, the function's own fingerprint is included. A function change cascades to all dependent models.
 
 ### Seeds
 
@@ -27,13 +27,13 @@ Seeds are fingerprinted by content hash and load-affecting config. Unchanged see
 
 Loaders, tasks, assets, checks, and hooks are fingerprinted by:
 
-- **Source code hash** -- the normalized source of the decorated function.
-- **Dependency hashes** -- transitive hashes of imported project modules, scoped to the git root. Changes to third-party packages (in `.venv`, `site-packages`, etc.) do not affect the identity; changes to your project's own helper modules do.
-- **Decorator config hash** -- the arguments passed to the decorator.
+- **Source code hash** - the normalized source of the decorated function.
+- **Dependency hashes** - transitive hashes of imported project modules, scoped to the git root. Changes to third-party packages (in `.venv`, `site-packages`, etc.) do not affect the identity; changes to your project's own helper modules do.
+- **Decorator config hash** - the arguments passed to the decorator.
 
-Python identity tracking is primarily a **visual indicator** in the plan output. When a node's identity changes, the plan shows source and dependency diffs so you can see exactly what changed. However, unlike SQL models where SQLBuild can observe inputs (fingerprints, source freshness) and skip unchanged work automatically, Python nodes may depend on external inputs that the framework cannot observe -- an API, a file on disk, a third-party service.
+Python identity tracking is primarily a **visual indicator** in the plan output. When a node's identity changes, the plan shows source and dependency diffs so you can see exactly what changed. However, unlike SQL models where SQLBuild can observe inputs (fingerprints, source freshness) and skip unchanged work automatically, Python nodes may depend on external inputs that the framework cannot observe: an API, a file on disk, a third-party service.
 
-For this reason, skip/run decisions for Python nodes are **user-controlled** via `ctx.skip()`. The node's own logic decides whether it needs to run based on whatever semantics are appropriate -- checking an API timestamp, comparing a file hash, querying a metadata table. If the condition is met, `ctx.skip()` short-circuits the node (and optionally its downstream dependents via soft or hard skip mode). This keeps the mechanism flexible and powerful without requiring the framework to infer things it cannot know.
+For this reason, skip/run decisions for Python nodes are **user-controlled** via `ctx.skip()`. The node's own logic decides whether it needs to run based on whatever semantics are appropriate: checking an API timestamp, comparing a file hash, querying a metadata table. If the condition is met, `ctx.skip()` short-circuits the node (and optionally its downstream dependents via soft or hard skip mode). This keeps the mechanism flexible and powerful without requiring the framework to infer things it cannot know.
 
 ### Audits
 
@@ -60,15 +60,15 @@ Source freshness lets SQLBuild observe whether external source data has actually
 
 ### Configuration
 
-Source freshness is configured per source in `sources/*.yml` with a `freshness:` block. See [Sources -- Source freshness](/concepts/sources#source-freshness) for the full configuration reference.
+Source freshness is configured per source in `sources/*.yml` with a `freshness:` block. See [Sources: Source freshness](/concepts/sources#source-freshness) for the full configuration reference.
 
 ### How observations work
 
 During planning, SQLBuild observes the current data version of each source that has freshness configured (or that the adapter can observe automatically):
 
-1. **Observe** -- query the source's current data version using the configured strategy.
-2. **Compare** -- compare the observed version against the last recorded observation from `_sqlbuild_source_freshness` in the target schema.
-3. **Propagate** -- walk the DAG downstream from changed or unknown sources to identify which models are affected.
+1. **Observe** - query the source's current data version using the configured strategy.
+2. **Compare** - compare the observed version against the last recorded observation from `_sqlbuild_source_freshness` in the target schema.
+3. **Propagate** - walk the DAG downstream from changed or unknown sources to identify which models are affected.
 
 Sources without explicit `freshness:` config are auto-observed using the `adapter` strategy if the adapter supports table metadata and the source has a physical table (not an expression source, not a managed source).
 
@@ -78,7 +78,7 @@ For timestamp-based freshness, `lag_tolerance` controls how much the observed va
 
 ### State storage
 
-Source freshness observations are stored in `_sqlbuild_source_freshness` in each target schema. Records are appended only after the affected downstream models build successfully -- if a build fails, the previous observation is preserved so the next run still sees the source as changed.
+Source freshness observations are stored in `_sqlbuild_source_freshness` in each target schema. Records are appended only after the affected downstream models build successfully. If a build fails, the previous observation is preserved so the next run still sees the source as changed.
 
 Observations are resolved across all target schemas in the project, so a source referenced by models in different schemas is tracked consistently.
 
@@ -88,7 +88,7 @@ Use [`sqb freshness`](/cli/freshness) to observe source freshness on demand with
 
 When a model or function changes, the change signal propagates downstream through the DAG. Every model downstream of a changed node is marked `Upstream changed` in the plan, even if its own SQL and config are identical.
 
-The cascade walk is topological -- it processes models in dependency order, so each model sees the resolved state of all its upstreams before deciding its own effective action.
+The cascade walk is topological: it processes models in dependency order, so each model sees the resolved state of all its upstreams before deciding its own effective action.
 
 **What cascades:**
 
@@ -108,17 +108,17 @@ If a model has multiple stale upstreams with different replay actions, the most 
 
 **Overriding cascaded replay:**
 
-Downstream incremental models can set their own `replay_on_change` policy to override the cascaded signal. If a downstream model declares its own policy, that policy applies instead of the upstream's. If it has no policy, it inherits the upstream's replay scope. See [Incremental Models -- Replay on change](/concepts/incremental#replay-on-change) for configuration details.
+Downstream incremental models can set their own `replay_on_change` policy to override the cascaded signal. If a downstream model declares its own policy, that policy applies instead of the upstream's. If it has no policy, it inherits the upstream's replay scope. See [Incremental Models: Replay on change](/concepts/incremental#replay-on-change) for configuration details.
 
 ## Replay on change
 
 When a change is detected on an incremental model, `replay_on_change` controls how much data to reprocess:
 
-- **`forward`** (default) -- run the normal incremental delta from the cursor. No reprocessing.
-- **`bounded-<duration>`** (e.g. `bounded-14d`) -- replay the specified window of data.
-- **`full`** -- drop and rebuild the entire table.
+- **`forward`** (default) - run the normal incremental delta from the cursor. No reprocessing.
+- **`bounded-<duration>`** (e.g. `bounded-14d`) - replay the specified window of data.
+- **`full`** - drop and rebuild the entire table.
 
-See [Incremental Models -- Replay on change](/concepts/incremental#replay-on-change) for configuration details.
+See [Incremental Models: Replay on change](/concepts/incremental#replay-on-change) for configuration details.
 
 ## Reuse from production
 
@@ -146,7 +146,7 @@ Use `reuse_hard_copy = true` on the target to force a full data copy instead of 
 
 ## Run despite unchanged
 
-Some models depend on external data that isn't tracked by source freshness -- for example, a table model that reads from an API-populated staging area. `run_despite_unchanged` forces a model to run periodically even when its version identity hasn't changed.
+Some models depend on external data that isn't tracked by source freshness, for example a table model that reads from an API-populated staging area. `run_despite_unchanged` forces a model to run periodically even when its version identity hasn't changed.
 
 ```sql
 MODEL (
@@ -162,8 +162,8 @@ MODEL (
 );
 ```
 
-- **`always`** -- run on every build regardless of state.
-- **Duration** (e.g. `24h`, `30d`, `90m`) -- run if at least the specified time has passed since the model's upstream source freshness was last observed. Requires at least one upstream source with timestamp freshness tracking.
+- **`always`** - run on every build regardless of state.
+- **Duration** (e.g. `24h`, `30d`, `90m`) - run if at least the specified time has passed since the model's upstream source freshness was last observed. Requires at least one upstream source with timestamp freshness tracking.
 
 Only table materializations support `run_despite_unchanged`. When triggered, downstream models are also marked as stale.
 
@@ -177,8 +177,8 @@ Python nodes also have their own identity fingerprints. If a node's source code 
 
 In standard mode, all change-tracking state lives in the warehouse as append-only tables in the same schemas as your data:
 
-- **`_sqlbuild_fingerprints`** -- stores version identities for models, functions, seeds, and Python nodes. One row per successful build per identity.
-- **`_sqlbuild_source_freshness`** -- stores source freshness observations. One row per successful build per source identity.
+- **`_sqlbuild_fingerprints`** - stores version identities for models, functions, seeds, and Python nodes. One row per successful build per identity.
+- **`_sqlbuild_source_freshness`** - stores source freshness observations. One row per successful build per source identity.
 
 There is no external state database, no manifest files, and no state machine with transitions that can corrupt. The planner reads the latest row per identity, compares it against the compiled project, and writes new rows after successful builds. Old rows are retained as immutable history.
 
@@ -188,4 +188,4 @@ Use `sqb janitor` to prune old state history rows while retaining the latest per
 
 ## Virtual environments
 
-Virtual environments store identities and change-tracking state in the VDE state backend (PostgreSQL or DuckDB) rather than in warehouse fingerprint tables. Identities are scoped per virtual environment, so each environment tracks its own version hashes, source freshness observations, and Python node identities independently. Change detection uses version hash comparison and VDE state refs. See [Virtual Environments -- Building](/concepts/advanced/virtual-environments/building) for details.
+Virtual environments store identities and change-tracking state in the VDE state backend (PostgreSQL or DuckDB) rather than in warehouse fingerprint tables. Identities are scoped per virtual environment, so each environment tracks its own version hashes, source freshness observations, and Python node identities independently. Change detection uses version hash comparison and VDE state refs. See [Virtual Environments: Building](/concepts/advanced/virtual-environments/building) for details.

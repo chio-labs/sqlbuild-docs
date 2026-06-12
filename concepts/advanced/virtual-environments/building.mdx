@@ -108,7 +108,7 @@ A node is stale when `bound != expected`. Stale nodes whose own local hash chang
 
 Seeds participate in version identity the same way as models. They are loaded into versioned physical tables with logical VDE views on top, and their version hashes and refs are tracked per virtual environment in the state backend. Unchanged seeds are not reloaded.
 
-Source freshness observations and Python node identities are also persisted per virtual environment and included in version hash computation. When a source's observed data version changes, its downstream models become stale. See [Sources -- Source freshness](/concepts/sources#source-freshness) for configuration.
+Source freshness observations and Python node identities are also persisted per virtual environment and included in version hash computation. When a source's observed data version changes, its downstream models become stale. See [Sources: Source freshness](/concepts/sources#source-freshness) for configuration.
 
 ## Seeded incremental builds
 
