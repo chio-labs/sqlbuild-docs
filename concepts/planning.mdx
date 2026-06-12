@@ -3,7 +3,7 @@ title: "Planning and Change Detection"
 description: "How SQLBuild decides what to build: fingerprints, source freshness, and warehouse-native state."
 ---
 
-When you run `sqb plan`, `sqb build`, or `sqb run`, SQLBuild compiles your project, compares it against the current warehouse state, and produces a plan. By default, only stale work runs. Unchanged models, seeds, audits, and Python nodes are skipped automatically.
+When you run `sqb plan` or `sqb build`, SQLBuild compiles your project, compares it against the current warehouse state, and produces a plan. By default, only stale work runs. Unchanged models, seeds, audits, and Python nodes are skipped automatically.
 
 Use `--force` to override change detection and run everything selected, regardless of state.
 

@@ -128,10 +128,10 @@ See [Tasks](/concepts/python-nodes/tasks#retries) for the full retry policy fiel
 
 ```bash
 # Run an asset and its required graph
-sqb run --select orders_export
+sqb build --select orders_export --no-tests --no-audits
 
 # Include in a full build with its upstreams
 sqb build --select +orders_export
 ```
 
-Assets run during `sqb build` and `sqb run`. Use `--no-python` to suppress read-side assets while still loading sources.
+Assets run during `sqb build`. Use `--no-python` to suppress read-side assets while still loading sources.

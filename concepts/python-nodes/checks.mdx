@@ -89,7 +89,7 @@ Checks do not support `columns`, `column_lineage`, or `retry`.
 
 ## Running checks
 
-Checks run automatically during `sqb build` when their Python dependencies run. They do **not** run during `sqb run`. To run checks on their own, use [`sqb check`](/cli/check):
+Checks run automatically during `sqb build` when their Python dependencies run. They are skipped when `--no-audits` is passed. To run checks on their own, use [`sqb check`](/cli/check):
 
 ```bash
 # Run all checks
@@ -102,7 +102,7 @@ sqb check --select +check_orders_exported
 sqb check --select tag:exports
 ```
 
-`sqb check` rejects selecting non-check nodes; use `sqb run`/`sqb build` to run tasks and assets. Check results are written to `target/run/checks/python_checks.json`, and `sqb check --json` prints them to stdout.
+`sqb check` rejects selecting non-check nodes; use `sqb build` to run tasks and assets. Check results are written to `target/run/checks/python_checks.json`, and `sqb check --json` prints them to stdout.
 
 ## Checks vs audits
 
