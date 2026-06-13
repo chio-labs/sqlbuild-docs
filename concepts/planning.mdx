@@ -179,6 +179,7 @@ In standard mode, all change-tracking state lives in the warehouse as append-onl
 
 - **`_sqlbuild_fingerprints`** - stores version identities for models, functions, seeds, and Python nodes. One row per successful build per identity.
 - **`_sqlbuild_source_freshness`** - stores source freshness observations. One row per successful build per source identity.
+- **`_sqlbuild_node_results`** - stores Python node runtime results (payload, metadata, status, errors). One row per execution per node. Results persist across runs for observability and downstream consumption.
 
 There is no external state database, no manifest files, and no state machine with transitions that can corrupt. The planner reads the latest row per identity, compares it against the compiled project, and writes new rows after successful builds. Old rows are retained as immutable history.
 
