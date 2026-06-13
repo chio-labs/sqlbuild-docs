@@ -19,13 +19,13 @@ from tasks.orders import export_orders
 
 @check(depends_on=export_orders)
 def check_orders_exported(ctx: CheckContext):
-    rows = ctx.metadata(export_orders)["rows"]
-    if rows == 0:
+    result = ctx.result_of(export_orders)
+    if result.metadata.get("rows", 0) == 0:
         return ctx.fail("no orders exported")
     return ctx.pass_("orders exported")
 ```
 
-The check receives a `CheckContext` and reads its dependencies' results with `ctx.payload(...)` / `ctx.metadata(...)`.
+The check receives a `CheckContext` and reads its dependencies' persisted results with `ctx.result_of(...)`.
 
 ## Results
 
@@ -34,7 +34,7 @@ Return a result through the context helpers, or a bool shorthand:
 ```python
 @check(depends_on=orders_asset)
 def rows_present(ctx):
-    return ctx.payload(orders_asset)["rows"] > 0   # True -> pass, False -> fail
+    return ctx.result_of(orders_asset).payload["rows"] > 0   # True -> pass, False -> fail
 ```
 
 | Return | Meaning |

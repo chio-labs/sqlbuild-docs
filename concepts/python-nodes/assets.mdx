@@ -50,8 +50,8 @@ from tasks.orders import export_orders
 
 @asset(depends_on=export_orders)
 def orders_dashboard(ctx):
-    rows = ctx.payload(export_orders)["rows"]
-    return ctx.result(metadata={"rows": rows}, materialized=True)
+    result = ctx.result_of(export_orders)
+    return ctx.result(metadata={"rows": result.payload["rows"]}, materialized=True)
 ```
 
 To read a SQL model or source, declare a typed reference and resolve it at runtime - see [SQL references](/concepts/python-nodes/sql-references):

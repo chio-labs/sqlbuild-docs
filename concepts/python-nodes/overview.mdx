@@ -84,7 +84,8 @@ Each node receives a context object as its first argument (`TaskContext`, `Asset
 | `ctx.query(sql)` / `ctx.execute_sql(sql)` | Run SQL on the connection |
 | `ctx.qualify_name(name)` | Qualify a relation name |
 | `ctx.relation(ref)` | Resolve a declared `model()`/`source()` reference to a relation |
-| `ctx.payload(node_fn)` / `ctx.metadata(node_fn)` | Read an upstream node's result in the same run |
+| `ctx.result_of(node_fn)` | Read the latest persisted result of an upstream node (current or previous run) |
+| `ctx.results_of(node_fn, limit=N)` | Read the last N successful results of an upstream node, newest first |
 | `ctx.providers` | Access discovered [providers](/concepts/python-nodes/providers) by name |
 
 Task and asset contexts add `ctx.result(...)` and `ctx.skip(...)`. Check contexts add `ctx.pass_(...)`, `ctx.fail(...)`, and `ctx.warn(...)`.

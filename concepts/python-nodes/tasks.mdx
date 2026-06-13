@@ -34,11 +34,11 @@ def fetch_orders(ctx: TaskContext):
 
 @task(depends_on=fetch_orders)
 def summarize_orders(ctx: TaskContext):
-    orders = ctx.payload(fetch_orders)
-    return ctx.result(metadata={"count": len(orders)})
+    result = ctx.result_of(fetch_orders)
+    return ctx.result(metadata={"count": len(result.payload)})
 ```
 
-`ctx.payload(node_fn)` and `ctx.metadata(node_fn)` read an upstream node's result within the same run. Reading a missing or unsuccessful upstream raises unless you pass `default=`.
+`ctx.result_of(node_fn)` reads the latest persisted result of an upstream node, returning a `NodeResultEnvelope` with `payload`, `metadata`, `status`, and `ts` fields. Results persist across runs. Use `ctx.results_of(node_fn, limit=N)` to read result history. Reading a missing or unsuccessful upstream raises unless you pass `default=`.
 
 Tasks may depend on other tasks, assets, and loaders. They may **not** depend on SQL models or sources as graph dependencies, but they can read them at runtime with typed references - see [SQL references](/concepts/python-nodes/sql-references).
 
@@ -53,7 +53,7 @@ def build_export(ctx: TaskContext):
     )
 ```
 
-- `payload` is the value downstream nodes read with `ctx.payload(...)`.
+- `payload` is the value downstream nodes read with `ctx.result_of(...)`.
 - `metadata` is structured JSON for catalogs and downstream reads.
 - Tasks cannot set `materialized` - that is for [assets](/concepts/python-nodes/assets).
 
