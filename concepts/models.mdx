@@ -409,9 +409,10 @@ Python hooks receive a `HookContext` as their first parameter (named `ctx`, `con
 | `ctx.execute_sql(sql)` | Execute SQL on the connection |
 | `ctx.query(sql)` | Execute SQL and return rows |
 | `ctx.log(message)` | Log to the run output |
+| `ctx.skip(reason, mode=...)` | Skip the model's materialization. `mode` accepts `"soft"` (default) or `"hard"` (blocks downstream models). |
 | `ctx.providers` | Access discovered [providers](/concepts/python-nodes/providers) by name |
 
-Providers can also be injected directly as hook function parameters by name. See [Providers](/concepts/python-nodes/providers).
+Pre-hooks can return `ctx.skip(...)` to skip the model's materialization entirely. A soft skip skips only this model; a hard skip also blocks downstream models. Providers can also be injected directly as hook function parameters by name. See [Providers](/concepts/python-nodes/providers).
 
 ### Hook decorator
 

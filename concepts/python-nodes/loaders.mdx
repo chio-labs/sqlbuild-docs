@@ -208,6 +208,9 @@ Every loader function receives a `LoaderContext` as its first argument. It provi
 | `log(message)` | Log a message to the execution lifecycle output |
 | `qualify_name(name)` | Return a fully-qualified relation name in the destination database/schema |
 | `skip(reason, mode=...)` | Skip this loader. `mode` is `"soft"` (default, skip only this loader) or `"hard"` (also block dependents) |
+| `result(payload=, metadata=, materialized=)` | Return a structured result for a self-managed loader |
+| `result_of(node_fn)` | Read the latest persisted result of an upstream node (current or previous run) |
+| `results_of(node_fn, limit=N)` | Read the last N successful results of an upstream node, newest first |
 | `loader(loader_fn)` | Return a `LoaderRelationRef` for an upstream loader dependency |
 | `source(source_name)` | Return a `LoaderRelationRef` for a project source by YAML name |
 
