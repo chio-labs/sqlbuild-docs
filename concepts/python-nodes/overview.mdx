@@ -107,6 +107,10 @@ def export_orders(ctx):
 
 Downstream nodes run only if at least one upstream succeeded. If all upstreams are skipped, the downstream is skipped. A failed or hard-skipped upstream blocks its dependents.
 
+## Result persistence
+
+Node results (payload, metadata, status, errors) are persisted after each execution. In standard mode, results are stored in `_sqlbuild_node_results` in the warehouse alongside your data. In virtual mode, results are stored in the VDE state backend scoped per environment. Results persist across runs, so they are available for observability, debugging, and downstream consumption.
+
 ## Selection
 
 Python nodes are selected like SQL resources, by bare name or typed selector:
