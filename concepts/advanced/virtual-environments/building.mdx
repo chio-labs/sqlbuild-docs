@@ -5,6 +5,10 @@ description: "Virtual builds, VDE creation, partial builds, and seeded increment
 
 Virtual builds create versioned physical relations and update VDE pointer sets. The build lifecycle is the same as standard mode (seeds, tests, models, audits), but model outputs are written to versioned physical tables and exposed through logical VDE views.
 
+<Warning>
+Virtual builds run ingress (loaders and Python nodes that feed sources) as a separate phase before SQL model execution. This means independent SQL models that do not depend on loaders will wait for all ingress to complete before starting. Standard mode does not have this limitation. This keeps VDE state persistence simpler and safer but may add wall time when ingress is slow and independent SQL work is available. A future optimization may allow overlapping ingress with independent SQL execution.
+</Warning>
+
 ## Default VDE
 
 When you run `sqb build` in virtual mode without `--virtual-env`, the VDE name defaults to the active physical target name:
