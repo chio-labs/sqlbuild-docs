@@ -3,14 +3,10 @@ title: "Using SQLBuild with dbt"
 description: "Make your existing dbt project change-aware with no SQLBuild models, then optionally grow into SQLBuild's own models."
 ---
 
-Point SQLBuild at your existing dbt project and it makes your dbt builds change-aware: it fingerprints your dbt models in the warehouse, prunes the ones that have not changed from the dbt run, and can reuse already-built tables from production. You do not write any SQLBuild models to get this. Your dbt project stays exactly as it is. No migration, no edits to your dbt files.
+Point SQLBuild at your existing dbt project to make your dbt builds change-aware. No SQLBuild models, no migration, no edits to your dbt files. It adds two things on a plain dbt project:
 
-SQLBuild adds two things dbt does not do on its own, both on a plain dbt project with zero SQLBuild models:
-
-- **Change-aware builds.** A second `sqb dbt build` skips every dbt model that is already current, instead of rebuilding the whole selection. See [Change-aware builds](/concepts/dbt-compatibility/change-aware-builds).
-- **Reuse from production.** Instead of rebuilding a model in dev, SQLBuild can pull the already-built table from a production-shaped git branch and seed incremental models from it. See [Reuse from production](/concepts/dbt-compatibility/reuse-from).
-
-Later, you can also write SQLBuild models, tests, audits, and scenarios downstream of your dbt models, but that is optional. The change-aware and reuse behavior works on a dbt-only project from day one.
+- **Change-aware builds.** SQLBuild fingerprints your dbt models in the warehouse and prunes the ones that have not changed, so a second build skips everything already current. See [Change-aware builds](/concepts/dbt-compatibility/change-aware-builds).
+- **Reuse from production.** Instead of rebuilding a model in dev, SQLBuild pulls the already-built table from a production-shaped git branch and seeds incremental models from it. See [Reuse from production](/concepts/dbt-compatibility/reuse-from).
 
 ## Start with your existing dbt project
 
@@ -100,10 +96,6 @@ target_path = "../dbt_project/target"
 | `reuse_from` | Production reuse configuration (optional). See [Reuse from production](/concepts/dbt-compatibility/reuse-from). |
 
 Paths can be absolute or relative to the SQLBuild project root.
-
-## Adding SQLBuild models (optional)
-
-Once the dbt-only workflow is in place, you can grow into SQLBuild's own models, tests, audits, and scenarios downstream of your dbt project, referencing dbt model outputs with `__dbt_ref`. This is additive and entirely optional. See [Adding SQLBuild models](/concepts/dbt-compatibility/adding-sqlbuild-models).
 
 ## Prerequisites
 
