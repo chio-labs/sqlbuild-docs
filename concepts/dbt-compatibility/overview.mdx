@@ -5,7 +5,7 @@ description: "Stop rebuilding your dbt project in dev. Reuse already-built table
 
 Point SQLBuild at your existing dbt project to stop rebuilding it from scratch in dev. No SQLBuild models, no migration, no edits to your dbt files. It adds two things on a plain dbt project:
 
-- **Reuse from production.** Building a branch in dev usually rebuilds the whole project, even though most models are identical to production. SQLBuild compiles a production-shaped git branch, copies its already-built tables into your target, and seeds incremental models from them, so dbt only builds what your branch actually changed. See [Reuse from production](/concepts/dbt-compatibility/reuse-from).
+- **Reuse from production.** Building a branch in dev usually rebuilds the whole project, even though most models are identical to production. SQLBuild compiles a production-shaped git branch, copies its already-built tables into your target, and seeds incremental models from a production baseline, so dbt only builds what your branch actually changed. See [Reuse from production](/concepts/dbt-compatibility/reuse-from).
 - **Change-aware builds.** SQLBuild fingerprints your dbt models in the warehouse and prunes the ones that have not changed, so a second build skips everything already current. See [Change-aware builds](/concepts/dbt-compatibility/change-aware-builds).
 
 <Note>
