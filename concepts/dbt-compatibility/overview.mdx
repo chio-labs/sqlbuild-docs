@@ -14,10 +14,10 @@ Later, you can also write SQLBuild models, tests, audits, and scenarios downstre
 
 ## Start with your existing dbt project
 
-From inside your dbt project, run a `sqb dbt` command:
+From inside your dbt project, run a `sqb dbt` command. Selection works exactly like dbt: scope to whatever you would normally build with `--select`, or omit it to plan the whole project.
 
 ```bash
-sqb dbt build
+sqb dbt plan --select path:models/marts
 ```
 
 The first time you do this, SQLBuild bootstraps itself. If there is no `sqlbuild_project.toml`, it reads your `dbt_project.yml` and profile and creates a minimal twin project in a `sqlbuild_project/` directory next to your dbt project. It reuses your dbt profile for the warehouse connection, so there are no separate credentials to configure.
@@ -46,13 +46,27 @@ target = "dev"
 
 There are no `models/` in this project. It is a configuration file pointing at your dbt project, nothing more. `source = "dbt_profile"` tells SQLBuild to connect using your dbt profile, so it talks to the same warehouse dbt does.
 
-Run `sqb dbt build` once to build (or reuse) your dbt models with state recorded, then run it again:
+Run `sqb dbt build --select path:models/marts` once to build your selected dbt models with state recorded, then plan again. Once everything in the selection is current, the dbt side reports nothing to do:
 
 ```
-dbt        all planned dbt models are current
+Plan ready (0 selected resources)
+
+dbt (3 selected resources)
+  selected by dbt selector: 3 from dbt selector
+  planned models: 0 run, 3 current, 0 blocked
+  planned non-model dbt work: 0
+  skipped: all planned dbt models are current
+
+  Model plan
+    First run (0)
+    Current (3)
+      model.analytics.dim_customers   no change
+      model.analytics.fct_orders      no change
+      model.analytics.dim_products    no change
+    Blocked (0)
 ```
 
-The second run skips the dbt build entirely because nothing changed. Change one model and only that model, and whatever depends on it, rebuilds.
+The next `sqb dbt build` skips the dbt run entirely because nothing changed. Change one model and only that model, plus whatever depends on it, rebuilds.
 
 ## How it works
 
