@@ -5,7 +5,7 @@ description: "Skip unchanged dbt models by fingerprinting them in the warehouse,
 
 When you run `sqb dbt build` or `sqb dbt run`, SQLBuild plans which dbt models actually need to run instead of rebuilding everything in the selection. Models whose SQL has not changed and whose inputs are current are pruned from the dbt command, so a second build skips them entirely.
 
-This works on a plain dbt project with no changes to your dbt files. SQLBuild reads the dbt manifest, compares it against state it stores in your warehouse, and decides per model whether dbt needs to run it.
+This works on a plain dbt project, with no SQLBuild models and no changes to your dbt files. SQLBuild reads the dbt manifest, compares it against state it stores in your warehouse, and decides per model whether dbt needs to run it.
 
 ## How dbt models are tracked
 
