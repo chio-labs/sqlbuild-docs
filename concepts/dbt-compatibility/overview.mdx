@@ -22,6 +22,17 @@ sqb dbt plan --select path:models/marts
 
 The first time you do this, SQLBuild bootstraps itself. If there is no `sqlbuild_project.toml`, it reads your `dbt_project.yml` and profile and creates a minimal twin project in a `sqlbuild_project/` directory next to your dbt project. It reuses your dbt profile for the warehouse connection, so there are no separate credentials to configure.
 
+```
+my-workspace/
+  analytics/                  # your existing dbt project, untouched
+    dbt_project.yml
+    models/
+    target/
+      manifest.json
+  sqlbuild_project/           # created by SQLBuild
+    sqlbuild_project.toml     # points at the dbt project, no models of its own
+```
+
 The generated `sqlbuild_project.toml` looks like this:
 
 ```toml
@@ -44,7 +55,7 @@ profile = "analytics"
 target = "dev"
 ```
 
-There are no `models/` in this project. It is a configuration file pointing at your dbt project, nothing more. `source = "dbt_profile"` tells SQLBuild to connect using your dbt profile, so it talks to the same warehouse dbt does.
+`source = "dbt_profile"` tells SQLBuild to connect using your dbt profile, so it talks to the same warehouse dbt does.
 
 Run `sqb dbt build --select path:models/marts` once to build your selected dbt models with state recorded, then plan again. Once everything in the selection is current, the dbt side reports nothing to do:
 
