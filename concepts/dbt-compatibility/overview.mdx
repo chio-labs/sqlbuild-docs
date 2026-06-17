@@ -58,11 +58,12 @@ The second run skips the dbt build entirely because nothing changed. Change one 
 
 1. SQLBuild runs `dbt compile` to produce a `manifest.json` with model metadata
 2. SQLBuild reads the manifest to understand dbt model names and their qualified warehouse tables
-3. SQLBuild plans which dbt models actually need to run, using warehouse-stored fingerprints and source freshness, and optionally reuses already-built relations from production
-4. `sqb dbt plan/run/build/test` orchestrates the run: dbt builds only the models that changed, pruning everything that is current
-5. (Optional) any SQLBuild models you have added run last, against the dbt outputs
+3. SQLBuild resolves your `--select`/`--exclude` against dbt by running `dbt ls`, so dbt-native selectors like `state:modified` and `package:` are evaluated by dbt itself, not reimplemented
+4. SQLBuild plans which dbt models actually need to run, using warehouse-stored fingerprints and source freshness, and optionally reuses already-built relations from production
+5. `sqb dbt plan/run/build/test` orchestrates the run: dbt builds only the models that changed, pruning everything that is current
+6. (Optional) any SQLBuild models you have added run last, against the dbt outputs
 
-dbt is always invoked as a subprocess. SQLBuild does not reimplement Jinja, profiles, or any dbt internals. It calls the `dbt` CLI for compilation, selection, and execution, and it never edits files in the dbt project.
+dbt is always invoked as a subprocess. SQLBuild does not reimplement Jinja, profiles, dbt's selection language, or any dbt internals. It calls the `dbt` CLI for compilation, selection (`dbt ls`), and execution, and it never edits files in the dbt project.
 
 ## Configuration
 
