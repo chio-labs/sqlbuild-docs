@@ -287,6 +287,11 @@ project_dir = "../dbt_project"
 profiles_dir = "../profiles"
 target_path = "../dbt_project/target"
 target = "dev"
+replay_on_change = "full"
+
+[dbt.reuse_from]
+git_ref = "main"
+generate_schema_name_override = "dbt/macros/generate_schema_name.sql"
 ```
 
 | Field | Description |
@@ -295,8 +300,11 @@ target = "dev"
 | `profiles_dir` | Path to the directory containing `profiles.yml` |
 | `target_path` | Path to dbt's `target/` directory (where `manifest.json` is written) |
 | `target` | dbt target name override (optional) |
+| `replay_on_change` | Rebuild window applied when a changed dbt model is rerun (optional). See [Change-aware builds](/concepts/dbt-compatibility/change-aware-builds#replay-on-change). |
+| `reuse_from.git_ref` | Production-shaped git branch or tag whose built tables are reused (optional). See [Reuse from production](/concepts/dbt-compatibility/reuse-from). |
+| `reuse_from.generate_schema_name_override` | Relative path under `dbt/macros/` to the `generate_schema_name` macro used when compiling the reuse ref. |
 
-Paths can be absolute or relative to the SQLBuild project root. See [dbt Interop](/concepts/dbt-interop) for setup and usage details.
+Paths can be absolute or relative to the SQLBuild project root. See [Using SQLBuild with dbt](/concepts/dbt-compatibility/overview) for setup and usage details.
 
 ## Skills
 

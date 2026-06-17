@@ -3,7 +3,7 @@ title: "Introduction"
 description: "A change-aware SQL framework: only rebuild what changed, with all state in the warehouse."
 ---
 
-Every build fingerprints models, seeds, functions, and Python nodes, tracks source freshness, and skips anything that hasn't changed, including audits that already passed for the same version. It can run alongside an existing dbt project, and adds ingestion, Python nodes, and opt-in virtual environments for more advanced use cases.
+Every build fingerprints models, seeds, functions, and Python nodes, tracks source freshness, and skips anything that hasn't changed, including audits that already passed for the same version. The same change-aware planning extends to an existing [dbt project](/concepts/dbt-compatibility/overview): SQLBuild prunes unchanged dbt models from the dbt run and can reuse already-built tables from production. It also adds ingestion, Python nodes, and opt-in virtual environments for more advanced use cases.
 
 ## Supported adapters
 
@@ -195,7 +195,6 @@ def materialize(ctx: MaterializationContext) -> MaterializationResult:
 
 ## What's next
 
-- **Python models** - Define models in Python using Pandas, PySpark, Snowpark, or BigFrames for transformations that don't fit naturally in SQL, with the same testing and audit guarantees as SQL models
 - **Broader adapter support** - ClickHouse, Redshift, Trino, Spark, Athena
 
 ## Quick links

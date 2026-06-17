@@ -1,0 +1,43 @@
+---
+title: "Testing and debug"
+description: "Mock dbt refs in SQLBuild unit tests, run sqb dbt test, and diagnose both projects."
+---
+
+## Unit tests with dbt refs
+
+SQLBuild unit tests can mock dbt model dependencies using `__dbt_ref__` fixture CTEs. When a model has a package, use `__dbt_ref__package__model`. When there is no package, use `__dbt_ref__model`:
+
+```sql
+TEST();
+
+WITH
+__dbt_ref__analytics__fact_orders AS (
+  SELECT 1 AS order_id, 100 AS customer_id, 2500 AS amount_cents
+),
+__expected__downstream_orders AS (
+  SELECT 1 AS order_id
+)
+SELECT 1
+```
+
+This mocks the dbt model `analytics.fact_orders` with controlled data, allowing you to test your SQLBuild model without a warehouse connection or a compiled dbt manifest.
+
+## sqb dbt test
+
+`sqb dbt test` runs dbt tests first, then SQLBuild's validations for the selected models:
+
+1. **dbt test runs first** - with the user's original selectors
+2. **SQLBuild test runs** - unit tests for selected SQLBuild models
+3. **SQLBuild audit runs** - audits for selected SQLBuild models
+
+dbt's `test_type:data` and `test_type:unit` selectors are mapped to SQLBuild equivalents: `test_type:data` runs SQLBuild audits, `test_type:unit` runs SQLBuild unit tests. Without a test type selector, both run.
+
+## sqb dbt debug
+
+`sqb dbt debug` runs both dbt's and SQLBuild's diagnostics:
+
+```bash
+sqb dbt debug
+```
+
+This runs `dbt debug` (verifying dbt project config and warehouse connection) followed by `sqb debug` (verifying SQLBuild project config and connection).

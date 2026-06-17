@@ -1,0 +1,76 @@
+---
+title: "Change-aware builds"
+description: "Skip unchanged dbt models by fingerprinting them in the warehouse, with cascade propagation and source freshness."
+---
+
+When you run `sqb dbt build` or `sqb dbt run`, SQLBuild plans which dbt models actually need to run instead of rebuilding everything in the selection. Models whose SQL has not changed and whose inputs are current are pruned from the dbt command, so a second build skips them entirely.
+
+This works on a plain dbt project with no changes to your dbt files. SQLBuild reads the dbt manifest, compares it against state it stores in your warehouse, and decides per model whether dbt needs to run it.
+
+## How dbt models are tracked
+
+SQLBuild stores a fingerprint for every dbt model it builds, in the same warehouse-native state tables it uses for its own models. Each fingerprint is keyed with `node_type: "dbt"` and the model's dbt `unique_id`, and records the model's version identity.
+
+The version identity comes from dbt's own `checksum` for the model node in the manifest. On each plan, SQLBuild compares the checksum in the current manifest against the fingerprint it last stored:
+
+| Condition | Action | Reason |
+|-----------|--------|--------|
+| No stored fingerprint | run | first run |
+| Target relation missing | run | relation missing |
+| Manifest checksum differs from stored fingerprint | run | checksum changed |
+| Full refresh requested | run | full refresh |
+| Everything matches and relation exists | skip | no change |
+
+After dbt runs, SQLBuild writes an updated fingerprint for each dbt model that executed, so the next plan sees them as current.
+
+State is append-only and lives in your warehouse. There is no external state store, no manifest comparison server, and no requirement to log in anywhere. See [Planning](/concepts/planning) for how SQLBuild's change detection works in general.
+
+## Cascade propagation
+
+Change detection runs over the combined dbt and SQLBuild graph, so a change in one dbt model correctly forces the work that depends on it, in both directions:
+
+- **Upstream changed.** A dbt model that is otherwise current is rerun when any of its upstream dbt models is running. The plan reason is `upstream_changed`.
+- **Downstream into SQLBuild.** When a dbt model runs, SQLBuild marks the SQLBuild models that read from it (through `__dbt_ref`) as stale, so they rebuild against the new data.
+
+This means a single changed staging model propagates a rebuild signal through the rest of the dbt DAG and across the boundary into your SQLBuild models, without you having to select them by hand.
+
+## Source freshness
+
+SQLBuild translates the sources declared in the dbt manifest into its own source freshness model and observes them as part of planning. Source state is stored alongside model fingerprints in the warehouse.
+
+- **Source changed.** A current dbt model whose upstream source has new data is promoted to run, with reason `source_freshness_changed`.
+- **Source stale past its age policy.** If an upstream source is older than its configured age tolerance, the dbt models downstream of it are blocked rather than built on stale inputs, with reason `source_freshness_error`. SQLBuild models downstream of a blocked dbt model are blocked too.
+
+Source freshness records are persisted after a successful build, so the next plan can detect new arrivals. See [Sources](/concepts/sources) for freshness strategies and age policies.
+
+## Pruning and steady state
+
+Only the dbt models classified as `run` are passed to the underlying `dbt build`/`dbt run` command. Current models are removed from the dbt selection, dbt tests and seeds for pruned models are dropped from the command, and dbt never sees the models it does not need to rebuild.
+
+When every dbt model in the selection is current, SQLBuild does not invoke dbt at all and reports that the dbt side is already current:
+
+```
+dbt        all planned dbt models are current
+```
+
+A first build runs the changed models; a second build with no changes skips the entire dbt run and only re-evaluates SQLBuild models, which are themselves current. This is the same skip-unchanged behavior SQLBuild applies to its own models, extended over your existing dbt project.
+
+## Replay on change
+
+When a changed dbt model is rerun, you can control how much data is rebuilt with the `replay_on_change` policy in the `[dbt]` config block:
+
+```toml
+[dbt]
+project_dir = "../dbt_project"
+profiles_dir = "../profiles"
+target_path = "../dbt_project/target"
+replay_on_change = "full"
+```
+
+This applies the rebuild window when a changed incremental dbt model is rerun, mirroring the [`replay_on_change`](/concepts/planning#replay-on-change) policy SQLBuild uses for its own incremental models.
+
+## What is never touched
+
+- dbt source files are never modified. SQLBuild reads the manifest and drives the `dbt` CLI; it does not patch, rewrite, or revert your dbt project.
+- dbt internals are never monkey-patched. Selection and execution go through the documented `dbt` CLI surface (`dbt ls`, `dbt compile`, `dbt build`/`dbt run`).
+- State lives in your warehouse, not in a separate database or service.
