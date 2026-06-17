@@ -88,47 +88,7 @@ Paths can be absolute or relative to the SQLBuild project root.
 
 ## Adding SQLBuild models (optional)
 
-Once the dbt-only workflow is in place, you can grow into SQLBuild's own models, tests, audits, and scenarios without leaving your dbt project. This is additive: the layout gains a `models/` directory in the SQLBuild project.
-
-```
-my-workspace/
-  dbt_project/
-    dbt_project.yml
-    models/
-      staging/stg_orders.sql
-      marts/fact_orders.sql
-    target/
-      manifest.json
-  profiles/
-    profiles.yml
-  sqlbuild_project/
-    sqlbuild_project.toml
-    models/
-      marts/downstream_orders.sql
-    tests/
-      unit/test_downstream_orders.sql
-```
-
-SQLBuild models reference dbt model outputs with `__dbt_ref("package", "model")`:
-
-```sql
-MODEL (
-  tags [finance],
-  columns (order_id (audits [not_null])),
-);
-
-SELECT order_id FROM __dbt_ref("analytics", "fact_orders")
-```
-
-This resolves to the qualified warehouse table name from the dbt manifest (e.g. `analytics.fact_orders`). The dbt model becomes an upstream dependency in the combined graph, so change detection and reuse continue to work across the boundary.
-
-SQLBuild models can also reference other SQLBuild models with `__ref()` as usual:
-
-```sql
-MODEL (tags [marts]);
-
-SELECT order_id FROM __ref("downstream_orders")
-```
+Once the dbt-only workflow is in place, you can grow into SQLBuild's own models, tests, audits, and scenarios downstream of your dbt project, referencing dbt model outputs with `__dbt_ref`. This is additive and entirely optional. See [Adding SQLBuild models](/concepts/dbt-compatibility/adding-sqlbuild-models).
 
 ## Prerequisites
 
@@ -142,4 +102,5 @@ SQLBuild runs `dbt compile` automatically as part of `sqb dbt plan/run/build/tes
 - [Selection](/concepts/dbt-compatibility/selection) - how `--select` and `--exclude` route work across both graphs.
 - [Change-aware builds](/concepts/dbt-compatibility/change-aware-builds) - fingerprinting, cascade propagation, source freshness, and pruning unchanged dbt models.
 - [Reuse from production](/concepts/dbt-compatibility/reuse-from) - pull already-built tables from a production-shaped git branch instead of rebuilding.
+- [Adding SQLBuild models](/concepts/dbt-compatibility/adding-sqlbuild-models) - optionally write SQLBuild models, tests, audits, and scenarios downstream of dbt.
 - [Testing and debug](/concepts/dbt-compatibility/testing-and-debug) - mock dbt refs in unit tests, `sqb dbt test`, and `sqb dbt debug`.
