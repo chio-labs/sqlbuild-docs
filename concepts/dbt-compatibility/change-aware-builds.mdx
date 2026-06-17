@@ -9,7 +9,7 @@ This works on a plain dbt project, with no SQLBuild models and no changes to you
 
 ## How dbt models are tracked
 
-SQLBuild stores a fingerprint for every dbt model it builds, in the same warehouse-native state tables it uses for its own models. Each fingerprint is keyed with `node_type: "dbt"` and the model's dbt `unique_id`, and records the model's version identity.
+SQLBuild stores a fingerprint for every dbt model it builds, in a `_sqlbuild_fingerprints` table in your target schema. Each fingerprint is keyed with `node_type: "dbt"` and the model's dbt `unique_id`, and records the model's version identity.
 
 The version identity comes from dbt's own `checksum` for the model node in the manifest. On each plan, SQLBuild compares the checksum in the current manifest against the fingerprint it last stored:
 
@@ -23,7 +23,16 @@ The version identity comes from dbt's own `checksum` for the model node in the m
 
 After dbt runs, SQLBuild writes an updated fingerprint for each dbt model that executed, so the next plan sees them as current.
 
-State is append-only and lives in your warehouse. There is no external state store, no manifest comparison server, and no requirement to log in anywhere. See [Planning](/concepts/planning) for how SQLBuild's change detection works in general.
+### What SQLBuild creates in your warehouse
+
+All state is append-only and lives in your target schema, in the same warehouse dbt already uses. There is no external state store, no manifest comparison server, and no requirement to log in anywhere. SQLBuild creates two small tables:
+
+| Table | Contents |
+|-------|----------|
+| `_sqlbuild_fingerprints` | One row per build per model, recording its version identity. Drives change detection. |
+| `_sqlbuild_source_freshness` | One row per build per source, recording the last observed freshness. Drives source-change detection. |
+
+These are the only objects SQLBuild adds. Your dbt models, schemas, and tables are otherwise untouched. The [janitor](/cli/janitor) can prune old rows, keeping only the latest per identity.
 
 ## Cascade propagation
 
@@ -36,7 +45,7 @@ This means a single changed staging model propagates a rebuild signal through th
 
 ## Source freshness
 
-SQLBuild translates the sources declared in the dbt manifest into its own source freshness model and observes them as part of planning. Source state is stored alongside model fingerprints in the warehouse.
+SQLBuild translates the sources declared in the dbt manifest into its own source freshness model and observes them as part of planning. Observations are stored in the `_sqlbuild_source_freshness` table in your target schema.
 
 - **Source changed.** A current dbt model whose upstream source has new data is promoted to run, with reason `source_freshness_changed`.
 - **Source stale past its age policy.** If an upstream source is older than its configured age tolerance, the dbt models downstream of it are blocked rather than built on stale inputs, with reason `source_freshness_error`. SQLBuild models downstream of a blocked dbt model are blocked too.
