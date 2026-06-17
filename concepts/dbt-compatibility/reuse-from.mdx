@@ -36,9 +36,64 @@ generate_schema_name_override = "dbt/macros/generate_schema_name.sql"
 | Field | Description |
 |-------|-------------|
 | `git_ref` | The production-shaped git branch or tag whose built tables you want to reuse. Must differ from the current branch. |
-| `generate_schema_name_override` | Relative path to a `generate_schema_name` macro, used when compiling the reuse ref so its relations resolve to the production schema. Must live under `dbt/macros/`. |
+| `generate_schema_name_override` | Relative path to a `generate_schema_name` macro that resolves to your production schema layout, used when compiling the reuse ref. Must live under `dbt/macros/`. See [The schema-name override macro](#the-schema-name-override-macro). |
 
 The override macro is injected into the isolated checkout when SQLBuild compiles the reuse ref, so the production manifest resolves to the production warehouse relations rather than your dev schema.
+
+## The schema-name override macro
+
+To reuse a production table, SQLBuild needs to know its exact warehouse location. It gets this by compiling the production git ref in an isolated checkout and reading the relation names from the resulting manifest. dbt computes those relation names with its `generate_schema_name` macro. SQLBuild does not know anything about your environments, and deliberately does not try to: it just compiles the ref with your configured target. If that resolves to your dev schemas, the manifest points at dev tables, not the production ones you want to copy from.
+
+The override solves this. You provide a `generate_schema_name` macro that resolves to your production schema layout with no environment branching, and SQLBuild injects it into the isolated checkout (and only that throwaway checkout, never your real dbt project) before compiling. The macro must be named `generate_schema_name` so it shadows your project's own, and the file must live under `dbt/macros/` in your SQLBuild project.
+
+**The rule:** take your project's existing `generate_schema_name`, keep only what it does in production, and delete the dev/CI branching.
+
+Most projects have a macro that switches on the environment, building clean schema names in production and suffixed ones in dev or CI:
+
+```sql
+-- your dbt project's existing macro
+{% macro generate_schema_name(custom_schema_name, node) -%}
+    {%- if target.name == 'prod' -%}
+        {%- if custom_schema_name is none -%}
+            {{ target.schema }}
+        {%- else -%}
+            {{ custom_schema_name | trim }}
+        {%- endif -%}
+    {%- else -%}
+        {{ target.schema }}_{{ target.name }}
+    {%- endif -%}
+{%- endmacro %}
+```
+
+The override is just the production branch, with the conditional removed:
+
+```sql
+-- dbt/macros/generate_schema_name.sql
+{% macro generate_schema_name(custom_schema_name, node) -%}
+    {%- if custom_schema_name is none -%}
+        {{ target.schema }}
+    {%- else -%}
+        {{ custom_schema_name | trim }}
+    {%- endif -%}
+{%- endmacro %}
+```
+
+If your production uses dbt's default unsuffixed layout (everything in the base schema, custom schemas concatenated), the override is just dbt's stock `generate_schema_name`:
+
+```sql
+-- dbt/macros/generate_schema_name.sql
+{% macro generate_schema_name(custom_schema_name, node) -%}
+    {%- if custom_schema_name is none -%}
+        {{ target.schema }}
+    {%- else -%}
+        {{ target.schema }}_{{ custom_schema_name | trim }}
+    {%- endif -%}
+{%- endmacro %}
+```
+
+<Warning>
+The override must produce production's schema names regardless of which target SQLBuild compiles with. The examples above use `target.schema` as the base, which only resolves to production when your configured target's schema is the production one. If your production base schema is a fixed value that differs from the active target, write that literal value instead of `target.schema`.
+</Warning>
 
 ## Reuse modes
 
