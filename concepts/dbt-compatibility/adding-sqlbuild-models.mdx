@@ -9,19 +9,15 @@ This is purely additive. Your dbt models stay in dbt, and the layout gains a `mo
 
 ```
 my-workspace/
-  dbt_project/
+  analytics/                  # your existing dbt project, untouched
     dbt_project.yml
     models/
-      staging/stg_orders.sql
-      marts/fact_orders.sql
     target/
       manifest.json
-  profiles/
-    profiles.yml
-  sqlbuild_project/
+  sqlbuild_project/           # created by SQLBuild
     sqlbuild_project.toml
     models/
-      marts/downstream_orders.sql
+      marts/downstream_orders.sql   # references dbt models via __dbt_ref
     tests/
       unit/test_downstream_orders.sql
 ```

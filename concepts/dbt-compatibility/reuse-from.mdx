@@ -161,8 +161,8 @@ The reuse pre-phase reports what it pulled, separately from the dbt run:
 
 ```
 dbt reuse  pre-phase before dbt execution
-  analytics.fct_orders          OK     reuse
-  analytics.fct_daily_activity  OK     baseline reuse before dbt catch-up
+  model.analytics.fct_orders          OK     reuse
+  model.analytics.fct_daily_activity  OK     baseline reuse before dbt catch-up
 
 REUSED=1  BASELINE_REUSED=1  TOTAL=2
 ```

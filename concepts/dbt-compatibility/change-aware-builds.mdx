@@ -56,10 +56,20 @@ Source freshness records are persisted after a successful build, so the next pla
 
 Only the dbt models classified as `run` are passed to the underlying `dbt build`/`dbt run` command. Current models are removed from the dbt selection, dbt tests and seeds for pruned models are dropped from the command, and dbt never sees the models it does not need to rebuild.
 
-When every dbt model in the selection is current, SQLBuild does not invoke dbt at all and reports that the dbt side is already current:
+When every dbt model in the selection is current, SQLBuild does not invoke dbt at all. The dbt section of the plan reports the skip and lists the current models:
 
 ```
-dbt        all planned dbt models are current
+dbt (3 selected resources)
+  selected by dbt selector: 3 from dbt selector
+  planned models: 0 run, 3 current, 0 blocked
+  planned non-model dbt work: 0
+  skipped: all planned dbt models are current
+
+  Model plan
+    Current (3)
+      model.analytics.dim_customers   no change
+      model.analytics.fct_orders      no change
+      model.analytics.dim_products    no change
 ```
 
 A first build runs the changed models; a second build with no changes skips the entire dbt run and only re-evaluates SQLBuild models, which are themselves current. This is the same skip-unchanged behavior SQLBuild applies to its own models, extended over your existing dbt project.
