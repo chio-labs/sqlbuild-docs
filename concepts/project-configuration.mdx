@@ -300,7 +300,7 @@ generate_schema_name_override = "dbt/macros/generate_schema_name.sql"
 | `profiles_dir` | Path to the directory containing `profiles.yml` |
 | `target_path` | Path to dbt's `target/` directory (where `manifest.json` is written) |
 | `target` | dbt target name override (optional) |
-| `replay_on_change` | Rebuild window applied when a changed dbt model is rerun (optional). See [Change-aware builds](/concepts/dbt-compatibility/change-aware-builds#replay-on-change). |
+| `replay_on_change` | Project-wide policy for rerunning changed dbt models: `forward_only` (default) or `full` (optional). See [Change-aware builds](/concepts/dbt-compatibility/change-aware-builds#replay-on-change). |
 | `reuse_from.git_ref` | Production-shaped git branch or tag whose built tables are reused (optional). See [Reuse from production](/concepts/dbt-compatibility/reuse-from). |
 | `reuse_from.generate_schema_name_override` | Relative path under `dbt/macros/` to the `generate_schema_name` macro used when compiling the reuse ref. |
 

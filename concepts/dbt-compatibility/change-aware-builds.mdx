@@ -57,17 +57,22 @@ A first build runs the changed models; a second build with no changes skips the 
 
 ## Replay on change
 
-When a changed dbt model is rerun, you can control how much data is rebuilt with the `replay_on_change` policy in the `[dbt]` config block:
+When a changed incremental dbt model is rerun, `replay_on_change` controls whether it runs incrementally or rebuilds in full. It is a single project-wide policy in the `[dbt]` config block, applied to every changed model in the run (not per model):
 
 ```toml
 [dbt]
 project_dir = "../dbt_project"
 profiles_dir = "../profiles"
 target_path = "../dbt_project/target"
-replay_on_change = "full"
+replay_on_change = "forward_only"
 ```
 
-This applies the rebuild window when a changed incremental dbt model is rerun, mirroring the [`replay_on_change`](/concepts/planning#replay-on-change) policy SQLBuild uses for its own incremental models.
+| Value | Behavior |
+|-------|----------|
+| `forward_only` (default) | Changed models run incrementally, picking up new data from where they left off. |
+| `full` | Changed models are rebuilt in full. SQLBuild adds `--full-refresh` to the dbt run when there is model work to do. |
+
+Unlike SQLBuild's own per-model [`replay_on_change`](/concepts/planning#replay-on-change), the dbt setting is all-or-nothing across the run and does not support bounded windows. A `bounded-<duration>` value is rejected for dbt.
 
 ## What is never touched
 
