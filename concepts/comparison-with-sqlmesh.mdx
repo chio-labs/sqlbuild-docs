@@ -44,7 +44,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | Zero-copy cloning | `sqb clone` | No | No |
 | **Models** | | | |
 | SQL models | `MODEL()` header with inline config | Jinja-templated SQL + YAML sidecar | `MODEL` DDL |
-| Python models | Coming soon | Limited (remote only) | Pandas, PySpark, Snowpark, BigFrames |
+| Python models | Coming soon | Pandas, PySpark, Snowpark, BigFrames | Pandas, PySpark, Snowpark, BigFrames |
 | Custom materializations | Python with full framework hooks | Jinja-based | Python-based custom model kinds |
 | Lifecycle hooks | Typed `sql()`/`python()` hooks with compile-time validation and `HookContext` | Jinja pre/post hooks | Python pre/post hooks |
 | **Python nodes** | | | |
@@ -54,7 +54,9 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | Factories | `@factory` - programmatic node generation | No | No |
 | Providers | Shared runtime services with name-based injection into nodes and hooks | No | No |
 | **dbt** | | | |
-| dbt interop | Run alongside dbt - reads manifest, no migration | N/A | Jinja compatibility layer plus own macro system |
+| dbt compatibility | Run alongside dbt - reads manifest, no migration | N/A | Jinja compatibility layer plus own macro system |
+| Change-aware dbt builds | Fingerprints dbt models in the warehouse and prunes unchanged ones from the dbt run | dbt State (separate account/login, preview) | N/A |
+| Reuse dbt builds from production | Pull already-built dbt tables from a production git branch, seed incrementals for catch-up | dbt State clone (separate account/login) | N/A |
 | **Sources** | | | |
 | Source loaders | Python `@loader` functions with table/append/delete_insert/merge strategies | No (external to dbt) | No (external to SQLMesh) |
 | Declarative ingestion | ingestr integration - YAML-only config for 50+ sources | No | No |
@@ -77,5 +79,4 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 
 ## Not yet in SQLBuild
 
-- **Python models** - Define models in Python using Pandas, PySpark, Snowpark, or BigFrames
 - **Broader adapter support** - ClickHouse, Redshift, Trino, Spark, Athena

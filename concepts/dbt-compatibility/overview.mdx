@@ -1,0 +1,107 @@
+---
+title: "Using SQLBuild with dbt"
+description: "Run SQLBuild alongside an existing dbt project, with change-aware builds and production reuse."
+---
+
+SQLBuild runs alongside an existing dbt project. Your dbt models stay in dbt. New models, tests, audits, and scenarios are written in SQLBuild and can reference dbt model outputs directly. No migration required.
+
+On top of running both graphs together, SQLBuild adds two things dbt does not do on its own:
+
+- **Change-aware builds.** SQLBuild fingerprints your dbt models in the warehouse and prunes the ones that have not changed from the dbt run, so a second build skips models that are already current. See [Change-aware builds](/concepts/dbt-compatibility/change-aware-builds).
+- **Reuse from production.** Instead of rebuilding a model in dev, SQLBuild can pull the already-built table from a production-shaped git branch and seed incremental models from it. See [Reuse from production](/concepts/dbt-compatibility/reuse-from).
+
+Both work without modifying any dbt source file.
+
+## How it works
+
+1. SQLBuild runs `dbt compile` to produce a `manifest.json` with model metadata
+2. SQLBuild reads the manifest to understand dbt model names and their qualified warehouse tables
+3. SQLBuild plans which dbt models actually need to run, using warehouse-stored fingerprints and source freshness, and optionally reuses already-built relations from production
+4. SQLBuild models reference dbt models using `__dbt_ref("package", "model")`
+5. `sqb dbt plan/run/build/test` orchestrates both sides: dbt runs first (only for the models that changed), then SQLBuild runs against the dbt outputs
+
+dbt is always invoked as a subprocess. SQLBuild does not reimplement Jinja, profiles, or any dbt internals. It calls the `dbt` CLI for compilation, selection, and execution, and it never edits files in the dbt project.
+
+## Setup
+
+### Project layout
+
+A typical layout has both projects side by side:
+
+```
+my-workspace/
+  dbt_project/
+    dbt_project.yml
+    models/
+      staging/stg_orders.sql
+      marts/fact_orders.sql
+    target/
+      manifest.json
+  profiles/
+    profiles.yml
+  sqlbuild_project/
+    sqlbuild_project.toml
+    models/
+      marts/downstream_orders.sql
+    tests/
+      unit/test_downstream_orders.sql
+```
+
+### Configuration
+
+Point SQLBuild at the dbt project in `sqlbuild_project.toml`:
+
+```toml
+[dbt]
+project_dir = "../dbt_project"
+profiles_dir = "../profiles"
+target_path = "../dbt_project/target"
+```
+
+| Field | Description |
+|-------|-------------|
+| `project_dir` | Path to the dbt project root (where `dbt_project.yml` lives) |
+| `profiles_dir` | Path to the directory containing `profiles.yml` |
+| `target_path` | Path to dbt's `target/` directory (where `manifest.json` is written) |
+| `target` | dbt target name override (optional) |
+| `replay_on_change` | Rebuild window applied when a changed dbt model is rerun (optional). See [Change-aware builds](/concepts/dbt-compatibility/change-aware-builds#replay-on-change). |
+| `reuse_from` | Production reuse configuration (optional). See [Reuse from production](/concepts/dbt-compatibility/reuse-from). |
+
+Paths can be absolute or relative to the SQLBuild project root.
+
+### Referencing dbt models
+
+SQLBuild models use `__dbt_ref("package", "model")` to reference dbt model outputs:
+
+```sql
+MODEL (
+  tags [finance],
+  columns (order_id (audits [not_null])),
+);
+
+SELECT order_id FROM __dbt_ref("analytics", "fact_orders")
+```
+
+This resolves to the qualified warehouse table name from the dbt manifest (e.g. `analytics.fact_orders`). The dbt model becomes an upstream dependency in the combined graph.
+
+SQLBuild models can also reference other SQLBuild models with `__ref()` as usual:
+
+```sql
+MODEL (tags [marts]);
+
+SELECT order_id FROM __ref("downstream_orders")
+```
+
+## Prerequisites
+
+- dbt must be installed and available on `PATH`
+- Both projects must target the same warehouse and schema/database context
+
+SQLBuild runs `dbt compile` automatically as part of `sqb dbt plan/run/build/test` to produce the manifest. You do not need to compile the dbt project manually.
+
+## On this topic
+
+- [Selection](/concepts/dbt-compatibility/selection) - how `--select` and `--exclude` route work across both graphs.
+- [Change-aware builds](/concepts/dbt-compatibility/change-aware-builds) - fingerprinting, cascade propagation, source freshness, and pruning unchanged dbt models.
+- [Reuse from production](/concepts/dbt-compatibility/reuse-from) - pull already-built tables from a production-shaped git branch instead of rebuilding.
+- [Testing and debug](/concepts/dbt-compatibility/testing-and-debug) - mock dbt refs in unit tests, `sqb dbt test`, and `sqb dbt debug`.

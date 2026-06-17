@@ -19,8 +19,17 @@
         "pages": [
           "index",
           "quickstart",
-          "concepts/dbt-interop",
           "concepts/comparison-with-sqlmesh"
+        ]
+      },
+      {
+        "group": "dbt Compatibility",
+        "pages": [
+          "concepts/dbt-compatibility/overview",
+          "concepts/dbt-compatibility/selection",
+          "concepts/dbt-compatibility/change-aware-builds",
+          "concepts/dbt-compatibility/reuse-from",
+          "concepts/dbt-compatibility/testing-and-debug"
         ]
       },
       {
