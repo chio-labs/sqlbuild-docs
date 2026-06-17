@@ -100,7 +100,7 @@ The auto-generated project above is editable, and you can write `sqlbuild_projec
 | `profiles_dir` | Path to the directory containing `profiles.yml` |
 | `target_path` | Path to dbt's `target/` directory (where `manifest.json` is written) |
 | `target` | dbt target name override (optional) |
-| `replay_on_change` | Rebuild window applied when a changed dbt model is rerun (optional). See [Change-aware builds](/concepts/dbt-compatibility/change-aware-builds#replay-on-change). |
+| `replay_on_change` | Project-wide policy for rerunning changed dbt models: `forward_only` (default) or `full` (optional). See [Change-aware builds](/concepts/dbt-compatibility/change-aware-builds#replay-on-change). |
 | `reuse_from` | Production reuse configuration (optional). See [Reuse from production](/concepts/dbt-compatibility/reuse-from). |
 
 Paths can be absolute or relative to the SQLBuild project root.
