@@ -3,9 +3,13 @@ title: "Reuse from production"
 description: "Pull already-built dbt tables from a production-shaped git branch instead of rebuilding them in dev."
 ---
 
-Rebuilding a full dbt project in a dev or branch environment is slow and expensive when most of the models are identical to what production already built. Reuse from production lets SQLBuild copy the already-built tables from a production-shaped git branch and seed incremental models from them, so dbt only has to build what your branch actually changed.
+Building a dbt project in a dev or branch environment usually rebuilds everything, even though most models are identical to production. Reuse from production avoids that:
 
-This is the dbt-compatibility counterpart to SQLBuild's native [reuse from production](/concepts/planning#reuse-from-production). The native version reuses relations from another live target in the same warehouse; this version reuses the dbt-built tables described by a different git branch.
+- SQLBuild copies the already-built tables from a production-shaped git branch into your target.
+- It seeds incremental models from production so they only need to catch up, not rebuild.
+- dbt then builds only the models your branch actually changed.
+
+This is the dbt-compatibility counterpart to SQLBuild's native [reuse from production](/concepts/planning#reuse-from-production), which reuses relations from another live target in the same warehouse. This version reuses the dbt-built tables described by a different git branch.
 
 ## How it works
 
@@ -14,7 +18,7 @@ When `reuse_from` is configured, SQLBuild runs a reuse pre-phase before dbt exec
 1. SQLBuild git-archives the configured `git_ref` into an isolated temporary checkout (your working tree is never touched).
 2. It compiles that checkout's dbt project on its own, producing a second manifest that describes the production-shaped relations.
 3. For each in-scope dbt model, SQLBuild compares the current manifest against the production manifest and the warehouse state, and decides whether the model can be reused.
-4. Reusable relations are copied or seeded into your target before dbt runs. dbt then only builds the models that genuinely changed on your branch.
+4. Reusable tables are copied into your target, and incremental models get a production baseline, before dbt runs. dbt then only builds the models that genuinely changed on your branch.
 
 Because reuse runs as a pre-phase, the models it satisfies are already current by the time the [change-aware](/concepts/dbt-compatibility/change-aware-builds) dbt run starts, so they are pruned from the dbt command.
 
@@ -42,9 +46,15 @@ The override macro is injected into the isolated checkout when SQLBuild compiles
 
 ## The schema-name override macro
 
-To reuse a production table, SQLBuild needs to know its exact warehouse location. It gets this by compiling the production git ref in an isolated checkout and reading the relation names from the resulting manifest. dbt computes those relation names with its `generate_schema_name` macro. SQLBuild does not know anything about your environments, and deliberately does not try to: it just compiles the ref with your configured target. If that resolves to your dev schemas, the manifest points at dev tables, not the production ones you want to copy from.
+To reuse a production table, SQLBuild needs its exact warehouse location. It gets this by compiling the production git ref in isolation and reading the relation names from the resulting manifest, which dbt computes with its `generate_schema_name` macro.
 
-The override solves this. You provide a `generate_schema_name` macro that resolves to your production schema layout with no environment branching, and SQLBuild injects it into the isolated checkout (and only that throwaway checkout, never your real dbt project) before compiling. The macro must be named `generate_schema_name` so it shadows your project's own, and the file must live under `dbt/macros/` in your SQLBuild project.
+The problem: SQLBuild compiles the ref with your configured target and deliberately knows nothing about your environments. If that target resolves to your dev schemas, the manifest points at dev tables, not the production ones you want to copy from.
+
+The override fixes this:
+
+- You provide a `generate_schema_name` macro that resolves to your production schema layout, with no environment branching.
+- SQLBuild injects it into the isolated checkout only, never your real dbt project.
+- The macro must be named `generate_schema_name` (so it shadows your project's own) and live under `dbt/macros/` in your SQLBuild project.
 
 **The rule:** take your project's existing `generate_schema_name`, keep only what it does in production, and delete the dev/CI branching.
 
@@ -97,20 +107,27 @@ The override must produce production's schema names regardless of which target S
 
 ## Reuse modes
 
-The reuse mode is chosen per model based on its dbt materialization.
+SQLBuild picks the mode per model based on its dbt materialization.
 
 ### Complete reuse (tables)
 
-For `table` models, SQLBuild does a complete reuse: it creates a staging table from the production relation, promotes it atomically into the destination, and writes a fingerprint for the model. The model is then current, so dbt does not rebuild it.
+For `table` models, SQLBuild reuses the production table outright:
 
-### Seeded reuse (incremental, microbatch, snapshot)
+- Creates a staging table from the production relation.
+- Promotes it atomically into the destination.
+- Writes a fingerprint so the model counts as current.
 
-For `incremental`, `microbatch`, and `snapshot` models, SQLBuild does a seeded reuse, described in plan output as "baseline reuse before dbt catch-up":
+dbt does not rebuild it.
 
-- If the destination does not exist, SQLBuild copies the production relation as the baseline.
-- If the destination already has data, SQLBuild appends only the rows from the production relation past the destination's current cursor value.
+### Baseline reuse (incremental, microbatch, snapshot)
 
-dbt then runs the incremental model on top of the seeded baseline to catch up to the latest data. The cursor column is read from the model's `meta.sqlbuild.reuse_cursor` in the manifest:
+For `incremental`, `microbatch`, and `snapshot` models, SQLBuild seeds a baseline from production and lets dbt catch up:
+
+- If the destination does not exist, it copies the production relation as the baseline.
+- If the destination already has data, it appends only the rows past the destination's current cursor value.
+- dbt then runs the incremental model on top, catching up to the latest data.
+
+The cursor column is read from the model's `meta.sqlbuild.reuse_cursor` in the manifest:
 
 ```yaml
 models:
@@ -132,7 +149,11 @@ Only physical materializations are reuse candidates: `table`, `incremental`, `mi
 | `ephemeral` | skipped (no relation) |
 | anything else | skipped (unsupported materialization) |
 
-A model is also not reused (it is rebuilt instead) when a full refresh is requested, when an upstream source is stale and blocks it, or when its reuse metadata no longer matches the current relations or cursor.
+A qualifying model is still rebuilt instead of reused when:
+
+- a full refresh is requested,
+- an upstream source is stale and blocks it, or
+- its reuse metadata no longer matches the current relations or cursor.
 
 ## Plan output
 
@@ -147,7 +168,7 @@ REUSED=1  BASELINE_REUSED=1  TOTAL=2
 ```
 
 - `REUSED` counts complete table reuses.
-- `BASELINE_REUSED` counts seeded incremental baselines that dbt will catch up on.
+- `BASELINE_REUSED` counts incremental baselines that dbt will catch up on.
 
 ## Requirements and guards
 
