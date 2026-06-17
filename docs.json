@@ -29,6 +29,7 @@
           "concepts/dbt-compatibility/selection",
           "concepts/dbt-compatibility/change-aware-builds",
           "concepts/dbt-compatibility/reuse-from",
+          "concepts/dbt-compatibility/adding-sqlbuild-models",
           "concepts/dbt-compatibility/testing-and-debug"
         ]
       },
