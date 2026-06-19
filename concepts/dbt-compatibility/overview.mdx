@@ -8,6 +8,10 @@ Point SQLBuild at your existing dbt project to stop rebuilding it from scratch i
 - **Reuse from production.** Building a branch in dev usually rebuilds the whole project, even though most models are identical to production. SQLBuild compiles a production-shaped git branch, copies its already-built tables into your target, and seeds incremental models from a production baseline, so dbt only builds what your branch actually changed. See [Reuse from production](/concepts/dbt-compatibility/reuse-from).
 - **Change-aware builds.** SQLBuild fingerprints your dbt models in the warehouse and prunes the ones that have not changed, so a second build skips everything already current. See [Change-aware builds](/concepts/dbt-compatibility/change-aware-builds).
 
+<Frame>
+  <img src="/dbt-reuse.gif" alt="Pointing SQLBuild at a dbt project: the first dbt build reuses 8 unchanged tables from production and rebuilds only the 2 edited models; the second build skips everything because all planned dbt models are current" />
+</Frame>
+
 <Note>
 SQLBuild reads your dbt manifest and drives the `dbt` CLI as a subprocess. It never edits, patches, or moves files in your dbt project, and it does not reimplement Jinja, profiles, or dbt's selection language. Your dbt project runs exactly as it does today.
 </Note>
