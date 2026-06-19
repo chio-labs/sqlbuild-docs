@@ -141,3 +141,7 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# demo build artifacts (assets/demos)
+assets/demos/*.mp4
+assets/demos/palette.png
