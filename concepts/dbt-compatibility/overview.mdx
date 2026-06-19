@@ -121,5 +121,6 @@ SQLBuild runs `dbt compile` automatically as part of `sqb dbt plan/run/build/tes
 - [Selection](/concepts/dbt-compatibility/selection) - how `--select` and `--exclude` route work across both graphs.
 - [Reuse from production](/concepts/dbt-compatibility/reuse-from) - pull already-built tables from a production-shaped git branch instead of rebuilding.
 - [Change-aware builds](/concepts/dbt-compatibility/change-aware-builds) - fingerprinting, cascade propagation, source freshness, and pruning unchanged dbt models.
+- [Column lineage](/concepts/dbt-compatibility/column-lineage) - trace a column through dbt and SQLBuild models, plus model-level lineage.
 - [Adding SQLBuild models](/concepts/dbt-compatibility/adding-sqlbuild-models) - optionally write SQLBuild models, tests, audits, and scenarios downstream of dbt.
 - [Testing and debug](/concepts/dbt-compatibility/testing-and-debug) - mock dbt refs in unit tests, `sqb dbt test`, and `sqb dbt debug`.
