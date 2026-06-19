@@ -9,7 +9,7 @@ Building a dbt project in a dev or branch environment usually rebuilds everythin
 - It seeds incremental models from production so they only need to catch up, not rebuild.
 - dbt then builds only the models your branch actually changed.
 
-This is the dbt-compatibility counterpart to SQLBuild's native [reuse from production](/concepts/planning#reuse-from-production), which reuses relations from another live target in the same warehouse. This version reuses the dbt-built tables described by a different git branch.
+This is the dbt-compatibility counterpart to SQLBuild's native [reuse from production](/concepts/reuse-from-production), which reuses relations from another live target in the same warehouse. This version reuses the dbt-built tables described by a different git branch.
 
 ## How it works
 
@@ -184,6 +184,6 @@ Reuse uses git to read the production ref, with guards that fail fast on misconf
 There are two reuse mechanisms with the same name, operating at different layers:
 
 - **dbt reuse** (`[dbt].reuse_from`, this page) reuses dbt-built tables described by a production git branch, with an isolated reuse compile.
-- **Native reuse** (`targets.<name>.reuse_from`, see [Planning](/concepts/planning#reuse-from-production)) reuses SQLBuild relations from another live target in the same warehouse, keyed on SQLBuild version identity, with optional zero-copy cloning.
+- **Native reuse** (`targets.<name>.reuse_from`, see [Reuse from production](/concepts/reuse-from-production)) reuses SQLBuild relations from another live target in the same warehouse, keyed on SQLBuild version identity, with optional zero-copy cloning.
 
 They are configured independently and can be used in the same project for their respective model kinds.

@@ -1,0 +1,45 @@
+---
+title: "Reuse from production"
+description: "Stop rebuilding in dev what production already built. Reuse matching relations, and clone upstream inputs, from another target."
+---
+
+Rebuilding a project in dev wastes compute when most models are identical to what production already built. SQLBuild can reuse already-built relations from another target instead of re-executing the query, and can clone the upstream inputs a partial build needs straight from production.
+
+This is the native, warehouse-to-warehouse form of reuse. The [dbt compatibility](/concepts/dbt-compatibility/reuse-from) page covers the counterpart that reuses dbt-built tables described by a production git branch.
+
+## Reuse matching relations
+
+Dev targets can opt into reusing relations from another target (for example prod) instead of rebuilding from scratch. When a model's version identity in dev matches the version already built in prod, SQLBuild clones or copies the relation rather than re-executing the query, zero compute for models that match.
+
+Configure it on the target:
+
+```toml
+[targets.dev]
+schema = "dev"
+reuse_from = "prod"
+```
+
+The planner checks each model against the `reuse_from` target's fingerprints and relation state. A model is reused when:
+
+- The expected version identity matches the `reuse_from` target's built version.
+- The relation exists in the `reuse_from` target.
+- Source freshness in the `reuse_from` target is current.
+
+For incremental models, reuse clones or copies the prod relation as a baseline, then runs the incremental delta on top.
+
+Use `reuse_hard_copy = true` on the target to force a full data copy instead of a zero-copy clone. This is useful when the adapter does not support cloning, or when you need an independent copy.
+
+`reuse_from` cannot be used together with `defer_sources_to` on the same target.
+
+Reuse keys on the same fingerprints SQLBuild uses for change detection. See [Planning and Change Detection](/concepts/planning) for how version identities are computed.
+
+## Cloning upstream inputs
+
+When you build a slice of your project with `--select`, the **root models of your selection** (the ones whose upstream dependencies you did not also select) still need their inputs to exist. If a direct upstream is missing or stale, SQLBuild can clone it from production instead of forcing you to build the whole upstream chain.
+
+For each unselected direct upstream of a root model, SQLBuild clones (or copies) whatever the reuse origin currently has into your target. Two things to be clear about:
+
+- **No catch-up.** You get production's current data as the input, exactly as it is. SQLBuild does not run an incremental delta on a cloned input, even if the upstream is an incremental model.
+- **Not fingerprinted.** A cloned input is materialized only to feed the build, so SQLBuild does not write a fingerprint for it. This is deliberate: the upstream was never actually built or validated in this target, so recording it as current would let change detection wrongly skip it later. The next time you select that model, it is planned from scratch as if the clone had never happened.
+
+This lets you build and test a subgraph in dev against real production inputs without rebuilding everything upstream of it. Cloned inputs respect the same `reuse_hard_copy` and zero-copy clone behavior as reuse above, and appear under `Dependency baseline` in the plan output.

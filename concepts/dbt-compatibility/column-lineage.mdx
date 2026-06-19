@@ -1,0 +1,80 @@
+---
+title: "Column lineage"
+description: "Trace a column through your dbt and SQLBuild models, plus model-level lineage, from one command."
+---
+
+`sqb dbt lineage` traces dependencies across the combined dbt and SQLBuild graph. Point it at a column to see exactly where that column's values come from (or go), through every intermediate model. Point it at a model for the model-level dependency graph. It compiles your dbt project, reads the manifest, and analyzes the SQL, so lineage works whether a node is a dbt model or a SQLBuild model.
+
+## Column lineage
+
+Target a column with `resource:column` (a colon between the model and the column name):
+
+```bash
+sqb dbt lineage fct_orders:order_amount_usd
+```
+
+```
+Column trace  model.jaffle_analytics.fct_orders:order_amount_usd  upstream
+
+  <- model.jaffle_analytics.int_order_payments:order_amount_cents (expression)
+```
+
+SQLBuild parses each model's SQL to follow the column back through the transformations that produced it, annotating how each step derived the value (for example `expression` for a computed column). This works across the dbt/SQLBuild boundary: a SQLBuild column that reads from a dbt model via `__dbt_ref` traces straight into the dbt model's columns.
+
+Use `--direction downstream` to trace the other way (every column that is derived from this one):
+
+```bash
+sqb dbt lineage stg_payments:amount_cents --direction downstream
+```
+
+Column lineage supports `--direction upstream` (default) or `downstream`. It does not support `both`, the same restriction as the native [`sqb lineage`](/concepts/column-lineage) command.
+
+<Note>
+The dbt column target uses a colon: `model:column`. The native `sqb lineage` command uses a dot: `model.column`. The dbt command uses a colon because dbt model and package references already use dots.
+</Note>
+
+## Model lineage
+
+Target a model (no colon) for the model-level dependency graph:
+
+```bash
+sqb dbt lineage fct_orders
+```
+
+```
+Lineage  dbt:fct_orders  upstream
+`- dbt:int_order_payments
+  +- dbt:stg_order_statuses
+  | `- dbt:stg_orders
+  +- dbt:stg_orders
+  `- dbt:stg_payments
+```
+
+Model lineage supports `--direction both`, which shows upstream and downstream in one view:
+
+```bash
+sqb dbt lineage fct_orders --direction both
+```
+
+```
+Lineage  dbt:fct_orders  both
+upstream
+`- dbt:int_order_payments
+  +- dbt:stg_order_statuses
+  | `- dbt:stg_orders
+  +- dbt:stg_orders
+  `- dbt:stg_payments
+downstream
+`- dbt:agg_daily_revenue
+```
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `--direction` | `upstream` (default), `downstream`, or `both`. `both` is model lineage only. |
+| `--depth` | How many hops to traverse: an integer or `all` (default `all`). |
+| `--format` | `tree` (default), `list` (an edge list of `a -> b` pairs), or `json`. |
+| `--no-sql-validation` | Skip SQL validation while compiling the SQLBuild side. |
+
+See [Selection](/concepts/dbt-compatibility/selection) for how dbt and SQLBuild resources are named in the combined graph.
