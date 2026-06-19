@@ -58,6 +58,7 @@
           "concepts/functions",
           "concepts/incremental",
           "concepts/planning",
+          "concepts/reuse-from-production",
           "concepts/snapshots",
           "concepts/audits",
           "concepts/testing",

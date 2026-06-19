@@ -122,38 +122,7 @@ See [Incremental Models: Replay on change](/concepts/incremental#replay-on-chang
 
 ## Reuse from production
 
-Dev targets can opt into reusing relations from another target (e.g. prod) instead of rebuilding from scratch. When a model's version identity in dev matches the version already built in prod, SQLBuild clones or copies the relation rather than re-executing the query.
-
-Configure this on the target:
-
-```toml
-[targets.dev]
-schema = "dev"
-reuse_from = "prod"
-```
-
-The planner checks each model against the `reuse_from` target's fingerprints and relation state. Models are reused when:
-
-- The expected version identity matches the `reuse_from` target's built version.
-- The relation exists in the `reuse_from` target.
-- Source freshness in the `reuse_from` target is current.
-
-For incremental models, reuse clones or copies the prod relation as a baseline, then runs the incremental delta on top.
-
-Use `reuse_hard_copy = true` on the target to force a full data copy instead of a zero-copy clone (useful when the adapter doesn't support cloning or when you need an independent copy).
-
-`reuse_from` cannot be used together with `defer_sources_to` on the same target.
-
-## Cloning upstream inputs from production
-
-When you build a slice of your project with `--select`, the **root models of your selection** (the ones whose upstream dependencies you did not also select) still need their inputs to exist. If a direct upstream is missing or stale, SQLBuild can clone it from production instead of forcing you to build the whole upstream chain.
-
-For each unselected direct upstream of a root model, SQLBuild clones (or copies) whatever the reuse origin currently has into your target. Two things to be clear about:
-
-- **No catch-up.** You get production's current data as the input, exactly as it is. SQLBuild does not run an incremental delta on a cloned input, even if the upstream is an incremental model.
-- **Not fingerprinted.** A cloned input is materialized only to feed the build, so SQLBuild does not write a fingerprint for it. This is deliberate: the upstream was never actually built or validated in this target, so recording it as current would let change detection wrongly skip it later. The next time you select that model, it is planned from scratch as if the clone had never happened.
-
-This lets you build and test a subgraph in dev against real production inputs without rebuilding everything upstream of it. Cloned inputs respect the same `reuse_hard_copy` and zero-copy clone behavior as [reuse from production](#reuse-from-production), and appear under `Dependency baseline` in the plan output.
+When a model's version identity matches a relation already built in another target, the planner can reuse that relation instead of rebuilding it, and can clone the upstream inputs a partial build needs from production. This reuses the same fingerprints described above. See [Reuse from production](/concepts/reuse-from-production) for configuration and behavior.
 
 ## Run despite unchanged
 
