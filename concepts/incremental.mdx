@@ -151,7 +151,9 @@ Without microbatch mode, the entire replay range is processed in one pass.
 
 ### Mixed-grain chains
 
-When a downstream microbatch model depends on an upstream model with a coarser time grain, SQLBuild automatically widens the replay window to the largest participating grain. For example, an hourly model downstream of a daily model will process in day-sized batches to prevent empty windows:
+When a downstream microbatch model reads from an upstream model with a coarser time grain, SQLBuild aligns the replay to the coarsest participating grain (the model's own grain and its cursor-input grains). This happens on every run that resolves cursor bounds from upstream models, not only when something changes. It is independent of the `replay_on_change` cascade behavior described below.
+
+Alignment does two things: it floors the replay window edges to the coarsest grain, and it coarsens the batch size to that grain. For example, an hourly model downstream of a daily model processes in day-sized batches, so each batch lines up with a unit of upstream data that actually advances instead of producing empty or boundary-straddling windows:
 
 ```sql
 -- Upstream: daily grain, 2d batches
@@ -168,7 +170,7 @@ MODEL (
   batch_size 2d,
 );
 
--- Downstream: hourly grain, but widens to day automatically
+-- Downstream: hourly grain, but aligns to day automatically
 MODEL (
   materialized incremental,
   incremental_strategy delete_insert,
