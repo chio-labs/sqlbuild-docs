@@ -105,11 +105,22 @@ MODEL (
 );
 ```
 
-SQLBuild uses these to compute `MIN/MAX` across all upstream inputs and determine the replay window.
+SQLBuild uses these to compute `MIN/MAX` across the listed inputs and determine the replay window.
+
+#### Listed inputs bound the window; unlisted inputs do not
+
+Only the inputs you list in `cursor_inputs` bound the replay window. This is an explicit choice, and it has two consequences worth understanding:
+
+- **Listed inputs** drive the window. Their new data advances the `MAX`, which is what tells SQLBuild how far to reprocess and which rows of the target to rewrite.
+- **Unlisted inputs are read in full.** SQLBuild does not add a cursor filter to them, and they do not bound the window. This is correct for lookup or dimension tables that have no meaningful cursor column: you do not list them, and SQLBuild reads them whole rather than trying to filter on a column that may not exist.
+
+The implication for `delete_insert` and `merge`: the target rows that get rewritten are the ones whose cursor falls inside the window derived from the listed inputs. If an unlisted input changes in a way that should affect target rows outside that window, those rows are not rewritten on a normal incremental run. List every input whose new data should drive reprocessing; leave unlisted only the inputs you intend to read in full.
+
+To capture changes that fall outside the normal forward window, see [Lookback](#lookback) for late-arriving data and [Replay on change](#replay-on-change) for model changes.
 
 ### Lookback
 
-Lookback extends the start of the replay window backwards to re-process recent data. This is useful for handling late-arriving records:
+Lookback extends the start of the replay window backwards to re-process recent data. The cursor is forward-moving, so use lookback to capture late-arriving or backfilled records that land just behind the current position:
 
 ```sql
 MODEL (
@@ -187,7 +198,7 @@ MODEL (
 
 ## Replay on change
 
-When a model's version identity changes (query, config, upstream cascade, or any other change reason), `replay_on_change` controls how much data to reprocess:
+When a model's version identity changes (query, config, upstream cascade, or any other change reason), `replay_on_change` is the explicit, per-model policy for how much data to reprocess. Reprocessing is a policy you set, not an automatic forced rebuild, so a definition change does not silently trigger a full rebuild of large downstream tables. You choose the cost per model:
 
 | Value | Effect |
 |-------|--------|
