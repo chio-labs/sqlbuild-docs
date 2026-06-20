@@ -18,25 +18,25 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | Zero-row assertions | `__assert__` CTEs in tests and scenarios | No | No |
 | **Audits** | | | |
 | Built-in audits | not_null, unique, accepted_values, relationships | not_null, unique, accepted_values, relationships | Extensive (statistical, string pattern, etc.) |
-| Blocking audits | Block promotion from staging table | Tests run after materialization | Block during plan (production untouched); during run, data already written |
+| Blocking audits | Block promotion from staging table | Tests run after materialization | Audits gate plan application; run-time audits execute after the interval is materialized |
 | Delta/interval-scoped audits | Per-microbatch audit cycle before DML | No | Audit query filtered to processed intervals for time-range models |
 | **Compilation** | | | |
-| SQL validation | Offline, compile-time | dbt Fusion (proprietary license) | SQLGlot-based |
-| Column-level lineage | Compile-time, fast and rich modes | Post-hoc via docs | Compile-time |
+| SQL validation | Offline, compile-time (Polyglot) | dbt Core: none; dbt Fusion engine: compile-time (proprietary; built on Apache-2.0 dbt Core v2) | Compile-time (SQLGlot) |
+| Column-level lineage | Compile-time, fast and rich modes | dbt Core: post-hoc via docs; dbt Fusion engine: compile-time | Compile-time |
 | Column contract validation | Compile-time inference plus runtime enforcement with `contract enforced` | YAML schema contracts at runtime | Schema contracts via plan |
 | SQL transpilation | For local E2E replay into DuckDB | No | For cross-dialect model execution |
 | Python macros | `@macro()` syntax | No (Jinja only) | SQLMesh macro syntax |
 | Jinja support | No (Python macros instead) | Yes (core templating) | Yes |
 | **Incremental** | | | |
-| Incremental strategies | append, delete_insert, merge, SCD Type 2 | append, delete+insert, merge, snapshots | append, delete_insert (time-range), merge (unique-key), SCD Type 2, partition (stateful) |
+| Incremental strategies | append, delete_insert, merge, SCD Type 2 | append, delete_insert, merge, snapshots | delete_insert (time-range), merge (unique-key), SCD Type 2, partition |
 | Microbatch execution | Configurable batch sizes with per-batch audits | Microbatch (recent addition) | Batch size support |
-| Stateful interval tracking | No - cursor-based (no external state) | No | Yes - tracks which intervals ran |
-| SCD Type 2 models | Timestamp and check strategies, historical input, hard deletes | Snapshots (limited) | Built-in |
+| Stateful interval tracking | Cursor-based, no external interval state | No | Tracks which intervals have run (in state store) |
+| SCD Type 2 models | Timestamp and check strategies, historical input, hard deletes | Snapshots (timestamp and check strategies) | `SCD_TYPE_2` model kind (timestamp and check strategies) |
 | **Planning and change detection** | | | |
-| Change-aware by default | Fingerprints models, seeds, functions, Python nodes; skips unchanged work including audits | dbt State (paid add-on) or external orchestrator | Version hash comparison |
+| Change-aware by default | Fingerprints models, seeds, functions, Python nodes; skips unchanged work including audits | dbt State (paid) | Version hash comparison |
 | Warehouse-native state | Append-only tables in the warehouse; no external state database | manifest.json artifacts | Requires external state store (SQLite/PostgreSQL) |
-| Source freshness | `sqb freshness` with adapter/column/sql strategies, lag tolerance, and CI gating | `dbt source freshness` | Adapter-metadata signal for external sources (no standalone command, no per-source config) |
-| Reuse from production | `reuse_from` clones/copies unchanged relations from another target | dbt State clone (paid) | N/A |
+| Source freshness | `sqb freshness` with adapter/column/sql strategies, lag tolerance, and CI gating | `dbt source freshness` | No dedicated freshness command; `signals` gate model evaluation until external data is ready |
+| Reuse from production | `reuse_from` clones/copies unchanged relations from another target | dbt State clone (paid) | Virtual environments reuse fingerprint-matched physical tables across environments (shared physical storage) |
 | Cascade propagation | Topological walk with `replay_on_change` policy inheritance and override | No cascade control | Cascades through version hashes |
 | **Environments** | | | |
 | Virtual environments | Pointer swaps with hash-based version reuse (opt-in) | No | Pointer swaps, no compute cost |
@@ -55,8 +55,8 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | Providers | Shared runtime services with name-based injection into nodes and hooks | No | No |
 | **dbt** | | | |
 | dbt compatibility | Run alongside dbt - reads manifest, no migration | N/A | Jinja compatibility layer plus own macro system |
-| Change-aware dbt builds | Fingerprints dbt models in the warehouse and prunes unchanged ones from the dbt run | dbt State (separate account/login, preview) | N/A |
-| Reuse dbt builds from production | Pull already-built dbt tables from a production git branch, seed incrementals for catch-up | dbt State clone (separate account/login) | N/A |
+| Change-aware dbt builds | Fingerprints dbt models in the warehouse and prunes unchanged ones from the dbt run | dbt State (paid) | N/A |
+| Reuse dbt builds from production | Pull already-built dbt tables from a production git branch, seed incrementals for catch-up | dbt State clone (paid) | N/A |
 | **Sources** | | | |
 | Source loaders | Python `@loader` functions with table/append/delete_insert/merge strategies | No (external to dbt) | No (external to SQLMesh) |
 | Declarative ingestion | ingestr integration - YAML-only config for 50+ sources | No | No |
