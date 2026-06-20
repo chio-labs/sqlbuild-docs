@@ -7,62 +7,103 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 
 ## Feature comparison
 
+### Testing
+
 | Feature | SQLBuild | dbt | SQLMesh |
 |---------|----------|-----|---------|
-| **Testing** | | | |
 | Unit tests with model chaining | Chain across multiple models | YAML-stub, single model | CTE-based, single model |
 | Macros as test helpers | Tests are SQL - macros work as reusable fixture generators | No (YAML stubs) | No |
 | E2E scenario tests | Fixture worlds with real graph execution | No | No |
 | Local E2E replay | Capture from warehouse, replay in DuckDB | No | No |
 | Macro / UDF / table function tests | `TEST(mode: macro/udf/table_fn)` | No | No |
 | Zero-row assertions | `__assert__` CTEs in tests and scenarios | No | No |
-| **Audits** | | | |
+
+### Audits
+
+| Feature | SQLBuild | dbt | SQLMesh |
+|---------|----------|-----|---------|
 | Built-in audits | not_null, unique, accepted_values, relationships | not_null, unique, accepted_values, relationships | Extensive (statistical, string pattern, etc.) |
 | Blocking audits | Block promotion from staging table | Tests run after materialization | Audits gate plan application; run-time audits execute after the interval is materialized |
 | Delta/interval-scoped audits | Per-microbatch audit cycle before DML | No | Audit query filtered to processed intervals for time-range models |
-| **Compilation** | | | |
+
+### Compilation
+
+| Feature | SQLBuild | dbt | SQLMesh |
+|---------|----------|-----|---------|
 | SQL validation | Offline, compile-time (Polyglot) | dbt Core: none; dbt Fusion engine: compile-time (proprietary; built on Apache-2.0 dbt Core v2) | Compile-time (SQLGlot) |
 | Column-level lineage | Compile-time, fast and rich modes | dbt Core: post-hoc via docs; dbt Fusion engine: compile-time | Compile-time |
 | Column contract validation | Compile-time inference plus runtime enforcement with `contract enforced` | YAML schema contracts at runtime | Schema contracts via plan |
 | SQL transpilation | For local E2E replay into DuckDB | No | For cross-dialect model execution |
 | Python macros | `@macro()` syntax | No (Jinja only) | SQLMesh macro syntax |
 | Jinja support | No (Python macros instead) | Yes (core templating) | Yes |
-| **Incremental** | | | |
+
+### Incremental
+
+| Feature | SQLBuild | dbt | SQLMesh |
+|---------|----------|-----|---------|
 | Incremental strategies | append, delete_insert, merge, SCD Type 2 | append, delete_insert, merge, snapshots | delete_insert (time-range), merge (unique-key), SCD Type 2, partition |
 | Microbatch execution | Configurable batch sizes with per-batch audits | Microbatch (recent addition) | Batch size support |
 | Stateful interval tracking | Cursor-based, no external interval state | No | Tracks which intervals have run (in state store) |
 | SCD Type 2 models | Timestamp and check strategies, historical input, hard deletes | Snapshots (timestamp and check strategies) | `SCD_TYPE_2` model kind (timestamp and check strategies) |
-| **Planning and change detection** | | | |
+
+### Planning and change detection
+
+| Feature | SQLBuild | dbt | SQLMesh |
+|---------|----------|-----|---------|
 | Change-aware by default | Fingerprints models, seeds, functions, Python nodes; skips unchanged work including audits | dbt State (paid) | Version hash comparison |
 | Warehouse-native state | Append-only tables in the warehouse; no external state database | manifest.json artifacts | Requires external state store (SQLite/PostgreSQL) |
 | Source freshness | `sqb freshness` with adapter/column/sql strategies, lag tolerance, and CI gating | `dbt source freshness` | No dedicated freshness command; `signals` gate model evaluation until external data is ready |
 | Reuse from production | `reuse_from` clones/copies unchanged relations from another target | dbt State clone (paid) | Virtual environments reuse fingerprint-matched physical tables across environments (shared physical storage) |
 | Cascade propagation | Topological walk with `replay_on_change` policy inheritance and override | No cascade control | Cascades through version hashes |
-| **Environments** | | | |
+
+### Environments
+
+| Feature | SQLBuild | dbt | SQLMesh |
+|---------|----------|-----|---------|
 | Virtual environments | Pointer swaps with hash-based version reuse (opt-in) | No | Pointer swaps, no compute cost |
 | Data diffs | Full row-level data comparison across targets or virtual environments | No | Table diff |
 | Zero-copy cloning | `sqb clone` | No | No |
-| **Models** | | | |
+
+### Models
+
+| Feature | SQLBuild | dbt | SQLMesh |
+|---------|----------|-----|---------|
 | SQL models | `MODEL()` header with inline config | Jinja-templated SQL + YAML sidecar | `MODEL` DDL |
 | Python models | Coming soon | Pandas, PySpark, Snowpark, BigFrames | Pandas, PySpark, Snowpark, BigFrames |
 | Custom materializations | Python with full framework hooks | Jinja-based | Python-based custom model kinds |
 | Lifecycle hooks | Typed `sql()`/`python()` hooks with compile-time validation and `HookContext` | Jinja pre/post hooks | Python pre/post hooks |
-| **Python nodes** | | | |
+
+### Python nodes
+
+| Feature | SQLBuild | dbt | SQLMesh |
+|---------|----------|-----|---------|
 | Tasks | `@task` - Python computation as DAG nodes | No | No |
 | Assets | `@asset` - external artifact production/observation | No | No |
 | Checks | `@check` - Python validation of tasks, assets, and loaders | No | No |
 | Factories | `@factory` - programmatic node generation | No | No |
 | Providers | Shared runtime services with name-based injection into nodes and hooks | No | No |
-| **dbt** | | | |
+
+### dbt interoperability
+
+| Feature | SQLBuild | dbt | SQLMesh |
+|---------|----------|-----|---------|
 | dbt compatibility | Run alongside dbt - reads manifest, no migration | N/A | Jinja compatibility layer plus own macro system |
 | Change-aware dbt builds | Fingerprints dbt models in the warehouse and prunes unchanged ones from the dbt run | dbt State (paid) | N/A |
 | Reuse dbt builds from production | Pull already-built dbt tables from a production git branch, seed incrementals for catch-up | dbt State clone (paid) | N/A |
-| **Sources** | | | |
+
+### Sources
+
+| Feature | SQLBuild | dbt | SQLMesh |
+|---------|----------|-----|---------|
 | Source loaders | Python `@loader` functions with table/append/delete_insert/merge strategies | No (external to dbt) | No (external to SQLMesh) |
 | Declarative ingestion | ingestr integration - YAML-only config for 50+ sources | No | No |
 | Auto-load during builds | Managed sources loaded before dependent models | No | No |
 | Source deferral | `--defer-sources-to` reads source data from another target | No | No |
-| **Other** | | | |
+
+### Other
+
+| Feature | SQLBuild | dbt | SQLMesh |
+|---------|----------|-----|---------|
 | Reference syntax | `__ref()` - parses as valid SQL | `{{ ref() }}` - Jinja template | `model_name` with dependency tracking |
 | Adapters | DuckDB, MotherDuck, Snowflake, BigQuery, Databricks, PostgreSQL, SQL Server | 30+ (community adapters) | DuckDB, Snowflake, BigQuery, Databricks, Spark, Redshift, Postgres, Trino, MySQL |
 | State requirements | Stateless by default | manifest.json + target/ | Requires state store (local database or PostgreSQL for production) |
