@@ -19,7 +19,7 @@
         "pages": [
           "index",
           "quickstart",
-          "concepts/comparison-with-sqlmesh"
+          "concepts/feature-comparison"
         ]
       },
       {
