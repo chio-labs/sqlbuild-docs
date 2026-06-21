@@ -97,6 +97,13 @@ Managed sources support incremental write strategies (`table`, `append`, `delete
 
 See [Loaders](/concepts/python-nodes/loaders) for the full guide on writing loader functions, write strategies, the loader context API, and auto-load behavior during builds.
 
+### Declarative integrations (no Python)
+
+For common ingestion you can declare the source entirely in YAML, with no `@loader` function. SQLBuild generates the loader for you and runs it during the build:
+
+- [dlt](/integrations/dlt) - declare `dlt_sources` for `rest_api`, `sql_database`, and `filesystem` sources.
+- [ingestr](/integrations/ingestr) - add an `ingestr` block to a source to pull from 50+ sources.
+
 ## Source freshness
 
 Source freshness lets SQLBuild observe whether a source's data has changed between runs. This feeds into [planning and change detection](/concepts/planning): models downstream of unchanged sources are skipped automatically.
