@@ -1,0 +1,64 @@
+---
+title: "Diffing dbt builds"
+description: "Compare your dbt build against a production baseline with sqb dbt diff."
+---
+
+`sqb dbt diff` compares the relations your dbt build produces against a production baseline, so you can confirm dev matches prod before you promote. It resolves the production-shaped relations the same way reuse does (by compiling your dbt project at a configured git ref), then compares each model.
+
+Every run requires exactly one comparison mode:
+
+```bash
+sqb dbt diff --schema-only
+sqb dbt diff --full
+sqb dbt diff --bounded <value>
+```
+
+Running without a mode is an error.
+
+## Modes
+
+### `--schema-only`
+
+Compares column names and types per model, without reading row data. Fast, needs no key, and works on any model:
+
+```
+     Model  stg_orders
+       Key  <not used>
+Comparison  schema-only
+
+Schemas
+- - - - -
+No schema differences.
+```
+
+Use this as a cheap structural check: it catches added, dropped, or retyped columns across the build without scanning rows.
+
+### `--full`
+
+Compares rows. Full row comparison needs a key to align rows between the two sides, so each compared model must define `config.unique_key` in its dbt config:
+
+```
+error[C341]: dbt diff requires model 'agg_daily_revenue' to define config.unique_key for row comparison
+  = help: Add unique_key to the dbt model config, or run sqb dbt diff --schema-only.
+```
+
+Add `unique_key` to the model config to enable a full row diff, or fall back to `--schema-only` for models without a natural key.
+
+### `--bounded`
+
+Compares only a recent window of rows instead of the whole table, using the model's SQLBuild cursor metadata. This keeps the comparison cheap on large relations. The value depends on the cursor kind:
+
+- **Timestamp cursor:** a duration like `30d`, `12h`, or `15m` - compares the last N of time.
+- **Integer cursor:** an integer bound.
+
+```bash
+sqb dbt diff --bounded 30d
+```
+
+The model must define SQLBuild cursor metadata for `--bounded` to apply; without it, SQLBuild reports a configuration error pointing you to add cursor metadata or use another mode.
+
+## On this topic
+
+- [Reuse from production](/concepts/dbt-compatibility/reuse-from) - how the production baseline is resolved and reused.
+- [Clone](/concepts/dbt-compatibility/clone) - copy or clone production relations into a target.
+- [Testing](/concepts/dbt-compatibility/testing) - unit tests against dbt models.

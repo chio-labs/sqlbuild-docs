@@ -30,8 +30,11 @@
           "concepts/dbt-compatibility/reuse-from",
           "concepts/dbt-compatibility/change-aware-builds",
           "concepts/dbt-compatibility/column-lineage",
-          "concepts/dbt-compatibility/adding-sqlbuild-models",
-          "concepts/dbt-compatibility/testing-and-debug"
+          "concepts/dbt-compatibility/testing",
+          "concepts/dbt-compatibility/scenarios",
+          "concepts/dbt-compatibility/diff",
+          "concepts/dbt-compatibility/clone",
+          "concepts/dbt-compatibility/adding-sqlbuild-models"
         ]
       },
       {

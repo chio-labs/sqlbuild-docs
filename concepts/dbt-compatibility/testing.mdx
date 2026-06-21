@@ -1,0 +1,96 @@
+---
+title: "Testing dbt models"
+description: "Write SQLBuild unit tests against your dbt models, mock sources/seeds/refs, and chain assertions across the dbt graph."
+---
+
+SQLBuild unit tests can target your dbt models directly. You mock the inputs at the edges of a chain, assert the output of a model downstream, and the real intermediate dbt models run in between to produce it. dbt's own unit tests are single-model and stub every input by hand; SQLBuild lets you test a model *through* its upstreams, and because tests are SQL you can use macros to generate repetitive fixtures.
+
+Tests live under `tests/unit/` in your SQLBuild project and begin with a `TEST();` header.
+
+## Mocking dbt inputs
+
+A test replaces a model's real inputs with fixture CTEs. The CTE name encodes what it mocks:
+
+| Prefix | Mocks | Example |
+|--------|-------|---------|
+| `__dbt_ref__<model>` | A dbt model dependency (no package) | `__dbt_ref__stg_orders` |
+| `__dbt_ref__<package>__<model>` | A dbt model dependency (with package) | `__dbt_ref__analytics__fact_orders` |
+| `__source__<source>__<table>` | A dbt source | `__source__raw__orders` |
+| `__source__<schema>__<source>__<table>` | A dbt source (schema-qualified) | `__source__analytics__raw__orders` |
+| `__seed__<seed>` | A dbt seed | `__seed__countries` |
+| `__ref__<model>` | A SQLBuild model dependency | `__ref__downstream_orders` |
+| `__macro__<name>` | A macro (replaces every `@<name>(...)` call) | `__macro__country_filter` |
+| `__expected__<model>` | The expected output to assert against | `__expected__downstream_orders` |
+
+Mocking a dbt model lets you test downstream logic without a warehouse connection or a compiled manifest:
+
+```sql
+TEST();
+
+WITH
+__dbt_ref__analytics__fact_orders AS (
+  SELECT 1 AS order_id, 100 AS customer_id, 2500 AS amount_cents
+),
+__expected__downstream_orders AS (
+  SELECT 1 AS order_id
+)
+SELECT 1
+```
+
+## Chaining across models
+
+To test a model through its upstreams, mock at the edges and assert downstream. Provide fixture rows for the source, seed, or upstream model at the top of the chain, assert the output of a model further down with `__expected__`, and SQLBuild runs the real dbt models in between.
+
+```sql
+TEST();
+
+WITH
+__source__raw__orders AS (
+  SELECT 70 AS order_id, cast('2026-07-01' AS date) AS order_date
+),
+__expected__fact_scenario_chain AS (
+  SELECT 70 AS order_id, cast('2026-07-01' AS date) AS order_date
+)
+SELECT 1
+```
+
+Here `__source__raw__orders` mocks the source at the top of the chain, and `__expected__fact_scenario_chain` asserts the output of a dbt model two layers downstream. The intermediate staging model runs for real to get there, so a change anywhere in the chain that breaks the final output is caught.
+
+## Generating fixtures with macros
+
+Because tests are SQL, your `@macro()` functions work inside them as fixture generators. Instead of copy-pasting near-identical rows, call a macro that returns the fixture SQL:
+
+```sql
+TEST();
+
+WITH
+__source__raw__orders AS (
+  @mock_orders()
+),
+__expected__fact_scenario_chain AS (
+  SELECT 70 AS order_id, cast('2026-07-01' AS date) AS order_date
+)
+SELECT 1
+```
+
+The `@mock_orders()` call expands at compile time to whatever SQL the Python macro returns. dbt unit tests use static YAML fixtures with no macro support, which is what makes repetitive test data unmaintainable at scale. See [Testing](/concepts/testing) for the full unit-test reference, including macro mocking and macro tests.
+
+## Running tests
+
+`sqb dbt test` runs dbt's own tests first, then SQLBuild's unit tests and audits for the selected models:
+
+```bash
+sqb dbt test
+```
+
+1. **dbt tests run first** with your original selectors.
+2. **SQLBuild unit tests run** for the selected models.
+3. **SQLBuild audits run** for the selected models.
+
+dbt's `test_type:` selectors map to SQLBuild equivalents: `test_type:unit` runs SQLBuild unit tests, `test_type:data` runs SQLBuild audits. Without a test-type selector, both run.
+
+## On this topic
+
+- [Scenarios](/concepts/dbt-compatibility/scenarios) - end-to-end fixture-world tests for dbt models, with warehouse capture and local replay.
+- [Diff](/concepts/dbt-compatibility/diff) - compare a dbt build against a production baseline.
+- [Adding SQLBuild models](/concepts/dbt-compatibility/adding-sqlbuild-models) - write SQLBuild models, audits, and scenarios downstream of dbt.
