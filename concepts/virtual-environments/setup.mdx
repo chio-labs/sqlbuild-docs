@@ -41,7 +41,7 @@ Each physical target that uses virtual mode needs a `[targets.<name>.state]` blo
 | `schema` | Yes | Schema name for state tables |
 | `connection` | Yes | Backend-specific connection config |
 | `allow_reset` | No | Whether `sqb state reset` is permitted (default: `false`) |
-| `unsuffixed_virtual_env` | No | VDE name that uses the base schema without a suffix (for [adopt/detach](/concepts/advanced/virtual-environments/adopt-detach)) |
+| `unsuffixed_virtual_env` | No | VDE name that uses the base schema without a suffix (for [adopt/detach](/concepts/virtual-environments/adopt-detach)) |
 
 ### DuckDB state backend
 
@@ -149,7 +149,7 @@ database = "state.duckdb"
 
 With this config, VDE `dev` uses `dev.fact_orders` while other VDEs like `kevin` use `dev__kevin.fact_orders`.
 
-This setting is also required for [adopt and detach](/concepts/advanced/virtual-environments/adopt-detach) operations so that existing consumer queries continue to work after migrating to virtual mode.
+This setting is also required for [adopt and detach](/concepts/virtual-environments/adopt-detach) operations so that existing consumer queries continue to work after migrating to virtual mode.
 
 ## Janitor configuration
 
@@ -162,7 +162,7 @@ retention_days = 30
 max_checkpoints = 20
 ```
 
-See [Janitor](/concepts/advanced/virtual-environments/janitor) for details on what gets cleaned up and how retention works.
+See [Janitor](/concepts/virtual-environments/janitor) for details on what gets cleaned up and how retention works.
 
 ## State tables
 
