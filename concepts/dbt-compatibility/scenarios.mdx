@@ -1,0 +1,80 @@
+---
+title: "Scenario tests for dbt models"
+description: "End-to-end scenario tests for dbt models, with warehouse capture and local DuckDB replay."
+---
+
+Scenario tests stand up a fixture world, run your dbt graph end to end, and assert on the results. Where a unit test checks one model's output, a scenario test exercises models running together, catching the integration bugs that only surface in combination. Scenarios can read real dbt sources, or mock them, and can be captured from the warehouse and replayed locally on DuckDB.
+
+Scenarios live under `tests/scenarios/` in your SQLBuild project and begin with a `SCENARIO(...)` header:
+
+```sql
+SCENARIO (description: "Mocked dbt ref scenario", tags: ["dbt_ref"]);
+
+WITH
+__dbt_ref__analytics__fact_orders AS (
+  SELECT 1 AS order_id
+),
+__expected__downstream_orders AS (
+  SELECT 1 AS order_id
+),
+__assert__no_zero_orders AS (
+  SELECT * FROM __ref("downstream_orders")
+  WHERE order_id = 0
+)
+SELECT 1
+```
+
+A scenario can mock inputs with the same prefixes as unit tests (`__dbt_ref__`, `__source__`, `__seed__`), assert a model's output with `__expected__`, and add zero-row assertions with `__assert__` CTEs. An `__assert__` CTE passes when it returns no rows, so the example above passes only if no order has `order_id = 0`.
+
+## Running scenarios
+
+```bash
+sqb dbt scenario test
+```
+
+`sqb dbt scenario` defaults to `test`. It compiles the dbt project, resolves the scenarios under `tests/scenarios/`, and runs each one against the warehouse, reporting per-scenario results:
+
+```
+Scenario (1 selected)
+
+  dbt_stg_scenario_orders
+    expect    expected stg_scenario_orders            PASS
+
+PASS=1  FAIL=0  ERROR=0  SKIP=0  TOTAL=1
+```
+
+Pass scenario names to run a subset:
+
+```bash
+sqb dbt scenario test dbt_stg_scenario_orders
+```
+
+## Capture and local replay
+
+Running scenarios against the warehouse needs a connection and incurs warehouse cost. You can instead capture a scenario's real input data once and replay it locally on DuckDB.
+
+Capture snapshots the warehouse relations a scenario reads:
+
+```bash
+sqb dbt scenario capture dbt_stg_scenario_orders
+```
+
+This writes a snapshot under `tests/_scenario_snapshots/<scenario>/`: a `scenario.json` manifest plus one JSONL file per captured relation (for example `sources/raw__orders.jsonl`). The manifest records each column's warehouse type and its local DuckDB type so the replay reproduces the same shapes.
+
+<Warning>
+Captured snapshots contain real warehouse data. Review them before committing, as they may include sensitive rows.
+</Warning>
+
+Replay a captured scenario locally with `--local`:
+
+```bash
+sqb dbt scenario test dbt_stg_scenario_orders --local
+```
+
+`--local` runs the scenario against the captured snapshot on DuckDB instead of the warehouse, so it needs no warehouse connection and is fast and deterministic. This is well suited to CI: capture once against a representative slice, commit the snapshot, and replay in CI without warehouse access.
+
+## On this topic
+
+- [Testing](/concepts/dbt-compatibility/testing) - unit tests against dbt models, with mocks and model chaining.
+- [Diff](/concepts/dbt-compatibility/diff) - compare a dbt build against a production baseline.
+- [Scenarios](/concepts/scenarios) - the full scenario reference, including fixture worlds and assertions.

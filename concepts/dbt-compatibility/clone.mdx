@@ -1,0 +1,44 @@
+---
+title: "Cloning dbt relations"
+description: "Copy or zero-copy clone production-shaped dbt relations into a target with sqb dbt clone."
+---
+
+`sqb dbt clone` populates a target with the already-built relations from your production baseline, without running dbt. It resolves the production-shaped relations the same way reuse does (by compiling your dbt project at the configured `reuse_from` git ref), then clones or copies each one into the target schema.
+
+```bash
+sqb dbt clone
+```
+
+```
+sqb clone  origin=main destination=dev
+
+  agg_daily_revenue    OK     copied
+  dim_customers        OK     copied
+  fct_orders           OK     copied
+  ...
+
+CLONED=0  COPIED=10  RECREATED_VIEWS=0  PASS=10  WARN=0  FAIL=0  TOTAL=10
+```
+
+The origin is the `reuse_from.git_ref` from your configuration; the destination is the active target. Where the warehouse supports zero-copy cloning, relations are cloned (`CLONED`); otherwise they are copied (`COPIED`). Views are recreated to point at the cloned relations (`RECREATED_VIEWS`).
+
+This differs from [reuse from production](/concepts/dbt-compatibility/reuse-from), which runs as a pre-phase inside a build and only brings over the unchanged relations a build needs. `sqb dbt clone` is a standalone operation that populates the whole target (or a selected subset) up front.
+
+## Options
+
+| Flag | Effect |
+|------|--------|
+| `--select` / `-s` | Limit to matching models (dbt selection syntax). |
+| `--exclude` | Exclude matching models. |
+| `--hard-copy` | Force a full copy instead of a zero-copy clone, even where the warehouse supports cloning. |
+| `--no-sql-validation` | Skip SQL validation during the clone. |
+
+```bash
+sqb dbt clone --select path:models/marts
+sqb dbt clone --hard-copy
+```
+
+## On this topic
+
+- [Reuse from production](/concepts/dbt-compatibility/reuse-from) - reuse unchanged relations as a build pre-phase.
+- [Diff](/concepts/dbt-compatibility/diff) - compare a build against the production baseline.
