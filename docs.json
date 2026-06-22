@@ -61,7 +61,15 @@
           "concepts/macros",
           "concepts/functions",
           "concepts/incremental",
-          "concepts/planning",
+          {
+            "group": "Planning and Change Detection",
+            "pages": [
+              "concepts/planning",
+              "concepts/planning/cascade-propagation",
+              "concepts/planning/source-freshness",
+              "concepts/planning/selection-and-staleness"
+            ]
+          },
           "concepts/reuse-from-production",
           "concepts/snapshots",
           "concepts/audits",

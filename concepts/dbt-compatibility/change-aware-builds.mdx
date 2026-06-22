@@ -91,7 +91,7 @@ replay_on_change = "forward_only"
 | `forward_only` (default) | Changed models run incrementally, picking up new data from where they left off. |
 | `full` | Changed models are rebuilt in full. SQLBuild adds `--full-refresh` to the dbt run when there is model work to do. |
 
-Unlike SQLBuild's own per-model [`replay_on_change`](/concepts/planning#replay-on-change), the dbt setting is all-or-nothing across the run and does not support bounded windows. A `bounded-<duration>` value is rejected for dbt.
+Unlike SQLBuild's own per-model [`replay_on_change`](/concepts/planning/cascade-propagation#replay-on-change), the dbt setting is all-or-nothing across the run and does not support bounded windows. A `bounded-<duration>` value is rejected for dbt.
 
 ## What is never touched
 
