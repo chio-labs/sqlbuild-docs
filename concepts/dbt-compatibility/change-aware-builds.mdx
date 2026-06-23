@@ -23,6 +23,16 @@ The version identity comes from dbt's own `checksum` for the model node in the m
 
 After dbt runs, SQLBuild writes an updated fingerprint for each dbt model that executed, so the next plan sees them as current.
 
+### Overriding change detection with `--force`
+
+`--force` bypasses the table above for the current run: every selected dbt model is planned and run regardless of whether its fingerprint matches or its relation exists.
+
+```bash
+sqb dbt build --select path:models/marts --force
+```
+
+Use it when you want to rebuild despite a clean plan, for example after an out-of-band change to the warehouse that SQLBuild's fingerprints cannot see. `--force` does not change fingerprints permanently or disable tracking; it just ignores the skip decision this once, and the next run without it is change-aware again. It is distinct from `--full-refresh`: `--force` decides *whether* a model runs, while `--full-refresh` decides *how* (a full rebuild rather than an incremental run). This mirrors native `sqb build --force`. See [Flags](/concepts/dbt-compatibility/overview#flags) for how flags route across dbt and SQLBuild.
+
 ### What SQLBuild creates in your warehouse
 
 All state is append-only and lives in your target schema, in the same warehouse dbt already uses. There is no external state store, no manifest comparison server, and no requirement to log in anywhere. SQLBuild creates two small tables:
