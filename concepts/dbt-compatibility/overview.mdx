@@ -115,18 +115,43 @@ The next `sqb dbt build` skips the dbt run entirely because nothing changed. Cha
 
 Each step calls the `dbt` CLI directly: `dbt compile` for the manifest, `dbt ls` for selection, and `dbt build`/`dbt run` for execution.
 
-### Passing dbt flags through
+### Flags
 
-`sqb dbt` execution commands accept common flags directly, including `--select`/`--exclude` (dbt selection) and `--full-refresh`:
+`sqb dbt plan/run/build/test` declare the common flags directly. Anything declared goes **before** a `--` separator; any other raw dbt flag goes **after** it and is forwarded verbatim. A flag placed on the wrong side errors rather than silently reaching dbt.
 
 ```bash
 sqb dbt build --select path:models/marts --full-refresh
 ```
 
-To forward any other native dbt flag straight to the underlying `dbt` invocation, put it after a `--` separator:
+Declared flags are routed to the right place automatically:
+
+| Flag | Routed to | Notes |
+| ---- | --------- | ----- |
+| `--select` / `--exclude` | dbt | dbt resolves selection (see [Selection](/concepts/dbt-compatibility/selection)). |
+| `--vars` | dbt **and** SQLBuild | The same vars feed dbt's compile and SQLBuild's own variable resolution, so both sides see identical values. |
+| `--full-refresh` | dbt **and** SQLBuild | Forces a full rebuild of selected models and tells SQLBuild's planner not to skip them. |
+| `--threads` | dbt (`--threads`) and SQLBuild (`--concurrency`) | |
+| `--target` / `--project-dir` / `--profiles-dir` / `--profile` / `--target-path` | dbt | Standard dbt locators. |
+| `--force` | SQLBuild | Bypasses change detection: plans and runs every selected model even if its fingerprint is unchanged. See below. |
+
+#### `--force`
+
+By default SQLBuild skips any model whose fingerprint and relation are unchanged. `--force` overrides that for the current run: every selected model is planned and run regardless of whether it changed. It is the dbt-interop equivalent of native `sqb build --force`, and is useful when you want to rebuild despite a clean plan (for example, to re-materialize after an out-of-band warehouse change). It does not alter fingerprints permanently; the next run without `--force` is change-aware again.
+
+#### `--vars`
+
+`--vars` accepts the same JSON object dbt accepts, and SQLBuild passes it to **both** the underlying `dbt` invocation and its own variable resolution. That means a value referenced as `@@my_var` in SQLBuild model SQL (see [Interpolation](/concepts/interpolation)) and as `{{ var('my_var') }}` in a dbt model both resolve to the value you passed. CLI vars take precedence over project and local config vars. You do not need to declare vars twice.
 
 ```bash
-sqb dbt build -- --vars '{"my_var": 1}'
+sqb dbt build --select path:models/marts --vars '{"my_var": 1}'
+```
+
+#### Forwarding other dbt flags
+
+For any native dbt flag SQLBuild does not declare, put it after `--` and it is passed straight to the `dbt` invocation untouched:
+
+```bash
+sqb dbt build -- --log-level debug
 ```
 
 ## Configuration
