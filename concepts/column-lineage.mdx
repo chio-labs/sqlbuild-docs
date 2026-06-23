@@ -3,6 +3,10 @@ title: "Column Lineage"
 description: "Trace individual columns through your SQL pipeline - understand where data comes from and where it goes."
 ---
 
+<Note>
+  Using SQLBuild alongside a dbt project? See [dbt column lineage](/concepts/dbt-compatibility/column-lineage) for tracing columns across the combined dbt and SQLBuild graph with `sqb dbt lineage`.
+</Note>
+
 ## Why column lineage matters
 
 **Impact analysis** - Before changing a source column, see exactly which downstream models and columns are affected. A rename or type change in `raw__orders.id` can be traced through every model that consumes it, even indirectly.
@@ -54,30 +58,90 @@ Column lineage supports two analysis modes that trade off speed against depth of
 
 ```bash
 sqb compile --lineage-mode rich
-sqb lineage fact_orders.total_cents --mode fast
+sqb lineage fact_orders.payment_amount_cents --mode fast
 ```
 
 ## Using column lineage
 
 ### Interactive tracing with `sqb lineage`
 
-Trace a specific column upstream or downstream:
+The target syntax is `model_name.column_name`. Trace a column upstream to see where its values come from:
 
 ```bash
-# Where does this column come from?
-sqb lineage fact_orders.total_cents
-
-# What consumes this column?
-sqb lineage fact_orders.order_id --direction downstream
-
-# Limit to 1 hop
-sqb lineage fact_orders.total_cents --depth 1
-
-# JSON output
-sqb lineage fact_orders.total_cents --format json
+sqb lineage daily_revenue.total_revenue_cents
 ```
 
-The target syntax is `model_name.column_name`. Column lineage supports `upstream` and `downstream` directions (not `both` - model lineage supports `both`).
+```
+Column trace  daily_revenue.total_revenue_cents  upstream
+
+└── stg_payments.amount_cents (aggregation)
+    └── raw__payments.amount_cents (direct)
+```
+
+Each hop is annotated with how the value was derived. Here `total_revenue_cents` is an aggregation of `stg_payments.amount_cents`, which is a direct passthrough from the source.
+
+Use `--direction downstream` to trace the other way - every column derived from this one:
+
+```bash
+sqb lineage stg_payments.amount_cents --direction downstream
+```
+
+```
+Column trace  stg_payments.amount_cents  downstream
+
+├── daily_revenue.avg_order_value_cents (aggregation)
+├── daily_revenue.total_revenue_cents (aggregation)
+├── daily_revenue.total_revenue_dollars (aggregation)
+├── dim_customers.lifetime_spend_cents (aggregation)
+└── fact_orders.payment_amount_cents (direct)
+```
+
+Column lineage supports `upstream` (default) and `downstream` directions (not `both` - model lineage supports `both`).
+
+### Model lineage
+
+`sqb lineage` also traces model-level dependencies when the target has no column (no dot):
+
+```bash
+sqb lineage fact_orders
+```
+
+```
+Lineage  model  fact_orders  models/marts/fact_orders.sql  upstream
+
+├── model  stg_orders  models/staging/stg_orders.sql
+│   └── source  raw__orders  sources/raw.yml
+├── model  stg_payments  models/staging/stg_payments.sql
+│   └── source  raw__payments  sources/raw.yml
+├── seed  waffle_types  seeds/waffle_types.csv
+└── udf  udf__is_completed_order
+```
+
+Each node is tagged with its resource type (`model`, `source`, `seed`, `udf`) and file path. Use `--direction both` to show upstream and downstream together:
+
+```bash
+sqb lineage daily_revenue --direction both
+```
+
+```
+Lineage  model  daily_revenue  models/marts/daily_revenue.sql  both
+
+upstream
+├── model  stg_orders  models/staging/stg_orders.sql
+│   └── source  raw__orders  sources/raw.yml
+└── model  stg_payments  models/staging/stg_payments.sql
+    └── source  raw__payments  sources/raw.yml
+downstream
+```
+
+### Options
+
+| Flag            | Description                                                                       |
+| --------------- | --------------------------------------------------------------------------------- |
+| `--direction`   | `upstream` (default), `downstream`, or `both`. `both` is model lineage only.      |
+| `--depth`       | How many hops to traverse: an integer or `all` (default `all`).                   |
+| `--format`      | `tree` (default), `list` (an edge list of `a -> b` pairs), or `json`.             |
+| `--mode`        | Column lineage mode: `rich` (default) or `fast`.                                  |
 
 See the [lineage CLI reference](/cli/lineage) for full flag documentation and output format examples.
 

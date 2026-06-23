@@ -28,7 +28,7 @@ Column trace  agg_daily_revenue:revenue_cents  upstream
             └── raw_payments:amount_cents (direct)
 ```
 
-Each hop is annotated with how the value was derived (`direct`, `aggregation`, `expression`, ...), and the trace follows the column all the way back to the source - here through four models down to a seed. It also crosses the dbt/SQLBuild boundary: a SQLBuild column that reads a dbt model via `__dbt_ref` traces straight into the dbt model's columns.
+Each hop is annotated with how the value was derived (`direct`, `aggregation`, `expression`, ...), and the trace follows the column all the way back to the source - here through four models down to a seed. It also crosses the dbt/SQLBuild boundary: a SQLBuild column that reads a dbt model via `__dbt_ref` traces straight into the dbt model's columns. See [Column lineage](/concepts/column-lineage) for the full list of transform types and confidence levels.
 
 Use `--direction downstream` to trace the other way - every column derived from this one:
 
@@ -42,9 +42,12 @@ Column trace  stg_payments:amount_cents  downstream
 ├── fct_payments:amount_cents (direct)
 └── int_order_payments:order_amount_cents (aggregation)
     ├── fct_orders:order_amount_cents (direct)
+    │   ├── agg_daily_revenue:avg_order_usd (aggregation)
     │   ├── agg_daily_revenue:revenue_cents (aggregation)
     │   └── agg_daily_revenue:revenue_usd (aggregation)
+    ├── fct_orders:order_amount_usd (expression)
     └── int_customer_orders:lifetime_amount_cents (aggregation)
+        ├── dim_customers:lifetime_amount_cents (expression)
         └── dim_customers:lifetime_amount_usd (expression)
 ```
 
@@ -67,11 +70,11 @@ Lineage  fct_orders [dbt]  upstream
 └── int_order_payments [dbt]
     ├── stg_order_statuses [dbt]
     │   └── stg_orders [dbt]
-    │       └── raw_orders [dbt]
+    │       └── seed.jaffle_analytics.raw_orders [dbt]
     ├── stg_orders [dbt]
-    │   └── raw_orders [dbt]
+    │   └── seed.jaffle_analytics.raw_orders [dbt]
     └── stg_payments [dbt]
-        └── raw_payments [dbt]
+        └── seed.jaffle_analytics.raw_payments [dbt]
 ```
 
 The `[dbt]` / `[sqb]` tag on each node shows whether it is a dbt or SQLBuild resource. `--direction both` shows upstream and downstream together:
@@ -84,7 +87,13 @@ sqb dbt lineage fct_orders --direction both
 Lineage  fct_orders [dbt]  both
 upstream
 └── int_order_payments [dbt]
-    └── ...
+    ├── stg_order_statuses [dbt]
+    │   └── stg_orders [dbt]
+    │       └── seed.jaffle_analytics.raw_orders [dbt]
+    ├── stg_orders [dbt]
+    │   └── seed.jaffle_analytics.raw_orders [dbt]
+    └── stg_payments [dbt]
+        └── seed.jaffle_analytics.raw_payments [dbt]
 downstream
 └── agg_daily_revenue [dbt]
 ```
