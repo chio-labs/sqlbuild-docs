@@ -289,7 +289,7 @@ target_path = "../dbt_project/target"
 target = "dev"
 replay_on_change = "full"
 
-[dbt.reuse_from]
+[dbt.production_ref]
 git_ref = "main"
 generate_schema_name_override = "dbt/macros/generate_schema_name.sql"
 ```
@@ -301,8 +301,8 @@ generate_schema_name_override = "dbt/macros/generate_schema_name.sql"
 | `target_path` | Path to dbt's `target/` directory (where `manifest.json` is written) |
 | `target` | dbt target name override (optional) |
 | `replay_on_change` | Project-wide policy for rerunning changed dbt models: `forward_only` (default) or `full` (optional). See [Change-aware builds](/concepts/dbt-compatibility/change-aware-builds#replay-on-change). |
-| `reuse_from.git_ref` | Production-shaped git branch or tag whose built tables are reused (optional). See [Reuse from production](/concepts/dbt-compatibility/reuse-from). |
-| `reuse_from.generate_schema_name_override` | Relative path under `dbt/macros/` to the `generate_schema_name` macro used when compiling the reuse ref. |
+| `production_ref.git_ref` | Production-shaped git branch or tag compiled to locate production relations, used by `sqb dbt clone` and `sqb dbt diff` (optional). See [Configuration](/concepts/dbt-compatibility/overview#the-production-ref-block). |
+| `production_ref.generate_schema_name_override` | Relative path under `dbt/macros/` to the `generate_schema_name` macro injected when compiling the production ref. |
 
 Paths can be absolute or relative to the SQLBuild project root. See [Using SQLBuild with dbt](/concepts/dbt-compatibility/overview) for setup and usage details.
 
