@@ -27,7 +27,6 @@
         "pages": [
           "concepts/dbt-compatibility/overview",
           "concepts/dbt-compatibility/selection",
-          "concepts/dbt-compatibility/reuse-from",
           "concepts/dbt-compatibility/change-aware-builds",
           "concepts/dbt-compatibility/column-lineage",
           "concepts/dbt-compatibility/testing",

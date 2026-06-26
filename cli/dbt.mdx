@@ -5,7 +5,7 @@ description: "Run SQLBuild alongside an existing dbt project."
 
 # sqb dbt
 
-Orchestrate dbt and SQLBuild together. Each subcommand runs dbt first, then SQLBuild, with selection logic that works across both project graphs. `sqb dbt build`, `sqb dbt run`, and `sqb dbt plan` are [change-aware](/concepts/dbt-compatibility/change-aware-builds): they prune dbt models that have not changed, and honor [reuse from production](/concepts/dbt-compatibility/reuse-from) when configured. See [Using SQLBuild with dbt](/concepts/dbt-compatibility/overview) for concepts and selection behavior.
+Orchestrate dbt and SQLBuild together. Each subcommand runs dbt first, then SQLBuild, with selection logic that works across both project graphs. `sqb dbt build`, `sqb dbt run`, and `sqb dbt plan` are [change-aware](/concepts/dbt-compatibility/change-aware-builds): they prune dbt models that have not changed. See [Using SQLBuild with dbt](/concepts/dbt-compatibility/overview) for concepts and selection behavior.
 
 ## sqb dbt plan
 
@@ -15,7 +15,7 @@ Preview combined dbt and SQLBuild work without executing.
 sqb dbt plan [--select <selector>...] [--exclude <selector>...] [--json] [--verbose]
 ```
 
-Shows which dbt models will run, which dbt models are current and pruned, which relations will be reused from production, which SQLBuild models will run, and the dbt/SQLBuild commands that would be executed.
+Shows which dbt models will run, which dbt models are current and pruned, which SQLBuild models will run, and the dbt/SQLBuild commands that would be executed.
 
 ## sqb dbt run
 
@@ -88,4 +88,4 @@ profiles_dir = "../profiles"
 target_path = "../dbt_project/target"
 ```
 
-See [Project Configuration](/concepts/project-configuration#dbt) for all fields, including `replay_on_change` and `reuse_from`.
+See [Project Configuration](/concepts/project-configuration#dbt) for all fields, including `replay_on_change` and `production_ref`.

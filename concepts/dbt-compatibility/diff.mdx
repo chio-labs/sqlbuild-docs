@@ -4,7 +4,7 @@ sidebarTitle: "Diff"
 description: "Compare your dbt build against a production baseline with sqb dbt diff."
 ---
 
-`sqb dbt diff` compares the relations your dbt build produces against a production baseline, so you can confirm dev matches prod before you promote. It resolves the production-shaped relations the same way reuse does (by compiling your dbt project at a configured git ref), then compares each model.
+`sqb dbt diff` compares the relations your dbt build produces against a production baseline, so you can confirm dev matches prod before you promote. It resolves the production-shaped relations by compiling your dbt project at the configured [`[dbt.production_ref]`](/concepts/dbt-compatibility/overview#the-production-ref-block) git ref, then compares each model.
 
 Every run requires exactly one comparison mode:
 
@@ -60,6 +60,6 @@ The model must define SQLBuild cursor metadata for `--bounded` to apply; without
 
 ## On this topic
 
-- [Reuse from production](/concepts/dbt-compatibility/reuse-from) - how the production baseline is resolved and reused.
+- [Configuration](/concepts/dbt-compatibility/overview#the-production-ref-block) - the `[dbt.production_ref]` git ref and schema-name override that diff resolves against.
 - [Clone](/concepts/dbt-compatibility/clone) - copy or clone production relations into a target.
 - [Testing](/concepts/dbt-compatibility/testing) - unit tests against dbt models.
