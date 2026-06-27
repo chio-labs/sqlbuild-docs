@@ -1,9 +1,70 @@
 ---
 title: "Introduction"
-description: "A change-aware SQL framework: only rebuild what changed, with all state in the warehouse."
+description: "Verify early, test properly, and deploy reversibly. SQL pipelines with the rigor of real software - on your existing dbt project, free and open source."
 ---
 
-Every build fingerprints models, seeds, functions, and Python nodes, tracks source freshness, and skips anything that hasn't changed, including audits that already passed for the same version. The same change-aware planning extends to an existing [dbt project](/concepts/dbt-compatibility/overview): SQLBuild prunes unchanged dbt models from the dbt run and can reuse already-built tables from production. It also adds ingestion, Python nodes, and opt-in virtual environments for more advanced use cases.
+**Valid isn't the same as correct.** Your SQL compiles, runs, and returns rows - none of that means the number is right, and a silently-wrong number a stakeholder already trusted is the bug that actually hurts.
+
+SQLBuild brings software-engineering rigor to SQL pipelines: **verify early, test properly, deploy reversibly.** Catch errors before the warehouse runs them, test your logic locally, and only build what actually changed. It works on a standalone SQL project or [points at your existing dbt project](/concepts/dbt-compatibility/overview) with no migration - free and open source.
+
+## Test properly
+
+Most data testing checks for nulls and uniqueness. That tells you a column isn't empty, not that your logic is right. SQLBuild tests the logic.
+
+- **Chained unit tests.** Mock your sources, assert on the model you care about, and SQLBuild resolves every intermediate model from its real SQL. One test file can be a full integration test across your pipeline.
+- **E2E scenario tests with local replay.** Build the real model graph against coherent fixtures in isolated relations, capture the result as JSONL, and replay it locally through DuckDB. CI runs full end-to-end tests with zero warehouse credentials or compute.
+- **Macro-powered mocks.** Tests are SQL, so they support macro calls - write reusable mock generators instead of copy-pasting fixtures.
+
+```sql
+-- Mock two sources, assert on the final mart.
+-- stg_orders and stg_payments resolve automatically from their real SQL.
+TEST();
+
+WITH
+__source__raw__orders AS ( @mock_orders() ),
+__source__raw__payments AS (
+  SELECT 1 AS payment_id, 1 AS order_id, 1500 AS amount_cents, 'credit_card' AS method
+),
+__expected__fact_orders AS (
+  SELECT 1 AS order_id, 100 AS customer_id, 1500 AS total_cents, 'credit_card' AS payment_method
+)
+SELECT 1
+```
+
+See [Testing](/concepts/scenarios) for unit tests, scenarios, and local replay.
+
+## Verify early
+
+Before any model runs, SQLBuild does static analysis of your project - offline, no warehouse connection needed.
+
+- **Catch errors at compile.** SQL syntax, type inference, contract checks, and column lineage all run before execution. A bad reference or a type mismatch fails at compile, with an error that points at the line - not halfway through a warehouse run.
+- **Fast, because it's Rust where it counts.** Static analysis runs on [Polyglot](https://github.com/tobilg/polyglot), a Rust SQL engine (MIT, 32+ dialects), so compile stays quick even on large projects.
+- **Open, not paywalled.** The static analysis is part of the Apache-2.0 core - no proprietary engine, no separate login, and no paid tier gating the smart checks.
+
+## Only build what changed
+
+Verification tells you the work is right; change detection makes sure you only pay for the work you need.
+
+Every model, seed, function, and Python node has a versioned identity. SQLBuild compares it against state stored in your own warehouse and skips anything unchanged.
+
+- **Models and functions:** fingerprinted by query hash, config, and upstream function hashes. Unchanged models are skipped entirely.
+- **Seeds:** content and load-affecting config are hashed. Unchanged seeds are not reloaded.
+- **Audits:** audits that already passed for the same model version are not re-run.
+- **Source freshness:** external source data versions are tracked automatically. Models downstream of unchanged sources are skipped, with lag tolerance to avoid jitter.
+- **Cascade propagation:** when a model does change, the signal propagates downstream, with configurable replay windows (`replay_on_change`).
+- **Python nodes:** loaders, tasks, assets, checks, and hooks are fingerprinted by source and dependency hashes; skip/run is user-controlled via `ctx.skip()`.
+
+State is plain append-only rows in your own warehouse (`_sqlbuild_fingerprints`, `_sqlbuild_source_freshness`, `_sqlbuild_node_results`) - no external state database, no manifest files, no state machine that can corrupt. Point SQLBuild at an [existing dbt project](/concepts/dbt-compatibility/overview) and the same change detection prunes unchanged dbt models from the run - nothing metered, no account, nothing to log into.
+
+## Deploy reversibly (opt-in)
+
+By default, SQLBuild runs in standard mode with state as append-only rows in your warehouse. When you want more, [virtual environments](/concepts/virtual-environments) add a reversibility layer on top:
+
+- **Instant branching, promotion, and rollback** as low-copy pointer operations.
+- **Partial promotion.** Promote the models that are ready without re-running everything downstream of them - you don't have to rebuild the whole closure to ship one fix.
+- **Checkpoints and reconciliation** so a bad change is something you undo, not an incident.
+
+Virtual environments are opt-in, not a tax you pay upfront - standard mode stays the default, so the floor stays low and you reach for them only when a workflow needs them.
 
 ## Supported adapters
 
@@ -11,32 +72,7 @@ SQLBuild works with **DuckDB, MotherDuck, Snowflake, BigQuery, Databricks, Postg
 
 DuckDB runs entirely locally, so you can try SQLBuild and run full E2E tests without any warehouse credentials. Head to the [Quickstart](/quickstart) to get a project running in minutes, or see [Adapters](/concepts/adapters) for connection setup.
 
-## How it works
-
-1. **Define** your models as SQL files with `MODEL()` headers that declare configuration, schema, and audits inline
-2. **Compile** to resolve references, validate SQL, infer column types, check contracts, and compute column lineage - all offline
-3. **Plan** what needs to change by comparing fingerprints, source freshness, seed content, and Python node identities against the warehouse state. Unchanged models, seeds, audits, and Python nodes are skipped. Production relations can optionally be reused when version identities match.
-4. **Build** by executing the plan: materializing only what changed, validating data before promotion, and ensuring bad data never reaches production
-5. **Test** with chained unit tests, E2E scenario tests, and local replay through DuckDB - no warehouse required
-
-## Why SQLBuild?
-
-### Change-aware builds
-
-Every node in the graph has a versioned identity. SQLBuild compares identities against warehouse state on every build and only runs what has actually changed.
-
-- **Models and functions:** Fingerprinted by query hash, config, and upstream function hashes. Unchanged models are skipped entirely.
-- **Seeds:** Content and load-affecting config are hashed. Unchanged seeds are not reloaded.
-- **Python nodes:** Loaders, tasks, assets, checks, and hooks are fingerprinted by source code hash and dependency hashes (scoped to the git root). The plan shows source and dependency diffs when a node's identity changes. Skip/run decisions are user-controlled via `ctx.skip()`, since only the node's own logic knows whether its external inputs have changed.
-- **Audits:** Audits that already passed for the same model version are not re-run. A version identity change triggers re-validation.
-- **Source freshness:** External source data versions are tracked automatically (via adapter metadata, column queries, or custom SQL). Models downstream of unchanged sources are skipped. Lag tolerance prevents jitter from triggering unnecessary rebuilds.
-- **Cascade propagation:** When a model does change, the signal propagates downstream through the DAG. Upstream changes cascade with configurable replay windows (`replay_on_change`).
-- **Reuse from production:** Dev targets can opt into `reuse_from` to clone or copy relations from another target (e.g. prod) when version identities match, instead of rebuilding from scratch.
-
-### Warehouse-native state
-
-- **Standard mode:** all state lives in the warehouse as append-only tables (`_sqlbuild_fingerprints`, `_sqlbuild_source_freshness`, `_sqlbuild_node_results`) in the same schemas as your data. No external state database, no manifest files, no state machine that can corrupt. The planner reads the latest row per identity, compares it against the compiled project, and writes new rows after successful builds. Old rows are retained as history and can be pruned by the janitor.
-- **Virtual environments:** the same identity and freshness data is stored in the VDE state backend (PostgreSQL or DuckDB), scoped per environment.
+## More in SQLBuild
 
 ### Familiar SQL models
 
@@ -81,36 +117,13 @@ def grant_target(target):
 - **Microbatch mode:** Split large replay windows into configurable batches, each with its own audit cycle. Or process the full range in one pass, the choice is per-model.
 - **Replay on change:** When a model's version identity changes, `replay_on_change` controls how much data to reprocess: `forward` (default, just run the next delta), `bounded-14d` (replay a window), or `full` (rebuild the table).
 
-### Python you can read, Rust where it counts
+### Python you can read and extend
 
-- **The framework is Python.** Adapters, macros, hooks, providers, custom materializations, and Python nodes are all plain Python you can read and extend.
-- **SQL analysis is Rust.** For SQL parsing, validation, column inference, lineage, and transpilation, SQLBuild uses [Polyglot](https://github.com/tobilg/polyglot), a Rust reimplementation of SQLGlot's SQL analysis capabilities (MIT, 32+ dialects). This keeps compile fast even on large projects while the code you actually work with stays Python.
+- **The framework is Python.** Adapters, macros, hooks, providers, custom materializations, and Python nodes are all plain Python you can read and extend. (The SQL analysis underneath runs on Rust via Polyglot - see [Verify early](#verify-early) - so the code you work with stays Python while compile stays fast.)
 
-### SQL unit tests that scale
+### Testing in depth
 
-- **Chain across models:** Mock your sources, assert on the model you care about, and SQLBuild automatically resolves every intermediate model using its real SQL. One test file can be a full integration test across your entire pipeline.
-- **Macro-powered mocks:** Because unit tests are written in SQL, they support macro calls, so you can write reusable mock generators and fixture builders instead of copy-pasting mock inputs across test files.
-
-```sql
--- Mock two sources, assert on the final mart.
--- stg_orders and stg_payments resolve automatically from their real SQL.
-TEST();
-
-WITH
-__source__raw__orders AS (
-  @mock_orders()
-),
-__source__raw__payments AS (
-  SELECT 1 AS payment_id, 1 AS order_id, 1500 AS amount_cents, 'credit_card' AS method
-),
-__expected__fact_orders AS (
-  SELECT 1 AS order_id, 100 AS customer_id, 1500 AS total_cents,
-         'credit_card' AS payment_method
-)
-SELECT 1
-```
-
-### E2E scenario tests with local replay
+Beyond the chained unit tests shown above, SQLBuild runs end-to-end scenario tests against the real model graph, with local replay and property assertions.
 
 - **Real graph execution:** Define coherent fixture inputs, and SQLBuild builds the real model graph against them in isolated warehouse relations. Test end-to-end business logic across your entire pipeline, not just one model at a time.
 - **Local replay without a warehouse:** Capture scenario fixtures as JSONL snapshots, then replay them locally through DuckDB. CI pipelines run full E2E tests with zero warehouse credentials or compute cost.
@@ -170,10 +183,6 @@ SQL models never depend on Python nodes - the only path from Python into SQL is 
 - **Zero-copy cloning:** Branch targets instantly with `sqb clone` without duplicating data.
 - **Deferred references:** Compile and plan against a production target with `--defer-to` while building in dev.
 - **No manifest required:** Clone, diff, and defer work directly against live targets. No `manifest.json` generation, no artifact management, no stale state.
-
-### Virtual environments
-
-- **Opt-in, not forced:** Virtual environments give you instant low-copy branching, promotion, and rollback - but they are an opt-in mode, not a tax you pay upfront. Standard mode stays the default, so the floor stays low and you reach for virtual environments only when a workflow actually needs them. See [Virtual Environments](/concepts/virtual-environments).
 
 ### Extensibility
 
