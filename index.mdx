@@ -21,12 +21,22 @@ Most data testing checks for nulls and uniqueness. That tells you a column isn't
 TEST();
 
 WITH
-__source__raw__orders AS ( @mock_orders() ),
+__source__raw__orders AS (
+  @mock_orders()
+),
 __source__raw__payments AS (
-  SELECT 1 AS payment_id, 1 AS order_id, 1500 AS amount_cents, 'credit_card' AS method
+  SELECT
+    1 AS payment_id,
+    1 AS order_id,
+    1500 AS amount_cents,
+    'credit_card' AS method
 ),
 __expected__fact_orders AS (
-  SELECT 1 AS order_id, 100 AS customer_id, 1500 AS total_cents, 'credit_card' AS payment_method
+  SELECT
+    1 AS order_id,
+    100 AS customer_id,
+    1500 AS total_cents,
+    'credit_card' AS payment_method
 )
 SELECT 1
 ```
@@ -140,10 +150,16 @@ __ref__stg_orders AS (
   SELECT 1 AS order_id, 10 AS customer_id, 'completed' AS status
 ),
 __ref__stg_payments AS (
-  SELECT 1 AS payment_id, 1 AS order_id, 1700 AS amount_cents, 'success' AS payment_status
+  SELECT
+    1 AS payment_id,
+    1 AS order_id,
+    1700 AS amount_cents,
+    'success' AS payment_status
 ),
 __expected__daily_revenue AS (
-  SELECT CAST('2026-04-01' AS DATE) AS revenue_date, 1700 AS total_revenue_cents
+  SELECT
+    CAST('2026-04-01' AS DATE) AS revenue_date,
+    1700 AS total_revenue_cents
 ),
 __assert__all_orders_have_payments AS (
   SELECT * FROM __ref("fact_orders") WHERE payment_amount_cents IS NULL
