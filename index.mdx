@@ -55,9 +55,9 @@ Before any model runs, SQLBuild does static analysis of your project - offline, 
 
 Verification tells you the work is right; change detection makes sure you only pay for the work you need.
 
-Every model, seed, function, and Python node has a versioned identity. SQLBuild compares it against state stored in your own warehouse and skips anything unchanged.
+Every model, seed, UDF, and Python node has a versioned identity. SQLBuild compares it against state stored in your own warehouse and skips anything unchanged.
 
-- **Models and functions:** fingerprinted by query hash, config, and upstream function hashes. Unchanged models are skipped entirely.
+- **Models and UDFs:** fingerprinted by query hash, config, and upstream UDF hashes. Unchanged models are skipped entirely.
 - **Seeds:** content and load-affecting config are hashed. Unchanged seeds are not reloaded.
 - **Audits:** audits that already passed for the same model version are not re-run.
 - **Source freshness:** external source data versions are tracked automatically. Models downstream of unchanged sources are skipped, with lag tolerance to avoid jitter.
