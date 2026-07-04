@@ -172,7 +172,11 @@ Configuration is layered in this order, with later layers overriding earlier one
 2. **Path defaults** (`path_defaults`) - if the model's path matches
 3. **MODEL() header** - the model's own config
 
-Tags are special: they are *unioned* across layers rather than overridden. A model with `tags [marts]` in its header that matches a path default with `tags [managed]` will have both tags.
+Most keys are overridden by the more specific layer, but three merge instead:
+
+- `tags` are *unioned* across layers. A model with `tags [marts]` in its header that matches a path default with `tags [managed]` will have both tags.
+- `row_diff_exclude_columns` lists are unioned across layers.
+- `row_diff_tolerances` mappings are deep-merged across layers, so a header tolerance for one column adds to (rather than replaces) tolerances declared in defaults or path defaults.
 
 ## Settings
 
