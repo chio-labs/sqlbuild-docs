@@ -93,7 +93,7 @@ sqb build --virtual-env pr_123 --select fact_orders --include-stale-upstreams
 Virtual environment builds are change-aware by default. When combined with `--select`, only models that are both selected and stale are built:
 
 ```bash
-sqb build --virtual-env pr_123 --select path:marts
+sqb build --virtual-env pr_123 --select path:models/marts
 ```
 
 This intersects the user selection with the stale-driven selection, useful when the stale cascade is large and you want to build a coherent subgraph without running unchanged models. Use `--force` to override and build all selected models regardless of state.

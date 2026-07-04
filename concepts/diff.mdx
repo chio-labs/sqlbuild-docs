@@ -129,7 +129,7 @@ Diff requires `--select` in the current version. You can use any selector syntax
 sqb diff prod:dev --full --select customer_status_snapshot
 
 # Diff all models in a path
-sqb diff prod:dev --schema-only --select path:marts
+sqb diff prod:dev --schema-only --select path:models/marts
 
 # Diff models with a specific tag
 sqb diff prod:dev --full --select tag:acceptance

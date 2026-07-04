@@ -41,13 +41,12 @@ sqb build --select tag:acceptance
 Select all models under a directory path:
 
 ```bash
-sqb build --select path:marts
-sqb build --select /marts
-sqb build --select marts/
-sqb build --select path:intermediate
+sqb build --select path:models/marts
+sqb build --select models/marts
+sqb build --select path:models/intermediate
 ```
 
-Any name containing `/` is treated as a path selector. `path:marts`, `/marts`, and `marts/` all work the same way. Nested paths work too: `staging/orders`. The `models/` prefix is stripped automatically, so use `path:marts` not `path:models/marts`.
+Any name containing `/` is treated as a path selector, so `path:models/marts` and a bare `models/marts` work the same way. Path selectors require an explicit root directory: `models/`, `tasks/`, `assets/`, `checks/`, or `loaders/`. Nested paths work too: `models/staging/orders`.
 
 ### Seed and source
 
@@ -84,7 +83,7 @@ Graph expansion works with all selector types:
 
 ```bash
 sqb build --select +tag:marts
-sqb build --select path:staging+
+sqb build --select path:models/staging+
 ```
 
 ## Path-between selectors
@@ -113,16 +112,16 @@ This is useful for rebuilding a specific slice of the DAG without manually listi
 Use commas to intersect selector results:
 
 ```bash
-sqb build --select "tag:staging,path:finance"
+sqb build --select "tag:staging,path:models/finance"
 ```
 
-This selects only models that match *both* conditions - in this case, models tagged `staging` that are also under the `finance` directory.
+This selects only models that match *both* conditions - in this case, models tagged `staging` that are also under the `models/finance` directory.
 
 ## Combining select and exclude
 
 ```bash
 # Build all marts except daily_revenue
-sqb build --select path:marts --exclude daily_revenue
+sqb build --select path:models/marts --exclude daily_revenue
 
 # Build everything upstream of fact_orders, excluding staging models
 sqb build --select +fact_orders --exclude tag:staging
@@ -133,14 +132,14 @@ sqb build --select +fact_orders --exclude tag:staging
 Unknown model names, empty paths, and malformed selectors produce clear error messages:
 
 ```
-Unknown selector name 'nonexistent_model'
-No models found under path 'nonexistent'.
-No models found with tag 'nonexistent_tag'
-Path selector 'fact_orders~' requires names on both sides of '~'
+unknown selector name 'nonexistent_model'
+no models found under path 'models/nonexistent'.
+no models found with tag 'nonexistent_tag'
+path selector 'fact_orders~' requires names on both sides of '~'
 ```
 
-If a path selector accidentally includes the `models/` prefix, SQLBuild suggests the correct form:
+If a path selector omits the root directory, SQLBuild asks for the explicit form:
 
 ```
-No models found under path 'models/marts'. (the 'models/' prefix is stripped automatically — try 'path:marts')
+path selectors require an explicit root: use 'models/', 'tasks/', 'assets/', 'checks/', or 'loaders/'
 ```
