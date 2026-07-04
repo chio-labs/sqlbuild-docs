@@ -470,6 +470,16 @@ At compile time, SQLBuild validates every `python("hook_name")` reference:
 | `post_hooks` | Lifecycle hooks to run after materialization: `sql("...")` and/or `python("hook_name")` entries |
 | `enabled` | Set to `false` to skip the model |
 | `contract` | `enforced` or `none`. When enforced, declared columns are the authoritative output schema. |
+| `sql_validation` | Per-model boolean override of the project `sql_validation` setting |
+
+Four knobs gate compile-time SQL validation, from broadest to narrowest:
+
+1. `settings.sql_analysis` - master switch for all SQL-analysis features
+2. `--no-sql-validation` - per-run CLI kill switch
+3. `settings.sql_validation` - project-level validation setting
+4. `MODEL (sql_validation ...)` - per-model override of the project setting
+
+Validation runs only when every broader knob allows it: `sql_analysis` must be on and `--no-sql-validation` absent before the project/model `sql_validation` values are consulted.
 
 ### Incremental config
 

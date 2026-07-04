@@ -27,6 +27,8 @@ The planner checks each model against the `reuse_from` target's fingerprints and
 
 For incremental models, reuse clones or copies the prod relation as a baseline, then runs the incremental delta on top.
 
+Custom materializations are reuse-eligible when they define a `prepare_version` function alongside `materialize` - the same hook used for [virtual environment seeding](/concepts/virtual-environments/building). Custom materializations without `prepare_version` are always rebuilt.
+
 Use `reuse_hard_copy = true` on the target to force a full data copy instead of a zero-copy clone. This is useful when the adapter does not support cloning, or when you need an independent copy.
 
 `reuse_from` cannot be used together with `defer_sources_to` on the same target.

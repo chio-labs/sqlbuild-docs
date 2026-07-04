@@ -73,3 +73,13 @@ Seeds (1)
 ```
 
 When query or schema changes are detected, the plan shows the affected models with backfill actions and cascade information.
+
+## Missing upstream dependencies
+
+Planning a scoped selection whose upstream inputs were never built in the target fails with `S301` rather than producing a plan that would break at build time:
+
+```
+error[S301]: cannot build selected scope: 3 missing upstream dependencies (stg_orders, stg_payments, waffle_types)
+```
+
+Build the upstream chain first, or select it along with the model: `sqb build --select +fact_orders`. On targets with [`reuse_from`](/concepts/reuse-from-production) configured, missing upstream inputs can instead be cloned from the reuse origin.
