@@ -69,7 +69,7 @@ sqb dbt build --select state:modified+
 sqb dbt build --select tag:nightly
 
 # SQLBuild models by path
-sqb dbt build --select path:marts
+sqb dbt build --select path:models/marts
 
 # Exclude by tag
 sqb dbt build --select fact_orders+ --exclude tag:nightly

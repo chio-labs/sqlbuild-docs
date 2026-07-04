@@ -17,8 +17,8 @@ These selectors match SQLBuild models directly:
 | Both `+` | `+fact_orders+` | Full upstream (including dbt) and downstream expansion. |
 | Tag | `tag:nightly` | Selects all SQLBuild models with that tag. Auto-includes dbt dependencies. |
 | Tag with `+` | `+tag:nightly` | Tag match plus upstream expansion through the combined graph. |
-| Path | `path:marts` | Selects SQLBuild models under that directory. dbt-style `path:models/marts` is translated automatically. |
-| Path with `+` | `+path:marts` | Path match plus upstream/downstream expansion. |
+| Path | `path:models/marts` | Selects SQLBuild models under that project-relative directory - the same syntax as dbt's `path:` selector. |
+| Path with `+` | `+path:models/marts` | Path match plus upstream/downstream expansion. |
 
 When a SQLBuild model is selected, its immediate dbt upstream dependencies are always included so dbt can build the tables that SQLBuild models read from.
 
@@ -61,7 +61,7 @@ sqb dbt build --select state:modified+
 sqb dbt build --select tag:nightly
 
 # Build SQLBuild models under a path
-sqb dbt build --select path:marts
+sqb dbt build --select path:models/marts
 ```
 
 ## Execution order
