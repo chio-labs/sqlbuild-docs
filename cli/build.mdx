@@ -5,7 +5,7 @@ description: "Execute the build lifecycle: compile, plan, and build what changed
 
 # sqb build
 
-Compiles, plans, and executes the build lifecycle. By default, only stale work runs; unchanged models, seeds, audits, and Python nodes are skipped automatically. Use `--no-tests` and `--no-audits` to skip validation for fast iteration.
+Compiles, plans, and executes the build lifecycle. By default, SQLBuild runs your full selection. Pass `--changes-only` (or set `changes_only = true` in config) to skip work that is already current - unchanged models, seeds, audits, and Python nodes. Use `--no-tests` and `--no-audits` to skip validation for fast iteration.
 
 ## Usage
 
@@ -17,7 +17,7 @@ sqb --project-dir <path> build [flags]
 
 | Flag | Description |
 |------|-------------|
-| `--force` | Override change detection and build all selected models regardless of state |
+| `--changes-only` | Skip models, seeds, audits, and Python nodes that are already current; build only stale work |
 | `--no-tests` | Skip SQL unit tests |
 | `--no-audits` | Skip audits |
 | `--no-python` | Skip read-side Python tasks and assets (loader-side Python still runs for selected sources) |

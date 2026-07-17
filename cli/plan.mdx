@@ -18,7 +18,7 @@ sqb --project-dir <path> plan [flags]
 | Flag | Description |
 |------|-------------|
 | `--no-sql-validation` | Skip compile-time SQL syntax validation |
-| `--force` | Override change detection and plan all selected models regardless of state |
+| `--changes-only` | Narrow the plan to only stale models; prune anything already current |
 | `--no-python` | Exclude read-side Python tasks and assets from the plan |
 | `--defer-to` | Resolve unselected model references against another target |
 | `--json` | Output the plan as JSON |

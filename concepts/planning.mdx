@@ -3,9 +3,9 @@ title: "Planning and Change Detection"
 description: "How SQLBuild decides what to build: fingerprints, change reasons, and warehouse-native state."
 ---
 
-When you run `sqb plan` or `sqb build`, SQLBuild compiles your project, compares it against the current warehouse state, and produces a plan. By default, only stale work runs - unchanged models, seeds, audits, and Python nodes are skipped automatically.
+When you run `sqb plan` or `sqb build`, SQLBuild compiles your project, compares it against the current warehouse state, and produces a plan. By default, SQLBuild runs your full selection - the same predictable behavior as a plain build, with nothing to configure.
 
-Use `--force` to override change detection and run everything selected, regardless of state.
+Change-aware pruning is opt-in. Pass `--changes-only` (or set `changes_only = true` in config) to narrow the run to only stale work - unchanged models, seeds, audits, and Python nodes are then skipped automatically. The fingerprints and change reasons below are recorded on every successful build regardless, so change detection is ready the moment you enable pruning.
 
 ## What is tracked
 
@@ -46,7 +46,29 @@ The plan assigns a reason to each node that needs work:
 | Upstream changed | An upstream model's change cascades downstream (see [Cascade propagation](/concepts/planning/cascade-propagation)) |
 | Run despite unchanged | The model is configured to run periodically even without changes (see [Run despite unchanged](#run-despite-unchanged)) |
 
-Unchanged nodes are skipped and show as current in the plan output.
+By default, every selected node runs regardless of its reason. Under `--changes-only`, nodes with no pending work are pruned and show as current in the plan output.
+
+## Changes-only mode
+
+By default, SQLBuild executes all selected models regardless of whether they have changed. `--changes-only` narrows the scope to only models that are actually stale:
+
+```bash
+sqb build --changes-only
+sqb build --select path:models/marts --changes-only
+sqb plan --changes-only
+```
+
+To make it the default for a project or target, set it in config instead of passing the flag every run:
+
+```toml
+[settings]
+changes_only = true
+
+[targets.dev]
+changes_only = true
+```
+
+The CLI flag takes precedence, followed by the selected target, explicit local settings, then project settings. When any source enables it, the planner removes models and functions from the selected scope if they have no pending work; models with any change reason, a pending backfill, or a changed upstream source are kept. Sources, seeds, and other non-model resources are always kept.
 
 ## On this topic
 

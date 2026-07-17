@@ -1,10 +1,10 @@
 ---
 title: "Source freshness"
 sidebarTitle: "Source freshness"
-description: "Observing whether external source data has actually changed between runs, so downstream models are skipped when sources are unchanged."
+description: "Observing whether external source data has actually changed between runs, so downstream models can be skipped when sources are unchanged."
 ---
 
-Source freshness lets SQLBuild observe whether external source data has actually changed between runs. Models downstream of unchanged sources are skipped automatically.
+Source freshness lets SQLBuild observe whether external source data has actually changed between runs. Under [`--changes-only`](/concepts/planning#changes-only-mode), models downstream of unchanged sources are skipped; on a default full build the observations are still recorded so pruning is accurate the next time you enable it.
 
 ## Configuration
 

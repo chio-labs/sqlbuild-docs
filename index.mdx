@@ -6,7 +6,7 @@ description: "Verify early, test properly, and deploy reversibly. SQL pipelines 
 
 **Valid isn't the same as correct.** Your SQL compiles, runs, and returns rows - none of that means the number is right, and a silently-wrong number a stakeholder already trusted is the bug that actually hurts.
 
-SQLBuild brings software-engineering rigor to SQL pipelines: **verify early, test properly, deploy reversibly.** Catch errors before the warehouse runs them, test your logic locally, and only build what actually changed. It works on a standalone SQL project or [points at your existing dbt project](/concepts/dbt-compatibility/overview) with no migration - free and open source.
+SQLBuild brings software-engineering rigor to SQL pipelines: **verify early, test properly, deploy reversibly.** Catch errors before the warehouse runs them and test your logic locally - with change-aware builds and reversible deploys there when you need them, not forced on you on day one. It works on a standalone SQL project or [points at your existing dbt project](/concepts/dbt-compatibility/overview) with no migration - free and open source.
 
 ## Test properly
 
@@ -52,20 +52,22 @@ Before any model runs, SQLBuild does static analysis of your project - offline, 
 - **Fast, because it's Rust where it counts.** Static analysis runs on [Polyglot](https://github.com/tobilg/polyglot), a Rust SQL engine (MIT, 32+ dialects), so compile stays quick even on large projects.
 - **Open, not paywalled.** The static analysis is part of the Apache-2.0 core - no proprietary engine, no separate login, and no paid tier gating the smart checks.
 
-## Only build what changed
+## Change-aware builds, when you need them
 
-Verification tells you the work is right; change detection makes sure you only pay for the work you need.
+**Start simple.** By default, `sqb build` runs your full selection - the same predictable mental model as dbt, with nothing to configure. For many projects, that is all they will ever need.
 
-Every model, seed, UDF, and Python node has a versioned identity. SQLBuild compares it against state stored in your own warehouse and skips anything unchanged.
+**Scale deliberately.** Change-aware builds are powerful: every model, seed, UDF, and Python node has a versioned identity, so SQLBuild can skip anything already current and only pay for the work that actually changed. But that power introduces complexity - warehouse state to reason about, staleness and cascade behavior, and partial-selection edge cases - that is not worth it for smaller or simpler pipelines. So it is opt-in: turn it on with `--changes-only` (or `changes_only = true` in config) when the cost of full rebuilds outgrows the simplicity of running everything.
 
-- **Models and UDFs:** fingerprinted by query hash, config, and upstream UDF hashes. Unchanged models are skipped entirely.
+When enabled, change detection covers the whole graph:
+
+- **Models and UDFs:** fingerprinted by query hash, config, and upstream UDF hashes. Unchanged models are skipped.
 - **Seeds:** content and load-affecting config are hashed. Unchanged seeds are not reloaded.
 - **Audits:** audits that already passed for the same model version are not re-run.
 - **Source freshness:** external source data versions are tracked automatically. Models downstream of unchanged sources are skipped, with lag tolerance to avoid jitter.
 - **Cascade propagation:** when a model does change, the signal propagates downstream, with configurable replay windows (`replay_on_change`).
 - **Python nodes:** loaders, tasks, assets, checks, and hooks are fingerprinted by source and dependency hashes; skip/run is user-controlled via `ctx.skip()`.
 
-State is plain append-only rows in your own warehouse (`_sqlbuild_fingerprints`, `_sqlbuild_source_freshness`, `_sqlbuild_node_results`) - no external state database, no manifest files, no state machine that can corrupt. Point SQLBuild at an [existing dbt project](/concepts/dbt-compatibility/overview) and the same change detection prunes unchanged dbt models from the run - nothing metered, no account, nothing to log into.
+State is plain append-only rows in your own warehouse (`_sqlbuild_fingerprints`, `_sqlbuild_source_freshness`, `_sqlbuild_node_results`) - no external state database, no manifest files, no state machine that can corrupt. Point SQLBuild at an [existing dbt project](/concepts/dbt-compatibility/overview) and the same opt-in change detection prunes unchanged dbt models from the run - nothing metered, no account, nothing to log into.
 
 ## Deploy reversibly (opt-in)
 

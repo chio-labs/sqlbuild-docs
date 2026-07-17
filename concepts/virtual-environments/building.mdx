@@ -71,7 +71,7 @@ Build a subset of models with `--select`:
 sqb build --virtual-env pr_123 --select fact_orders
 ```
 
-Partial builds leave the VDE in `active` (working) status if downstream models remain stale. A follow-up `sqb build --virtual-env pr_123` (without `--select`) builds the remaining stale models to finalize the VDE.
+Partial builds leave the VDE in `active` (working) status if downstream models remain stale. A follow-up `sqb build --virtual-env pr_123 --changes-only` (without `--select`) builds the remaining stale models to finalize the VDE; a plain `sqb build --virtual-env pr_123` rebuilds the whole selection.
 
 ### Stale upstream coherence
 
@@ -90,15 +90,15 @@ sqb build --virtual-env pr_123 --select fact_orders --include-stale-upstreams
 
 ### Stale-driven selection
 
-Virtual environment builds are change-aware by default. When combined with `--select`, only models that are both selected and stale are built:
+Virtual environment builds run the full selection by default, like standard mode. Add `--changes-only` to intersect the selection with the stale-driven set, so only models that are both selected and stale are built:
 
 ```bash
-sqb build --virtual-env pr_123 --select path:models/marts
+sqb build --virtual-env pr_123 --select path:models/marts --changes-only
 ```
 
-This intersects the user selection with the stale-driven selection, useful when the stale cascade is large and you want to build a coherent subgraph without running unchanged models. Use `--force` to override and build all selected models regardless of state.
+This is useful when the stale cascade is large and you want to build a coherent subgraph without running unchanged models. Without `--changes-only`, every selected model is built regardless of state.
 
-Standard mode is change-aware by default. See [Planning and Change Detection](/concepts/planning) for how fingerprints, source freshness, and identity tracking determine what gets built.
+Change-aware pruning is opt-in in both standard mode and virtual environments. See [Planning and Change Detection](/concepts/planning) for how fingerprints, source freshness, and identity tracking determine what gets built.
 
 ## Stale detection
 
