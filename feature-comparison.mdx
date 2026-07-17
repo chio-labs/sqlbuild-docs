@@ -50,7 +50,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 
 | Feature | SQLBuild | dbt | SQLMesh |
 |---------|----------|-----|---------|
-| Change-aware by default | Fingerprints models, seeds, functions, Python nodes; skips unchanged work including audits | dbt State (paid) | Version hash comparison |
+| Change-aware builds | Opt-in (`--changes-only`); fingerprints models, seeds, functions, Python nodes and skips unchanged work including audits | dbt State (paid) | Version hash comparison |
 | Warehouse-native state | Append-only tables in the warehouse; no external state database | manifest.json artifacts | Requires external state store (SQLite/PostgreSQL) |
 | Source freshness | `sqb freshness` with adapter/column/sql strategies, lag tolerance, and CI gating | `dbt source freshness` | No dedicated freshness command; `signals` gate model evaluation until external data is ready |
 | Reuse from production | `reuse_from` clones/copies unchanged relations from another target | dbt State clone (paid) | Virtual environments reuse fingerprint-matched physical tables across environments (shared physical storage) |
@@ -88,7 +88,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | Feature | SQLBuild | dbt | SQLMesh |
 |---------|----------|-----|---------|
 | dbt compatibility | Run alongside dbt - reads manifest, no migration | N/A | Jinja compatibility layer plus own macro system |
-| Change-aware dbt builds | Fingerprints dbt models in the warehouse and prunes unchanged ones from the dbt run | dbt State (paid) | N/A |
+| Change-aware dbt builds | Opt-in (`--changes-only`); fingerprints dbt models in the warehouse and prunes unchanged ones from the dbt run | dbt State (paid) | N/A |
 | Reuse dbt builds from production | Pull already-built dbt tables from a production git branch, seed incrementals for catch-up | dbt State clone (paid) | N/A |
 
 ### Sources
@@ -114,7 +114,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 
 | Tool | Best for |
 |------|----------|
-| **SQLBuild** | Change-aware SQL pipelines with warehouse-native state. Skips unchanged work by default, tracks source freshness, and keeps all state as append-only tables in the warehouse. Adds ingestion, Python nodes, pre-promotion audit gating, chained unit tests, local E2E replay, and opt-in virtual environments. |
+| **SQLBuild** | Rigor-first SQL pipelines: compile-time verification, pre-promotion audit gating, chained unit tests, and local E2E replay by default. Opt into change-aware builds and warehouse-native state when full rebuilds get expensive, plus ingestion, Python nodes, and virtual environments as the project grows. |
 | **dbt** | The most widely adopted SQL transformation framework with the largest adapter and community ecosystem. |
 | **SQLMesh** | State-managed pipelines with virtual environments, interval tracking, and cross-dialect transpilation. |
 

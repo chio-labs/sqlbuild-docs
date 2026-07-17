@@ -5,7 +5,7 @@ description: "Run SQLBuild alongside an existing dbt project."
 
 # sqb dbt
 
-Orchestrate dbt and SQLBuild together. Each subcommand runs dbt first, then SQLBuild, with selection logic that works across both project graphs. `sqb dbt build`, `sqb dbt run`, and `sqb dbt plan` are [change-aware](/concepts/dbt-compatibility/change-aware-builds): they prune dbt models that have not changed. See [Using SQLBuild with dbt](/concepts/dbt-compatibility/overview) for concepts and selection behavior.
+Orchestrate dbt and SQLBuild together. Each subcommand runs dbt first, then SQLBuild, with selection logic that works across both project graphs. `sqb dbt build`, `sqb dbt run`, and `sqb dbt plan` run the full selection by default and become [change-aware](/concepts/dbt-compatibility/change-aware-builds) with `--changes-only`, pruning dbt models that have not changed. See [Using SQLBuild with dbt](/concepts/dbt-compatibility/overview) for concepts and selection behavior.
 
 ## sqb dbt plan
 
