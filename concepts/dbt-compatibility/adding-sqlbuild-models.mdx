@@ -3,7 +3,7 @@ title: "Adding SQLBuild models"
 description: "Grow into SQLBuild's own models, tests, audits, and scenarios downstream of your dbt project."
 ---
 
-The [change-aware builds](/concepts/dbt-compatibility/change-aware-builds) workflow needs no SQLBuild models. This page is the optional next step: once that workflow is in place, you can write SQLBuild models, tests, audits, and scenarios downstream of your dbt project without leaving it.
+You can use `sqb dbt` with no SQLBuild models at all. This page is the optional next step: write SQLBuild models, tests, audits, and scenarios downstream of your dbt project without leaving it.
 
 This is purely additive. Your dbt models stay in dbt, and the layout gains a `models/` directory in the SQLBuild project.
 
@@ -35,7 +35,7 @@ MODEL (
 SELECT order_id FROM __dbt_ref("analytics", "fact_orders")
 ```
 
-This resolves to the qualified warehouse table name from the dbt manifest (e.g. `analytics.fact_orders`). The dbt model becomes an upstream dependency in the combined graph, so change detection and reuse continue to work across the boundary: when a referenced dbt model changes, the SQLBuild models downstream of it rebuild.
+This resolves to the qualified warehouse table name from the dbt manifest (e.g. `analytics.fact_orders`). The dbt model becomes an upstream dependency in the combined graph, so selection, execution ordering, and failure blocking work across the boundary. SQLBuild does not fingerprint the dbt model or infer that it changed; use dbt-native state selectors when you need change-based dbt selection.
 
 SQLBuild models can also reference other SQLBuild models with `__ref()` as usual:
 

@@ -24,7 +24,11 @@ When a SQLBuild model is selected, its immediate dbt upstream dependencies are a
 
 ## dbt-only selectors
 
-Selectors that SQLBuild does not recognize (like `state:modified`, `package:stripe`, `source:stripe.charges`) are passed to `dbt ls` to resolve:
+Selectors that SQLBuild does not recognize (like `state:modified`, `package:stripe`, `source:stripe.charges`) are passed to `dbt ls` to resolve. State selectors also need a dbt state artifact:
+
+```bash
+sqb dbt build --state path/to/state --defer --select state:modified+
+```
 
 | Selector | Example | Behavior |
 |----------|---------|----------|
@@ -54,8 +58,8 @@ sqb dbt build --select downstream_orders+
 # Build a SQLBuild model with full upstream dbt chain
 sqb dbt build --select +downstream_orders
 
-# Build SQLBuild models downstream of modified dbt models
-sqb dbt build --select state:modified+
+# Build SQLBuild models downstream of dbt-native modified models
+sqb dbt build --state path/to/state --defer --select state:modified+
 
 # Build all SQLBuild models tagged "nightly" with their dbt dependencies
 sqb dbt build --select tag:nightly
@@ -68,13 +72,15 @@ sqb dbt build --select path:models/marts
 
 For `sqb dbt run` and `sqb dbt build`:
 
-1. **dbt runs** - a single `dbt run/build` command executes with the user's selectors merged with any additional dbt models required by selected SQLBuild models, pruned to only the models that [actually changed](/concepts/dbt-compatibility/change-aware-builds)
+1. **dbt runs** - a single `dbt run/build` command executes with the user's selectors merged with any additional dbt models required by selected SQLBuild models
 2. **SQLBuild runs** - selected SQLBuild models execute against the now-built dbt tables
 
 For `sqb dbt test`:
 
-1. **dbt test runs first** - with the user's original selectors
+1. **dbt test runs first** - planning resolves the user's selectors to exact dbt `test` and `unit_test` nodes, and execution reuses that test set
 2. **SQLBuild test runs** - unit tests for selected SQLBuild models
 3. **SQLBuild audit runs** - audits for selected SQLBuild models
 
 The `test_type:data` and `test_type:unit` selectors from dbt are mapped to SQLBuild equivalents: `test_type:data` runs SQLBuild audits, `test_type:unit` runs SQLBuild unit tests.
+
+Ordinary interop commands do not apply SQLBuild-owned change detection to dbt resources. Use dbt-native `--state` and selectors such as `state:modified` when you want dbt state semantics.

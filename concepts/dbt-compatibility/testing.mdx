@@ -84,11 +84,21 @@ The `@mock_orders()` call expands at compile time to whatever SQL the Python mac
 sqb dbt test
 ```
 
-1. **dbt tests run first** with your original selectors.
+1. **dbt tests run first** from the exact data/unit test nodes resolved during planning.
 2. **SQLBuild unit tests run** for the selected models.
 3. **SQLBuild audits run** for the selected models.
 
 dbt's `test_type:` selectors map to SQLBuild equivalents: `test_type:unit` runs SQLBuild unit tests, `test_type:data` runs SQLBuild audits. Without a test-type selector, both run.
+
+```bash
+# All selected unit tests, without data tests or SQLBuild audits
+sqb dbt test --select test_type:unit
+
+# Unit tests associated with one dbt model
+sqb dbt test --select "fact_orders,test_type:unit"
+```
+
+The planned test IDs are reused for execution, progress, and the final summary. SQLBuild tests may target dbt models directly with `__expected__<model>`, including dbt model names that contain double underscores; exact model names are resolved before package-qualified fixture encoding.
 
 ## On this topic
 

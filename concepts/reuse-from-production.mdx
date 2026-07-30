@@ -5,7 +5,7 @@ description: "Stop rebuilding in dev what production already built. Reuse matchi
 
 Rebuilding a project in dev wastes compute when most models are identical to what production already built. SQLBuild can reuse already-built relations from another target instead of re-executing the query, and can clone the upstream inputs a partial build needs straight from production.
 
-This is the native, warehouse-to-warehouse form of reuse. The [dbt compatibility](/concepts/dbt-compatibility/reuse-from) page covers the counterpart that reuses dbt-built tables described by a production git branch.
+This is a native SQLBuild warehouse-to-warehouse workflow. dbt interop does not apply this reuse policy automatically; use explicit [`sqb dbt clone`](/concepts/dbt-compatibility/clone) when you need selected dbt-built relations copied from a production-shaped git ref.
 
 ## Reuse matching relations
 
