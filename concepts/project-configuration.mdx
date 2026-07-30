@@ -197,7 +197,7 @@ default_audit_run_scope = "final"
 | Field | Default | Description |
 |-------|---------|-------------|
 | `sql_analysis` | `true` | Enable SQL validation and static analysis at compile time |
-| `changes_only` | `false` | Enable [change-aware pruning](/concepts/planning#changes-only-mode) for `plan`, `build`, and `sqb dbt` execution without passing `--changes-only` each run. Can also be set per target under `[targets.<name>]`. The CLI flag takes precedence, then the selected target, then local settings, then this project setting. |
+| `changes_only` | `false` | Enable native SQLBuild [change-aware pruning](/concepts/planning#changes-only-mode) for `plan` and `build` without passing `--changes-only` each run. This setting does not prune dbt resources or alter ordinary `sqb dbt` orchestration. Can also be set per target. |
 | `virtual_environments` | `false` | Enable [virtual environments](/concepts/virtual-environments) (versioned model outputs, promotion, rollback, state management). When `false`, the project runs in standard mode. |
 | `query_change_tracking` | `true` | Track query fingerprints for change detection |
 | `sql_validation` | `true` | Validate SQL syntax during compilation |
@@ -292,7 +292,9 @@ project_dir = "../dbt_project"
 profiles_dir = "../profiles"
 target_path = "../dbt_project/target"
 target = "dev"
-replay_on_change = "full"
+
+[dbt.vars]
+region = "us"
 
 [dbt.production_ref]
 git_ref = "main"
@@ -305,11 +307,15 @@ generate_schema_name_override = "dbt/macros/generate_schema_name.sql"
 | `profiles_dir` | Path to the directory containing `profiles.yml` |
 | `target_path` | Path to dbt's `target/` directory (where `manifest.json` is written) |
 | `target` | dbt target name override (optional) |
-| `replay_on_change` | Project-wide policy for rerunning changed dbt models: `forward_only` (default) or `full` (optional). See [Change-aware builds](/concepts/dbt-compatibility/change-aware-builds#replay-on-change). |
-| `production_ref.git_ref` | Production-shaped git branch or tag compiled to locate production relations, used by `sqb dbt clone` and `sqb dbt diff` (optional). See [Configuration](/concepts/dbt-compatibility/overview#the-production-ref-block). |
-| `production_ref.generate_schema_name_override` | Relative path under `dbt/macros/` to the `generate_schema_name` macro injected when compiling the production ref. |
+| `vars` | Default dbt variables. Local and CLI variables override matching keys. |
+| `production_ref.git_ref` | Production-shaped git branch or tag compiled only by explicit `sqb dbt clone` and `sqb dbt diff`. Required for those commands. |
+| `production_ref.generate_schema_name_override` | Relative path to the `generate_schema_name` macro injected when compiling the production ref. Required for clone/diff. |
+| `production_ref.refresh` | Refresh the cached production checkout before compiling. Defaults to `true`. |
+| `production_ref.git_timeout_seconds` | Timeout for production-ref git operations. Defaults to `30`. |
 
-Paths can be absolute or relative to the SQLBuild project root. See [Using SQLBuild with dbt](/concepts/dbt-compatibility/overview) for setup and usage details.
+Paths can be absolute or relative to the SQLBuild project root. Local `[dbt]` configuration supports only `target` and `vars`. Ordinary `sqb dbt plan/run/build/test` commands do not use `production_ref`; they compile only the current project. See [Using SQLBuild with dbt](/concepts/dbt-compatibility/overview) for setup and usage details.
+
+The removed `[dbt].replay_on_change` and `[dbt].defer_clone_from` keys produce a configuration error. They are not compatibility aliases.
 
 ## Skills
 

@@ -67,7 +67,7 @@ When enabled, change detection covers the whole graph:
 - **Cascade propagation:** when a model does change, the signal propagates downstream, with configurable replay windows (`replay_on_change`).
 - **Python nodes:** loaders, tasks, assets, checks, and hooks are fingerprinted by source and dependency hashes; skip/run is user-controlled via `ctx.skip()`.
 
-State is plain append-only rows in your own warehouse (`_sqlbuild_fingerprints`, `_sqlbuild_source_freshness`, `_sqlbuild_node_results`) - no external state database, no manifest files, no state machine that can corrupt. Point SQLBuild at an [existing dbt project](/concepts/dbt-compatibility/overview) and the same opt-in change detection prunes unchanged dbt models from the run - nothing metered, no account, nothing to log into.
+State is plain append-only rows in your own warehouse (`_sqlbuild_fingerprints`, `_sqlbuild_source_freshness`, `_sqlbuild_node_results`) - no external state database, no manifest files, no state machine that can corrupt. This change-aware behavior applies to SQLBuild-owned work. When you point SQLBuild at an [existing dbt project](/concepts/dbt-compatibility/overview), dbt selection and execution remain dbt-native, including `--state` and `--defer`.
 
 ## Deploy reversibly (opt-in)
 

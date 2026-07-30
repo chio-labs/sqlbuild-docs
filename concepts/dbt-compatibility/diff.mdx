@@ -9,9 +9,9 @@ description: "Compare your dbt build against a production baseline with sqb dbt 
 Every run requires exactly one comparison mode:
 
 ```bash
-sqb dbt diff --schema-only
-sqb dbt diff --full
-sqb dbt diff --bounded <value>
+sqb dbt diff --select path:models/marts --schema-only
+sqb dbt diff --select fact_orders --full
+sqb dbt diff --select event_time_orders --bounded <value>
 ```
 
 Running without a mode is an error.
@@ -53,7 +53,7 @@ Compares only a recent window of rows instead of the whole table, using the mode
 - **Integer cursor:** an integer bound.
 
 ```bash
-sqb dbt diff --bounded 30d
+sqb dbt diff --select event_time_orders --bounded 30d
 ```
 
 The model must define SQLBuild cursor metadata for `--bounded` to apply; without it, SQLBuild reports a configuration error pointing you to add cursor metadata or use another mode.

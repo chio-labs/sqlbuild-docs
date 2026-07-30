@@ -5,7 +5,15 @@ description: "Run SQLBuild alongside an existing dbt project."
 
 # sqb dbt
 
-Orchestrate dbt and SQLBuild together. Each subcommand runs dbt first, then SQLBuild, with selection logic that works across both project graphs. `sqb dbt build`, `sqb dbt run`, and `sqb dbt plan` run the full selection by default and become [change-aware](/concepts/dbt-compatibility/change-aware-builds) with `--changes-only`, pruning dbt models that have not changed. See [Using SQLBuild with dbt](/concepts/dbt-compatibility/overview) for concepts and selection behavior.
+Orchestrate dbt and SQLBuild together with selection across both project graphs. Ordinary commands compile only the current dbt project and do not fingerprint, freshness-check, prune, or automatically clone dbt models. See [Using SQLBuild with dbt](/concepts/dbt-compatibility/overview) for concepts and selection behavior.
+
+## sqb dbt init
+
+Create or update the SQLBuild companion project for an existing dbt project.
+
+```bash
+sqb dbt init --project-dir ../dbt_project --profiles-dir ../profiles
+```
 
 ## sqb dbt plan
 
@@ -15,7 +23,7 @@ Preview combined dbt and SQLBuild work without executing.
 sqb dbt plan [--select <selector>...] [--exclude <selector>...] [--json] [--verbose]
 ```
 
-Shows which dbt models will run, which dbt models are current and pruned, which SQLBuild models will run, and the dbt/SQLBuild commands that would be executed.
+Shows selected and required dbt resources, selected SQLBuild work, and the commands that would be executed.
 
 ## sqb dbt run
 
@@ -43,6 +51,47 @@ sqb dbt test [--select <selector>...] [--exclude <selector>...]
 
 dbt's `test_type:data` and `test_type:unit` selectors are mapped: `test_type:data` runs SQLBuild audits, `test_type:unit` runs SQLBuild unit tests. Without a test type selector, both run.
 
+```bash
+# Run only unit tests
+sqb dbt test --select test_type:unit
+
+# Run only unit tests associated with one dbt model
+sqb dbt test --select "fact_orders,test_type:unit"
+```
+
+SQLBuild resolves the dbt test selection during planning and executes those exact `test` and `unit_test` nodes. Progress and summary totals use the same planned test set.
+
+## sqb dbt clone
+
+Explicitly clone or copy selected production-shaped dbt relations into the active target. `--select` is required.
+
+```bash
+sqb dbt clone --select path:models/marts
+```
+
+See [Cloning dbt relations](/concepts/dbt-compatibility/clone).
+
+## sqb dbt diff
+
+Compare selected current relations with a configured production ref. Choose one comparison mode.
+
+```bash
+sqb dbt diff --select fact_orders --schema-only
+sqb dbt diff --select fact_orders --full
+sqb dbt diff --select event_time_orders --bounded 30d
+```
+
+See [Diffing dbt builds](/concepts/dbt-compatibility/diff).
+
+## Lineage and scenarios
+
+```bash
+sqb dbt lineage fact_orders --direction both
+sqb dbt scenario test
+```
+
+See [dbt column lineage](/concepts/dbt-compatibility/column-lineage) and [dbt scenarios](/concepts/dbt-compatibility/scenarios).
+
 ## sqb dbt debug
 
 Run dbt diagnostics followed by SQLBuild diagnostics.
@@ -62,8 +111,8 @@ sqb dbt build --select downstream_orders
 # Full upstream chain including dbt
 sqb dbt build --select +downstream_orders
 
-# Downstream of modified dbt models
-sqb dbt build --select state:modified+
+# Downstream of dbt-native modified models
+sqb dbt build --state path/to/state --defer --select state:modified+
 
 # SQLBuild models by tag
 sqb dbt build --select tag:nightly
@@ -88,4 +137,8 @@ profiles_dir = "../profiles"
 target_path = "../dbt_project/target"
 ```
 
-See [Project Configuration](/concepts/project-configuration#dbt) for all fields, including `replay_on_change` and `production_ref`.
+See [Project Configuration](/concepts/project-configuration#dbt) for all fields, including `vars` and `production_ref`.
+
+dbt-native `--state`, `--defer`, and `--indirect-selection` options are supported. SQLBuild-native `--defer-to <target>` is available for the SQLBuild portion of `sqb dbt plan/run/build`; it is not supported by `sqb dbt test` and does not clone dbt relations.
+
+`--changes-only`, `[dbt].replay_on_change`, and `[dbt].defer_clone_from` are not supported by dbt interop. Use native dbt state selection or explicit clone/diff instead.
