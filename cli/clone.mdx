@@ -1,11 +1,11 @@
 ---
 title: "clone"
-description: "Copy models between targets using zero-copy cloning."
+description: "Copy model relations between configured targets."
 ---
 
 # sqb clone
 
-Copies model relations from one target to another. Uses zero-copy cloning where the adapter supports it, falling back to physical copies with `--hard-copy`.
+Copies model relations from one target to another. It uses adapter-native cloning where supported and physical copies where required; `--hard-copy` forces a physical copy on adapters that support both.
 
 No `manifest.json` generation or artifact management is required. Clone works directly against live targets.
 
@@ -41,4 +41,14 @@ sqb clone --from prod --to dev --hard-copy
 
 ## Clone policies
 
-Targets must allow cloning in `sqlbuild_project.toml`. See [Project Configuration](/concepts/project-configuration) for details.
+Targets deny cloning by default. Enable the origin and destination explicitly in `sqlbuild_project.toml`:
+
+```toml
+[targets.prod.clone]
+allow_as_clone_origin = true
+
+[targets.dev.clone]
+allow_as_clone_destination = true
+```
+
+The origin target must already contain the built relations being cloned. The configured warehouse credentials must be able to read those relations and create relations in the destination. See [Project Configuration](/concepts/project-configuration) for details.

@@ -5,6 +5,8 @@ description: "Explore model and column-level dependency graphs from the command 
 
 Inspect upstream and downstream dependencies for any model, source, seed, or function in your project. Supports both model-level lineage (dependency graph) and column-level lineage (tracing individual columns through transformations). Outputs as a tree, edge list, or structured JSON.
 
+`sqb compile` computes lineage for validation and includes per-model summaries in its JSON report. Use this command when you need to inspect or export the actual lineage graph.
+
 ## Usage
 
 ```bash

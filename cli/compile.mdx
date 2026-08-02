@@ -113,7 +113,7 @@ The `--lineage-mode` flag controls how column lineage is computed during compile
 | `rich` | Full SQL analysis with transform classification and deeper tracing. Slower on large projects. |
 | `none` | Skip column lineage entirely. |
 
-Column lineage results are included in the JSON compile report under each model's `lineage` field. See [Column Lineage](/concepts/column-lineage) for details on analysis modes and transform types.
+The JSON compile report includes a lineage summary for each model, not the full column graph. Use `sqb lineage <model>[.<column>]` to inspect lineage as a tree, edge list, or JSON. See [Column Lineage](/concepts/column-lineage) for details on analysis modes and transform types.
 
 ## Examples
 
