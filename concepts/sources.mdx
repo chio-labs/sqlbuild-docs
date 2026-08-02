@@ -213,7 +213,7 @@ Use [`sqb freshness`](/cli/freshness) to observe source freshness on demand with
 |-------|-------------|
 | `name` | Source name, used in `__source("name")` references |
 | `database` | Target database (optional) |
-| `schema` | Target schema (optional) |
+| `schema` | Physical source schema (optional). For managed sources, overrides target `loader_schema`; otherwise managed loaders fall back to `loader_schema`, then target `schema`. |
 | `table` | Target table name (defaults to `name` if omitted) |
 | `expression` | Inline SQL expression (alternative to table reference) |
 | `managed` | Set to `true` to bind the source to the `@loader` function of the same name (see [Loaders](/concepts/python-nodes/loaders)) |
