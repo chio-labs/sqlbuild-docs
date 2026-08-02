@@ -76,6 +76,7 @@ A target is a named build context - the schema, database, or connection you buil
 | Field | Description |
 |-------|-------------|
 | `schema` | Schema for all models in this target |
+| `loader_schema` | Default write schema for managed source loaders; falls back to `schema` |
 | `database` | Database for all models in this target |
 | `connection` | Override the base connection config |
 | `vars` | Target-specific project variables |
@@ -86,16 +87,14 @@ A target is a named build context - the schema, database, or connection you buil
 
 ```toml
 [targets.prod]
-schema = "prod"
-
-[targets.prod.vars]
-source_schema = "raw_prod"
+schema = "analytics_prod"
+loader_schema = "raw_prod"
+defer_sources_to = "prod"
 
 [targets.dev]
-schema = "dev"
-
-[targets.dev.vars]
-source_schema = "raw_dev"
+schema = "analytics_dev"
+loader_schema = "raw_dev"
+defer_sources_to = "prod"
 
 [targets.staging]
 schema = "staging"
@@ -103,6 +102,15 @@ schema = "staging"
 [targets.staging.connection]
 database = "staging.duckdb"
 ```
+
+Managed loader writes use the active target's `loader_schema`, falling back to its model
+`schema`. Managed source reads use the target named by `defer_sources_to`, or the active
+target itself when deferral is omitted. In the example, `load --target dev` writes to
+`raw_dev`, while models built in dev read from `raw_prod`.
+
+SQLBuild rejects targets on the same warehouse/database when their managed loader writes
+resolve to the same schema. Two targets may read the same schema through deferral, but they
+cannot both own loader writes there.
 
 ### Selecting a target
 
