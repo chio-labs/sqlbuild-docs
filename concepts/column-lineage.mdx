@@ -147,14 +147,11 @@ See the [lineage CLI reference](/cli/lineage) for full flag documentation and ou
 
 ### Batch analysis with `sqb compile`
 
-Every compile run includes column lineage in the output:
+Every compile run computes column lineage for analysis and reports a summary:
 
 ```bash
 # Default: fast column lineage
 sqb compile
-
-# Rich column lineage in compile
-sqb compile --lineage-mode rich
 
 # Skip column lineage
 sqb compile --lineage-mode none
@@ -163,7 +160,7 @@ sqb compile --lineage-mode none
 sqb compile --json
 ```
 
-In the JSON compile report, each model includes a `lineage` field with `column_count`, `edge_count`, and `has_star` metadata.
+In the JSON compile report, each model includes a `lineage` field with `column_count`, `edge_count`, and `has_star` metadata. It does not contain the full edge graph; use `sqb lineage <model>[.<column>] --format json` when you need structured lineage details.
 
 See the [compile CLI reference](/cli/compile) for details on the compile report format.
 

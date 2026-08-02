@@ -60,7 +60,7 @@ For timestamp cursors, the bound is a duration (`14d`, `6h`, `30m`). For integer
 
 ## Row matching
 
-Rows are matched between the two sides using the model's `unique_key`. For models without a `unique_key`, SQLBuild uses all columns as a composite key.
+Rows are matched between the two sides using the model's `unique_key`. Models without a `unique_key` can use schema-only diff but cannot run full or bounded row comparisons.
 
 The diff output categorises rows as:
 - **Equal** - same key, same values on both sides

@@ -7,6 +7,8 @@ description: "Generate the static DAG artifact for Dagster and other integration
 
 Compiles the project and outputs the static DAG artifact. The artifact contains every node (source, seed, model, function), dependency edge, and check (test, audit, scenario) in your project as structured JSON. It is the bridge between SQLBuild and external orchestrators like Dagster.
 
+This artifact describes resource dependencies, not column-level lineage. Use [`sqb lineage`](/cli/lineage) to inspect or export column traces.
+
 ## Usage
 
 ```bash

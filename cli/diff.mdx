@@ -13,6 +13,8 @@ sqb diff <FROM>:<TO> <mode> [flags]
 
 The first argument is a positional `FROM:TO` range. Exactly one mode is required: `--full`, `--schema-only`, or `--bounded <duration>`.
 
+Full and bounded row comparisons require the model to define `unique_key`. Bounded mode uses the model's cursor and falls back to a full row comparison when no cursor is configured.
+
 ## Flags
 
 | Flag | Description |
