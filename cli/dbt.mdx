@@ -5,7 +5,7 @@ description: "Run SQLBuild alongside an existing dbt project."
 
 # sqb dbt
 
-Orchestrate dbt and SQLBuild together. Each subcommand runs dbt first, then SQLBuild, with selection logic that works across both project graphs. `sqb dbt build`, `sqb dbt run`, and `sqb dbt plan` run the full selection by default and become [change-aware](/concepts/dbt-compatibility/change-aware-builds) with `--changes-only`, pruning dbt models that have not changed. See [Using SQLBuild with dbt](/concepts/dbt-compatibility/overview) for concepts and selection behavior.
+Orchestrate dbt and SQLBuild together. Each subcommand runs dbt first, then SQLBuild, with selection logic that works across both project graphs. `sqb dbt build`, `sqb dbt run`, and `sqb dbt plan` run the full selection, exactly like dbt. See [Using SQLBuild with dbt](/concepts/dbt-compatibility/overview) for concepts and selection behavior.
 
 ## sqb dbt plan
 
@@ -15,7 +15,7 @@ Preview combined dbt and SQLBuild work without executing.
 sqb dbt plan [--select <selector>...] [--exclude <selector>...] [--json] [--verbose]
 ```
 
-Shows which dbt models will run, which dbt models are current and pruned, which SQLBuild models will run, and the dbt/SQLBuild commands that would be executed.
+Shows which dbt models will run, which SQLBuild models will run, and the dbt/SQLBuild commands that would be executed.
 
 ## sqb dbt run
 
@@ -32,16 +32,6 @@ Build dbt models first (including dbt tests), then SQLBuild models with audits.
 ```bash
 sqb dbt build [--select <selector>...] [--exclude <selector>...]
 ```
-
-## sqb dbt test
-
-Run dbt tests first, then SQLBuild unit tests and audits for selected models.
-
-```bash
-sqb dbt test [--select <selector>...] [--exclude <selector>...]
-```
-
-dbt's `test_type:data` and `test_type:unit` selectors are mapped: `test_type:data` runs SQLBuild audits, `test_type:unit` runs SQLBuild unit tests. Without a test type selector, both run.
 
 ## sqb dbt debug
 
@@ -88,4 +78,4 @@ profiles_dir = "../profiles"
 target_path = "../dbt_project/target"
 ```
 
-See [Project Configuration](/concepts/project-configuration#dbt) for all fields, including `replay_on_change` and `production_ref`.
+See [Project Configuration](/concepts/project-configuration#dbt) for all fields.

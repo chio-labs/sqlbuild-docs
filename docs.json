@@ -27,12 +27,6 @@
         "pages": [
           "concepts/dbt-compatibility/overview",
           "concepts/dbt-compatibility/selection",
-          "concepts/dbt-compatibility/change-aware-builds",
-          "concepts/dbt-compatibility/column-lineage",
-          "concepts/dbt-compatibility/testing",
-          "concepts/dbt-compatibility/scenarios",
-          "concepts/dbt-compatibility/diff",
-          "concepts/dbt-compatibility/clone",
           "concepts/dbt-compatibility/adding-sqlbuild-models"
         ]
       },
@@ -69,7 +63,6 @@
               "concepts/planning/selection-and-staleness"
             ]
           },
-          "concepts/reuse-from-production",
           "concepts/snapshots",
           "concepts/audits",
           "concepts/testing",

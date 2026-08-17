@@ -5,7 +5,7 @@ description: "How SQLBuild decides what to build: fingerprints, change reasons, 
 
 When you run `sqb plan` or `sqb build`, SQLBuild compiles your project, compares it against the current warehouse state, and produces a plan. By default, SQLBuild runs your full selection - the same predictable behavior as a plain build, with nothing to configure.
 
-Change-aware pruning is opt-in. Pass `--changes-only` (or set `changes_only = true` in config) to narrow the run to only stale work - unchanged models, seeds, audits, and Python nodes are then skipped automatically. The fingerprints and change reasons below are recorded on every successful build regardless, so change detection is ready the moment you enable pruning.
+Change-aware pruning is opt-in and requires [virtual environments](/concepts/virtual-environments). In a virtual environment, pass `--changes-only` (or set `changes_only = true` in config) to narrow the run to only stale work - unchanged models, seeds, audits, and Python nodes are then skipped. The fingerprints and change reasons below are recorded on every successful build regardless, so change detection is ready the moment you enable pruning.
 
 ## What is tracked
 
@@ -50,35 +50,32 @@ By default, every selected node runs regardless of its reason. Under `--changes-
 
 ## Changes-only mode
 
-By default, SQLBuild executes all selected models regardless of whether they have changed. `--changes-only` narrows the scope to only models that are actually stale:
+Change-aware pruning requires virtual environments (`virtual_environments = true`); it is rejected in standard mode. Within a virtual environment, `--changes-only` narrows the scope to only models that are actually stale:
 
 ```bash
-sqb build --changes-only
-sqb build --select path:models/marts --changes-only
-sqb plan --changes-only
+sqb build --virtual-env pr_123 --changes-only
+sqb build --virtual-env pr_123 --select path:models/marts --changes-only
+sqb plan --virtual-env pr_123 --changes-only
 ```
 
 To make it the default for a project or target, set it in config instead of passing the flag every run:
 
 ```toml
 [settings]
+virtual_environments = true
 changes_only = true
 
 [targets.dev]
 changes_only = true
 ```
 
-The CLI flag takes precedence, followed by the selected target, explicit local settings, then project settings. When any source enables it, the planner removes models and functions from the selected scope if they have no pending work; models with any change reason, a pending backfill, or a changed upstream source are kept. Sources, seeds, and other non-model resources are always kept.
+The CLI flag takes precedence, followed by the selected target, explicit local settings, then project settings. When any source enables it, the planner removes models and functions from the selected scope if they have no pending work; models with any change reason, a pending backfill, or a changed upstream source are kept. Sources, seeds, and other non-model resources are always kept. See [Virtual Environments: Building](/concepts/virtual-environments/building).
 
 ## On this topic
 
 - [Cascade propagation](/concepts/planning/cascade-propagation) - how a change signal propagates downstream, and how each materialization type responds.
 - [Source freshness](/concepts/planning/source-freshness) - observing whether external source data has actually changed between runs.
 - [Selection and staleness](/concepts/planning/selection-and-staleness) - how `--select` interacts with change detection, and the stale warnings that prevent silent partial rebuilds.
-
-## Reuse from production
-
-When a model's version identity matches a relation already built in another target, the planner can reuse that relation instead of rebuilding it, and can clone the upstream inputs a partial build needs from production. This uses the same fingerprints described above. See [Reuse from production](/concepts/reuse-from-production).
 
 ## Run despite unchanged
 
