@@ -1,9 +1,9 @@
 ---
 title: "Testing"
-description: "SQL unit tests with model chaining, macro support, assertions, and multi-model integration testing."
+description: "SQL unit tests and multi-model tests with macro support, assertions, and model chaining."
 ---
 
-SQLBuild supports SQL-native unit tests that validate model logic by comparing actual query results against expected values. Tests can chain across multiple models, use macros for reusable mock data, include zero-row assertions, and run as full integration tests across your pipeline.
+SQLBuild supports SQL-native unit tests that validate model logic by comparing actual query results against expected values. Tests can chain across multiple models (multi-model tests), use macros for reusable mock data, and include zero-row assertions.
 
 For end-to-end testing across many models with physical warehouse relations, see [Scenarios](/concepts/scenarios).
 
@@ -58,7 +58,7 @@ The trailing `SELECT 1` is required as a ceremonial closing statement.
 
 Any CTE without one of these prefixes is treated as a helper CTE, available to all mock and model SQL in the test.
 
-## Chaining across models
+## Multi-model tests
 
 Tests can span multiple models in a single file. Mock your sources, define an expected output for the model you care about, and SQLBuild automatically resolves every intermediate model using its real SQL.
 
@@ -375,7 +375,7 @@ tests/
   unit/
     test_stg_orders.sql              # model test
     test_fact_orders.sql              # model test with assertion
-    test_daily_revenue_chain.sql      # chain test across multiple models
+    test_daily_revenue_chain.sql      # multi-model test
     test_line_total_cents_macro.sql   # macro test
     test_is_completed_order_udf.sql   # UDF test
     test_customer_orders_table_fn.sql # table function test
