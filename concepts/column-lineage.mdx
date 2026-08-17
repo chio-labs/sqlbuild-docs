@@ -3,10 +3,6 @@ title: "Column Lineage"
 description: "Trace individual columns through your SQL pipeline - understand where data comes from and where it goes."
 ---
 
-<Note>
-  Using SQLBuild alongside a dbt project? See [dbt column lineage](/concepts/dbt-compatibility/column-lineage) for tracing columns across the combined dbt and SQLBuild graph with `sqb dbt lineage`.
-</Note>
-
 ## Why column lineage matters
 
 **Impact analysis** - Before changing a source column, see exactly which downstream models and columns are affected. A rename or type change in `raw__orders.id` can be traced through every model that consumes it, even indirectly.
