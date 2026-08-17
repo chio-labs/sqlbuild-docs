@@ -12,7 +12,7 @@ SQLBuild brings software-engineering rigor to SQL pipelines: **verify early, tes
 
 Most data testing checks for nulls and uniqueness. That tells you a column isn't empty, not that your logic is right. SQLBuild tests the logic.
 
-- **Chained unit tests.** Mock your sources, assert on the model you care about, and SQLBuild resolves every intermediate model from its real SQL. One test file can be a full integration test across your pipeline.
+- **Multi-model tests.** Mock your sources, assert on the model you care about, and SQLBuild resolves every intermediate model from its real SQL. One test file can cover a whole stretch of your pipeline.
 - **E2E scenario tests with local replay.** Build the real model graph against coherent fixtures in isolated relations, capture the result as JSONL, and replay it locally through DuckDB. CI runs full end-to-end tests with zero warehouse credentials or compute.
 - **Macro-powered mocks.** Tests are SQL, so they support macro calls - write reusable mock generators instead of copy-pasting fixtures.
 
@@ -136,7 +136,7 @@ def grant_target(target):
 
 ### Testing in depth
 
-Beyond the chained unit tests shown above, SQLBuild runs end-to-end scenario tests against the real model graph, with local replay and property assertions.
+Beyond the multi-model tests shown above, SQLBuild runs end-to-end scenario tests against the real model graph, with local replay and property assertions.
 
 - **Real graph execution:** Define coherent fixture inputs, and SQLBuild builds the real model graph against them in isolated warehouse relations. Test end-to-end business logic across your entire pipeline, not just one model at a time.
 - **Local replay without a warehouse:** Capture scenario fixtures as JSONL snapshots, then replay them locally through DuckDB. CI pipelines run full E2E tests with zero warehouse credentials or compute cost.
