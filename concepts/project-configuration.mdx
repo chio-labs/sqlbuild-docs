@@ -101,8 +101,6 @@ A target is a named build context - the schema, database, or connection you buil
 | `connection` | Override the base connection config |
 | `vars` | Target-specific project variables |
 | `defer_sources_to` | Target name to read managed source data from (see [Loaders](/concepts/python-nodes/loaders#source-deferral)) |
-| `reuse_from` | Target name to reuse relations from when version identities match (see [Reuse from production](/concepts/reuse-from-production)) |
-| `reuse_hard_copy` | Force a full data copy instead of zero-copy clone when reusing (default: `false`) |
 | `clone` | Clone policy (see below) |
 
 ```toml
@@ -242,7 +240,7 @@ default_audit_run_scope = "final"
 | Field | Default | Description |
 |-------|---------|-------------|
 | `sql_analysis` | `true` | Enable SQL validation and static analysis at compile time |
-| `changes_only` | `false` | Enable [change-aware pruning](/concepts/planning#changes-only-mode) for `plan`, `build`, and `sqb dbt` execution without passing `--changes-only` each run. Can also be set per target under `[targets.<name>]`. The CLI flag takes precedence, then the selected target, then local settings, then this project setting. |
+| `changes_only` | `false` | Enable [change-aware pruning](/concepts/planning#changes-only-mode) for `plan` and `build` without passing `--changes-only` each run. Requires `virtual_environments = true`; rejected in standard mode. Can also be set per target under `[targets.<name>]`. The CLI flag takes precedence, then the selected target, then local settings, then this project setting. |
 | `virtual_environments` | `false` | Enable [virtual environments](/concepts/virtual-environments) (versioned model outputs, promotion, rollback, state management). When `false`, the project runs in standard mode. |
 | `query_change_tracking` | `true` | Track query fingerprints for change detection |
 | `sql_validation` | `true` | Validate SQL syntax during compilation |
@@ -337,11 +335,6 @@ project_dir = "../dbt_project"
 profiles_dir = "../profiles"
 target_path = "../dbt_project/target"
 target = "dev"
-replay_on_change = "full"
-
-[dbt.production_ref]
-git_ref = "main"
-generate_schema_name_override = "dbt/macros/generate_schema_name.sql"
 ```
 
 | Field | Description |
@@ -350,9 +343,6 @@ generate_schema_name_override = "dbt/macros/generate_schema_name.sql"
 | `profiles_dir` | Path to the directory containing `profiles.yml` |
 | `target_path` | Path to dbt's `target/` directory (where `manifest.json` is written) |
 | `target` | dbt target name override (optional) |
-| `replay_on_change` | Project-wide policy for rerunning changed dbt models: `forward_only` (default) or `full` (optional). See [Change-aware builds](/concepts/dbt-compatibility/change-aware-builds#replay-on-change). |
-| `production_ref.git_ref` | Production-shaped git branch or tag compiled to locate production relations, used by `sqb dbt clone` and `sqb dbt diff` (optional). See [Configuration](/concepts/dbt-compatibility/overview#the-production-ref-block). |
-| `production_ref.generate_schema_name_override` | Relative path under `dbt/macros/` to the `generate_schema_name` macro injected when compiling the production ref. |
 
 Paths can be absolute or relative to the SQLBuild project root. See [Using SQLBuild with dbt](/concepts/dbt-compatibility/overview) for setup and usage details.
 
@@ -403,7 +393,7 @@ debug_mode = "true"
 | `vars` | Developer-specific variable overrides (merged on top of project + target vars) |
 
 Target blocks support the same local overrides, including `schema`, `loader_schema`,
-`connection`, `vars`, source deferral, reuse, and clone policy fields. Unspecified values
+`connection`, `vars`, source deferral, and clone policy fields. Unspecified values
 continue to come from `sqlbuild_project.toml`.
 
 This replaces the common dbt pattern of switching profiles or setting environment variables
