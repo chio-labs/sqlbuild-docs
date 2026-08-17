@@ -11,7 +11,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 
 | Feature | SQLBuild | dbt | SQLMesh |
 |---------|----------|-----|---------|
-| Unit tests with model chaining | Chain across multiple models | YAML-stub, single model | CTE-based, single model |
+| Multi-model tests | Chain across multiple models | YAML-stub, single model | CTE-based, single model |
 | Macros as test helpers | Tests are SQL - macros work as reusable fixture generators | No (YAML stubs) | No |
 | E2E scenario tests | Fixture worlds with real graph execution | No | No |
 | Local E2E replay | Capture from warehouse, replay in DuckDB | No | No |
@@ -112,7 +112,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 
 | Tool | Best for |
 |------|----------|
-| **SQLBuild** | Rigor-first SQL pipelines: compile-time verification, pre-promotion audit gating, chained unit tests, and local E2E replay by default. Opt into change-aware builds and warehouse-native state when full rebuilds get expensive, plus ingestion, Python nodes, and virtual environments as the project grows. |
+| **SQLBuild** | Rigor-first SQL pipelines: compile-time verification, pre-promotion audit gating, multi-model tests, and local E2E replay by default. Opt into change-aware builds and warehouse-native state when full rebuilds get expensive, plus ingestion, Python nodes, and virtual environments as the project grows. |
 | **dbt** | The most widely adopted SQL transformation framework with the largest adapter and community ecosystem. |
 | **SQLMesh** | State-managed pipelines with virtual environments, interval tracking, and cross-dialect transpilation. |
 

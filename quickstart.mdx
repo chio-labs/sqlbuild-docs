@@ -235,8 +235,8 @@ waffle-shop/
   tests/
     unit/
       test_stg_orders.sql              # model unit test
-      test_fact_orders.sql             # multi-model unit test
-      test_daily_revenue_chain.sql     # chain test across multiple models
+      test_fact_orders.sql             # multi-model test
+      test_daily_revenue_chain.sql     # multi-model test
       test_line_total_cents_macro.sql  # macro test
     scenarios/
       daily_revenue_minimal.sql   # E2E scenario test
@@ -254,6 +254,6 @@ waffle-shop/
 - [Functions](/concepts/functions) - SQL UDFs, Python UDFs, and table functions
 - [Incremental](/concepts/incremental) - learn about cursor-based incremental strategies
 - [Audits](/concepts/audits) - configure data quality checks
-- [Testing](/concepts/testing) - write SQL unit tests with chaining and macro support
+- [Testing](/concepts/testing) - write SQL unit tests and multi-model tests with macro support
 - [Column Lineage](/concepts/column-lineage) - trace individual columns through your pipeline
 - [CLI Reference](/cli/build) - full command reference
