@@ -1,0 +1,108 @@
+---
+title: "Enums and Constants"
+description: "Declare compiler-validated domain values and scalar constants for use across SQLBuild SQL."
+---
+
+Enums name a fixed domain of string or integer values. Constants name one string or integer value. SQLBuild validates references at compile time and renders them as SQL literals.
+
+## Public declarations
+
+Public declarations are available throughout the project. Put enum files anywhere under `enums/` and constant files anywhere under `constants/`; both roots are discovered recursively.
+
+```sql
+-- enums/market/market_type.sql
+ENUM (
+  name market_type,
+  members [WIN, PLACE, SHOW],
+);
+```
+
+Shorthand members use the member name as the string value. Use explicit members when the reference name and stored value differ, or for integer enums:
+
+```sql
+ENUM (
+  name source,
+  members (
+    CENTRUM "centrum",
+    PARISTURF "paristurf",
+  ),
+);
+
+ENUM (
+  name priority,
+  members (LOW 1, HIGH 3),
+);
+```
+
+```sql
+-- constants/market/thresholds.sql
+CONSTANT (name min_runners, value 7);
+CONSTANT (name fallback_source, value "centrum");
+```
+
+A file may contain multiple declarations. Public names must not start with `_`.
+
+## References
+
+Use `@enum("name").MEMBER` and `@const("name")` anywhere public declarations are supported:
+
+```sql
+SELECT *
+FROM prices
+WHERE market_type = @enum("market_type").WIN
+  AND runner_count > @const("min_runners")
+```
+
+This compiles to:
+
+```sql
+WHERE market_type = 'WIN'
+  AND runner_count > 7
+```
+
+Public references work in model queries, SQL hooks, SQL functions, audits, unit tests, scenarios, and inline source expressions. Unknown declarations or enum members fail compilation.
+
+## Model-local declarations
+
+Use model-local declarations for values that should not enter the project-wide namespace:
+
+```sql
+MODEL (
+  enums (
+    _state [OPEN, CLOSED],
+  ),
+  constants (
+    _min_runners 7,
+  ),
+);
+
+SELECT *
+FROM runners
+WHERE state = @enum("_state").OPEN
+  AND runner_count > @const("_min_runners")
+```
+
+Model-local names must start with `_`. They are available only in that model's query and SQL hooks; another model cannot resolve them.
+
+## Types and validation
+
+Enums must contain at least one member and use one consistent scalar type. String and integer members cannot be mixed. Integer values use explicit member syntax.
+
+Names must be SQL identifiers. Duplicate declaration names, duplicate member names, invalid visibility prefixes, and malformed references all fail compilation.
+
+## Enum-typed contracts
+
+An enum name can be used as a model column type:
+
+```sql
+MODEL (
+  contract enforced,
+  columns (
+    market_type (type market_type),
+  ),
+);
+```
+
+SQLBuild resolves the physical type to `VARCHAR` or `INTEGER`. With `contract enforced`, it also adds an `accepted_values` audit for the enum members, so an out-of-domain value blocks promotion.
+
+Declaration changes participate in change detection. A changed referenced value changes compiled SQL; changed members of an enum-typed contract change the model's contract identity.

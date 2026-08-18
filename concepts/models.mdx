@@ -294,6 +294,19 @@ Contract values:
 
 Contracts interact with schema change policies. For snapshot models, `snapshot_schema_change append_new_columns` is incompatible with `contract enforced` because appending columns would violate the contract.
 
+Columns may also use a declared enum as their type:
+
+```sql
+MODEL (
+  contract enforced,
+  columns (
+    market_type (type market_type),
+  ),
+);
+```
+
+SQLBuild resolves the enum to its physical string or integer type and adds accepted-values validation for its members. See [Enums and Constants](/concepts/enums-and-constants).
+
 ### Audit run scope
 
 Audits on incremental models can specify `run_scope` to control when they execute:
