@@ -14,6 +14,8 @@ The rule is simple: if it's any SQL that will be executed, it uses `@`. If it's 
 
 | Syntax | Where | Resolved |
 |--------|-------|----------|
+| `@enum("name").MEMBER` | Executable SQL | Compile time - expands to the validated enum member value |
+| `@const("name")` | Executable SQL | Compile time - expands to the named scalar value |
 | `@macro(args)` | Model SQL, SQL hooks, tests, audits, inline source expressions | Compile time - expands to macro return value |
 | `@@name` | Model SQL, SQL hooks, tests, audits, inline source expressions | Compile time - project variable substitution |
 | `@@ENV:NAME` | Model SQL, SQL hooks, tests, audits, inline source expressions | Compile time - environment variable |
@@ -24,6 +26,8 @@ The rule is simple: if it's any SQL that will be executed, it uses `@`. If it's 
 | `${ENV:...}` | TOML/YAML config values | Config compilation |
 
 `@@CTX:` is intentionally SQL-hook-only. Model SQL describes a relation's data and should not reference its own destination identity. SQL hooks are the operational SQL layer where destination context is useful - grants, logging, post-materialization DDL. Python hooks access the same information through `ctx.destination` on the `HookContext` object (see [Hooks](/concepts/models#hooks)).
+
+See [Enums and Constants](/concepts/enums-and-constants) for declaration syntax, visibility, and contract integration.
 
 ## Project variables
 
@@ -151,8 +155,9 @@ SQLBuild processes authored SQL in this order:
 
 1. **Config templates** (`${CTX:...}`, `${ENV:...}`) in TOML/YAML config values are resolved during config compilation
 2. **Project variables** (`@@name`), **environment variables** (`@@ENV:NAME`), and **context variables** (`@@CTX:name` in SQL hooks) are substituted
-3. **Macro calls** (`@name(args)`) are expanded
-4. **SQL analysis validation** runs against the fully expanded SQL
+3. **Enum and constant references** are validated and expanded to scalar SQL literals
+4. **Macro calls** (`@name(args)`) are expanded
+5. **SQL analysis validation** runs against the fully expanded SQL
 
 This means:
 - Config templates resolve first, before any SQL processing
