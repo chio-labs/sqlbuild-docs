@@ -3,7 +3,7 @@ title: "Incremental Models"
 description: "Cursor-based incremental strategies, microbatch execution, and backfill policies."
 ---
 
-Incremental models process only new or changed data instead of rebuilding the entire table. SQLBuild works out where to resume by reading the highest cursor value (timestamp or integer) already in the target table, so there is no state store or checkpoint to maintain. If a model fails for several runs, the next successful build picks up from the last data it actually wrote, with no manual backfilling.
+Incremental models process only new or changed data instead of rebuilding the entire table. SQLBuild works out where to resume from the current target and input relations, so there is no separate checkpoint store. A retry recomputes its interval from current warehouse state rather than reusing the exact interval of a failed attempt.
 
 ## Strategies
 
@@ -78,7 +78,7 @@ GROUP BY customer_id
 
 ## Cursors
 
-Cursors define the incremental replay boundary. SQLBuild queries `MAX(cursor)` from the target table and `MIN/MAX` from upstream inputs to compute the replay window automatically.
+Cursors define the incremental replay boundary. SQLBuild queries `MAX(cursor)` from the target table and `MIN/MAX` from upstream inputs to compute the replay window automatically. Observed maxima are inclusive warehouse values; SQLBuild advances them once to produce an effective exclusive end bound.
 
 | Field | Description |
 |-------|-------------|
@@ -105,7 +105,35 @@ MODEL (
 );
 ```
 
-SQLBuild uses these to compute `MIN/MAX` across the listed inputs and determine the replay window.
+SQLBuild uses these to determine the replay window. With multiple listed inputs, the end is the conservative common watermark: the minimum of their maxima. This prevents a faster input from advancing the model beyond data available from a slower input.
+
+On a first build, SQLBuild derives the interval from the declared cursor inputs and cursor policy. If it cannot establish a valid interval, the build fails before mutating the destination.
+
+### Cursor bounds in model SQL
+
+Cursor-based incremental models can read their effective interval with zero-argument intrinsics:
+
+```sql
+MODEL (
+  materialized incremental,
+  incremental_strategy delete_insert,
+  cursor activity_hour,
+  cursor_type timestamp,
+  cursor_grain hour,
+  cursor_inputs (
+    fact_orders ordered_at,
+  ),
+);
+
+SELECT customer_id, ordered_at AS activity_hour
+FROM __ref("fact_orders")
+WHERE ordered_at >= __cursor_start()
+  AND ordered_at < __cursor_end()
+```
+
+`__cursor_start()` is the effective inclusive start and `__cursor_end()` is the effective exclusive end after cursor floors, lookback, replay policy, and command-line overrides have been applied. The intrinsics accept no arguments and are only valid in built-in cursor incremental model query SQL. They are rejected in functions, hooks, audits, SQL tests and scenarios, source expressions, non-incremental or cursorless models, custom materializations, and non-microbatch full refreshes.
+
+In microbatch mode, the intrinsics resolve to each batch's concrete bounds. A microbatch full refresh discovers its range from current inputs while ignoring the old destination watermark.
 
 #### Listed inputs bound the window; unlisted inputs do not
 
