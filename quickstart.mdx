@@ -213,6 +213,9 @@ waffle-shop/
     sql/
       udf__is_completed_order.sql    # scalar SQL UDF
       table_fn__customer_orders.sql  # table function
+  schemas/
+    orders/
+      order.sql                 # reusable model column schema
   models/
     staging/
       stg_customers.sql         # view (audits declared in MODEL() header)
