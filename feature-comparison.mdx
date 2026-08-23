@@ -33,6 +33,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | SQL validation | Offline, compile-time (Polyglot) | dbt Core: none; dbt Fusion engine: compile-time (proprietary; built on Apache-2.0 dbt Core v2) | Compile-time (SQLGlot) |
 | Column-level lineage | Compile-time, fast and rich modes | dbt Core: post-hoc via docs; dbt Fusion engine: compile-time | Compile-time |
 | Column contract validation | Compile-time inference plus runtime enforcement with `contract enforced` | YAML schema contracts at runtime | Schema contracts via plan |
+| SQL architecture policy | Opt-in Kata rules over compiled models with coded faults, remediations, suppressions, and custom rules | Project conventions through packages and external tooling | Built-in audits and external linting |
 | SQL transpilation | For local E2E replay into DuckDB | No | For cross-dialect model execution |
 | Python macros | `@macro()` syntax | No (Jinja only) | SQLMesh macro syntax |
 | Jinja support | No (Python macros instead) | Yes (core templating) | Yes |
@@ -106,7 +107,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | Adapters | DuckDB, MotherDuck, Snowflake, BigQuery, Databricks, PostgreSQL, SQL Server | 30+ (community adapters) | DuckDB, Snowflake, BigQuery, Databricks, Spark, Redshift, Postgres, Trino, MySQL |
 | State requirements | Stateless by default | manifest.json + target/ | Requires state store (local database or PostgreSQL for production) |
 | Playground | `sqb playground` | Clone example repo | Example project |
-| AI agent skills | `sqb skills update` | No | No |
+| AI agent skills | General guidance with `sqb skills update`; policy-derived guidance with `sqb kata skills` | No | No |
 
 ## Where each tool fits
 

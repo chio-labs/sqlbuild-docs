@@ -50,6 +50,13 @@
           "concepts/sources",
           "concepts/seeds",
           "concepts/models",
+          {
+            "group": "Kata",
+            "pages": [
+              "concepts/kata",
+              "concepts/kata/custom-rules"
+            ]
+          },
           "concepts/enums-and-constants",
           "concepts/interpolation",
           "concepts/macros",
@@ -125,6 +132,7 @@
           "cli/playground",
           "cli/skills",
           "cli/compile",
+          "cli/kata",
           "cli/plan",
           "cli/build",
           "cli/load",

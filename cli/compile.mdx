@@ -40,6 +40,12 @@ When SQL analysis is enabled (default), compile performs static analysis on your
 - **Column contract validation**: If a model declares columns in its `MODEL()` header, compile checks that every declared column exists in the query output. If a column declares a type and `type_enforcement` is enabled, compile also verifies the inferred type matches the declared type
 - **Column lineage**: Traces which source columns flow into each output column, including transform classification. See [Column Lineage](/concepts/column-lineage) for details
 
+<Note>
+`sqb compile` checks SQL correctness, contracts, and lineage. [`sqb kata`](/cli/kata) compiles the
+project and then applies its separately configured architecture policy. Kata is not run
+automatically by `compile`.
+</Note>
+
 ### Contract diagnostics
 
 When a contract violation is found, compile reports it with source-annotated diagnostics:

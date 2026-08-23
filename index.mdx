@@ -42,13 +42,15 @@ __expected__fact_orders AS (
 SELECT 1
 ```
 
-See [Testing](/concepts/scenarios) for unit tests, scenarios, and local replay.
+See [Testing](/concepts/testing) for SQL unit tests and [Scenarios](/concepts/scenarios) for local
+E2E replay.
 
 ## Verify early
 
 Before any model runs, SQLBuild does static analysis of your project - offline, no warehouse connection needed.
 
 - **Catch errors at compile.** SQL syntax, type inference, contract checks, and column lineage all run before execution. A bad reference or a type mismatch fails at compile, with an error that points at the line - not halfway through a warehouse run.
+- **Enforce architecture deliberately.** Opt into [Kata](/concepts/kata) to check model structure, dependency CTEs, layer boundaries, joins, naming, contracts, and test coverage with coded faults and remediations.
 - **Fast, because it's Rust where it counts.** Static analysis runs on [Polyglot](https://github.com/tobilg/polyglot), a Rust SQL engine (MIT, 32+ dialects), so compile stays quick even on large projects.
 - **Open, not paywalled.** The static analysis is part of the Apache-2.0 core - no proprietary engine, no separate login, and no paid tier gating the smart checks.
 
@@ -67,7 +69,7 @@ When enabled, change detection covers the whole graph:
 - **Cascade propagation:** when a model does change, the signal propagates downstream, with configurable replay windows (`replay_on_change`).
 - **Python nodes:** loaders, tasks, assets, checks, and hooks are fingerprinted by source and dependency hashes; skip/run is user-controlled via `ctx.skip()`.
 
-State is plain append-only rows in your own warehouse (`_sqlbuild_fingerprints`, `_sqlbuild_source_freshness`, `_sqlbuild_node_results`) - no external state database, no manifest files, no state machine that can corrupt. Point SQLBuild at an [existing dbt project](/concepts/dbt-compatibility/overview) and the same opt-in change detection prunes unchanged dbt models from the run - nothing metered, no account, nothing to log into.
+State is plain append-only rows in your own warehouse (`_sqlbuild_fingerprints`, `_sqlbuild_source_freshness`, `_sqlbuild_node_results`) - no external state database, no manifest files, no state machine that can corrupt. SQLBuild-owned models can also depend on models from an [existing dbt project](/concepts/dbt-compatibility/overview) - nothing metered, no account, nothing to log into.
 
 ## Deploy reversibly (opt-in)
 
@@ -232,7 +234,7 @@ def materialize(ctx: MaterializationContext) -> MaterializationResult:
     Get a project running locally in minutes.
   </Card>
   <Card title="CLI Reference" icon="terminal" href="/cli/build">
-    Full reference for every SQLBuild command.
+    Reference for SQLBuild commands and flags.
   </Card>
   <Card title="Concepts" icon="book" href="/concepts/models">
     Understand models, incremental strategies, audits, and selectors.
