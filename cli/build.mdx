@@ -57,7 +57,7 @@ This replaces the former `sqb run` command. The full lifecycle (tests + audits) 
 2. Seeds are loaded (if changed)
 3. Source audits run before their dependent models (unless `--no-audits`)
 4. SQL unit tests run before their target model (unless `--no-tests`)
-5. Models are materialized in DAG topological order (unchanged models are skipped)
+5. Models are materialized in DAG topological order (`--changes-only` skips models already current)
 6. Error-severity audits run against the staging table before promotion to the target (unless `--no-audits`)
 
 ## Output

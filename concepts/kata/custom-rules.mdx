@@ -1,0 +1,159 @@
+---
+title: "Custom Kata Rules"
+description: "Define and test repository-owned SQL architecture rules with the public Kata API."
+---
+
+Custom Kata rules extend the built-in policy when a repository has domain conventions that cannot
+be expressed by configuration alone. They use the same selection, suppression, deterministic
+ordering, and remediation output as built-ins.
+
+Custom rule codes use `XSQBK<family><three digits>`. Keep codes stable after adoption because they
+become part of configuration, CI output, and exceptions.
+
+## Define a rule
+
+```python
+from sqlbuild.kata import KataFault, RuleContext, kata
+
+
+@kata(
+    code="XSQBKP001",
+    family="prices",
+    slug="typed-currency",
+    message="price models must declare a currency column",
+    remediation="Declare currency in the MODEL columns contract.",
+)
+def typed_currency(*, model, ctx: RuleContext) -> list[KataFault]:
+    if any(column.name == "currency" for column in ctx.declared_columns):
+        return []
+    return [ctx.path_fault()]
+```
+
+The function signature is exactly two keyword-only arguments named `model` and `ctx`. Return an
+empty list when the model passes or one or more `KataFault` values when it fails.
+
+`RuleContext` exposes the compiled model, authored SQL, raw Polyglot AST, references, parsed model
+name, materialization, declared columns, audit and test counts, public declarations, active policy,
+and fault constructors. Repository files can be read safely through `project_read_text` and
+`project_glob`.
+
+## Load and select rules
+
+Load repository-owned files or dotted modules from `sqlbuild_project.toml`:
+
+```toml
+[kata]
+select = ["XSQBKP001"]
+rule_paths = ["kata/rules"]
+rule_modules = ["project_kata.rules"]
+```
+
+A directory in `rule_paths` is scanned recursively for Python files containing `@kata`. Dotted
+modules must resolve beneath the project root. Codes must be unique across built-in and custom
+rules.
+
+Setting `enabled_by_default=True` on the decorator lets a matching custom prefix activate the rule;
+it does not enable Kata when `[kata].select` is empty.
+
+## Typed options
+
+Declare options with `RuleOption.boolean`, `integer`, `string`, `string_list`, or `integer_list`:
+
+```python
+from sqlbuild.kata import KataFault, RuleContext, RuleOption, kata
+
+
+REQUIRED_DOMAIN = RuleOption.string(
+    name="required_domain",
+    default="market",
+    description="Domain that owns price models",
+)
+
+
+@kata(
+    code="XSQBKP002",
+    family="prices",
+    slug="required-domain",
+    message="price models must belong to the configured domain",
+    remediation="Move or rename this model for the configured domain.",
+    options=(REQUIRED_DOMAIN,),
+)
+def required_domain(*, model, ctx: RuleContext) -> list[KataFault]:
+    parts = ctx.name_parts
+    if parts is not None and parts.domain == ctx.option(REQUIRED_DOMAIN):
+        return []
+    return [ctx.path_fault()]
+```
+
+Configure options under the exact rule code. Unknown rules, option names, or invalid values fail
+configuration:
+
+```toml
+[kata.rule_options.XSQBKP002]
+required_domain = "finance"
+```
+
+## Test every rule
+
+Use the public harness so tests exercise normal SQLBuild discovery, compilation, rule loading, and
+structured fault evaluation:
+
+```python
+from sqlbuild.kata import RuleCase, evaluate_rule
+
+from kata.rules.prices import typed_currency
+
+
+def test_missing_currency_faults() -> None:
+    result = evaluate_rule(
+        rule=typed_currency,
+        test_case=RuleCase(
+            description="missing currency faults",
+            source=(
+                "MODEL (materialized table);\n\n"
+                "WITH final AS (SELECT 1 AS price)\n"
+                "SELECT price FROM final\n"
+            ),
+            path="models/mart/market__mart__prices.sql",
+            expected_fault_count=1,
+        ),
+    )
+
+    assert result.fault_count == 1
+```
+
+`RuleCase.files` can add supporting project files and `RuleCase.config` supplies the rule's option
+values. Keep conventional `RuleCase` and `evaluate_rule` calls under `tests/` so `SQBKX201` can
+count statically discoverable harness cases. This coverage check does not execute the tests, so run
+the test suite separately in CI.
+
+## Execution and caching
+
+Selected custom rules execute in a bounded Python subprocess with a 30-second timeout. Exceptions
+are reported with the rule code and model path, and returned faults rejoin normal suppressions and
+deterministic ordering.
+
+<Warning>
+Custom rules are trusted repository Python, not sandboxed plugins. Rule modules execute when they
+are loaded, and rules that are not required to be cacheable may access external resources. Review
+them like any other project code.
+</Warning>
+
+Selecting any custom rule disables the model cache by default. To keep the built-in cache available,
+require hermetic custom rules explicitly:
+
+```toml
+[kata.cache]
+enabled = true
+require_cacheable = true
+```
+
+Cacheable rules may import supported pure modules such as `collections`, `dataclasses`, `enum`,
+`math`, `re`, `typing`, and `sqlbuild.kata`. Use `RuleContext` rather than direct filesystem calls.
+SQLBuild validates these constraints before evaluation.
+
+Custom findings are still recomputed on each invocation. `require_cacheable` preserves the native
+model cache around them; it does not cache custom subprocess output.
+
+Return to [Kata SQL Architecture Checks](/concepts/kata) for built-in rules, selectors, and
+exceptions.

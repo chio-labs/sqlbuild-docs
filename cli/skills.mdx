@@ -77,3 +77,18 @@ sqb playground waffle-shop
 cd waffle-shop
 # Agent skill files are already installed
 ```
+
+## Kata policy skills
+
+`sqb skills update` installs general SQLBuild framework guidance. `sqb kata skills` generates
+project-specific guidance from the active Kata rules, options, thresholds, naming vocabulary, and
+scoped deviations:
+
+```bash
+sqb kata skills
+sqb kata skills --check
+```
+
+Use `--check` in CI to detect missing or stale policy guidance without rewriting files. Kata uses
+the separate `sqlbuild-kata` skill path and refuses to overwrite divergent or unowned content. See
+[Kata SQL Architecture Checks](/concepts/kata) and the [Kata CLI reference](/cli/kata).

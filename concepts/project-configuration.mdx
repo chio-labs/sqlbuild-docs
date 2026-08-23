@@ -255,6 +255,24 @@ default_audit_run_scope = "final"
 - **`staged`** (default for most adapters): Materializes into a staging table, runs audits, then swaps into the target. If audits fail, the production table is untouched.
 - **`direct`**: Creates the table directly at the target location. Audits run after materialization. Simpler but no pre-promotion safety net.
 
+## Kata
+
+Kata policy belongs in the shared `sqlbuild_project.toml` so local and CI evaluation use the same
+architecture rules:
+
+```toml
+[kata]
+select = ["SQBK", "SQBKS001", "SQBKS101"]
+
+[kata.thresholds]
+min_audits_per_model = 1
+min_tests_per_model = 1
+```
+
+Kata is opt-in. Prefix selectors activate matching default-enabled rules; exact codes also activate
+opt-in rules. See [Kata SQL Architecture Checks](/concepts/kata) for the complete rule,
+configuration, and suppression reference.
+
 ## Project variables
 
 Variables are simple string substitutions available in model SQL via the `@@name` syntax:

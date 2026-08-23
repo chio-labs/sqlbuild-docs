@@ -1,0 +1,233 @@
+---
+title: "Kata SQL Architecture Checks"
+description: "Enforce opt-in SQL architecture and model-shape policy over your compiled project."
+---
+
+Kata is SQLBuild's opt-in SQL architecture policy. It compiles the project, then checks model
+structure, naming, dependency boundaries, joins, contracts, and test coverage. Built-in checks run
+offline: they do not execute warehouse SQL or rewrite source files. Findings have stable codes and
+concrete remediations.
+
+Kata is error-only: every retained finding blocks the command. Use it for conventions that a team
+has deliberately adopted, not as a collection of advisory style warnings.
+
+Tests codify behavioral expectations; Kata codifies architectural expectations for SQL models.
+For equivalent boundaries, repository structure, and code-shape checks in Python projects, see
+[Fensu](https://docs.fensu.dev/).
+
+## Where Kata fits
+
+| Command | Responsibility |
+|---------|----------------|
+| `sqb compile` | SQL validity, references, inferred columns, contracts, and lineage |
+| `sqb lint` / `sqb format` | SQL presentation and formatting |
+| `sqb kata` | Repository architecture and model-shape conventions |
+| `sqb test` | Transformation behavior |
+| `sqb audit` | Data quality against materialized data |
+
+Kata is a separate command. It is not run automatically by `compile` or `build`.
+
+## Enable Kata
+
+Commit the shared policy to `sqlbuild_project.toml`:
+
+```toml
+[kata]
+select = [
+  "SQBK",
+  "SQBKS001",
+  "SQBKS101",
+  "SQBKS201",
+  "SQBKX001",
+  "SQBKX002",
+]
+
+[kata.thresholds]
+min_audits_per_model = 1
+min_tests_per_model = 1
+```
+
+This is an example policy, not a universal preset. Select only conventions that the repository is
+ready to enforce.
+
+<Note>
+Kata evaluates no rules until `[kata].select` resolves at least one rule. Prefix selectors activate
+only matching rules that are enabled by default. Exact rule codes also activate opt-in rules. In
+SQLBuild 0.54.1, `select = ["SQBK"]` activates `SQBKR401` only; it does not enable every built-in
+rule.
+</Note>
+
+Rule selectors are case-sensitive prefixes. They do not use `*` wildcards:
+
+- Built-in rules use `SQBK<family><three digits>`, such as `SQBKS101`.
+- Custom rules use `XSQBK<family><three digits>`, such as `XSQBKP001`.
+- `select` activates rules; `ignore` removes matching rules from the active policy.
+- An exact code activates that rule even when it is opt-in.
+- The CLI `--select` and `--exclude` flags scope models, not rules.
+
+Inspect any built-in or configured custom rule without enabling it:
+
+```bash
+sqb kata rule SQBKS101
+```
+
+## Built-in rules
+
+All built-ins are opt-in except `SQBKR401`.
+
+### Structure
+
+| Code | Check |
+|------|-------|
+| `SQBKS000` | Standalone comments belong on the first inner line of a CTE |
+| `SQBKS001` | Transformation logic belongs in top-level CTEs |
+| `SQBKS002` | The terminal SELECT reads plainly from the final top-level CTE |
+| `SQBKS101` | Each `__ref` and `__source` is isolated in one dependency import CTE |
+| `SQBKS201` | `SELECT *` is restricted to dependency import CTEs |
+| `SQBKS202` | Positional set-operation branches enumerate their columns |
+| `SQBKS301` | CTEs are top-level, not nested |
+| `SQBKS302` | Recursive CTEs are not permitted |
+| `SQBKS401` | View materialization agrees with the `stg_v`, `int_v`, or `mart_v` marker |
+| `SQBKS501` | CTE names describe their contents |
+
+### Layers and model grammar
+
+| Code | Check |
+|------|-------|
+| `SQBKL001` | Dependencies flow forward through the layer order |
+| `SQBKL101` | Qualified table dependencies use `__ref` or `__source` |
+| `SQBKR001` | Model names follow `<domain>__<layer>__<entity>[__<source>]` |
+| `SQBKR002` | Model layer names agree with their folders |
+| `SQBKR201` | Model source suffixes and source dependency names use approved, current tokens |
+| `SQBKR301` | Referenced model identifiers follow Kata model-name grammar |
+| `SQBKR401` | Models declare `contract enforced` (default-enabled) |
+
+### Joins
+
+| Code | Check |
+|------|-------|
+| `SQBKJ001` | Implicit comma joins are not permitted |
+| `SQBKJ002` | Cross joins require an exact, reasoned exception |
+| `SQBKJ101` | Non-cross joins declare `ON` or `USING` keys |
+
+### Column naming and types
+
+| Code | Check |
+|------|-------|
+| `SQBKN001` | `is_`, `has_`, and `can_` columns are BOOLEAN |
+| `SQBKN002` | `*_at`, `*_ts`, and `*_timestamp` columns use timestamp types |
+| `SQBKN003` | `*_date` columns are DATE |
+
+These checks use declared contract columns, not inferred output columns.
+
+### Decision hygiene
+
+| Code | Check |
+|------|-------|
+| `SQBKH001` | Enum comparisons use declared enum members |
+| `SQBKH002` | Non-canonical numeric decisions use named constants |
+| `SQBKH101` | Identical enum domains are consolidated |
+| `SQBKH201` | Public enum and constant files live under domain folders |
+
+### Tests and coverage
+
+| Code | Check |
+|------|-------|
+| `SQBKX001` | Non-passthrough models meet the configured audit minimum |
+| `SQBKX002` | Non-passthrough models meet the configured SQL test minimum |
+| `SQBKX201` | Selected custom rules have statically discoverable public-harness test cases |
+
+Selecting a custom rule automatically adds `SQBKX201` unless the policy ignores it. This is a
+static check for conventional `RuleCase` and `evaluate_rule` usage; it does not execute the tests.
+Thresholds default to one and can be set to zero to disable the corresponding minimum:
+
+```toml
+[kata.thresholds]
+min_audits_per_model = 1
+min_tests_per_model = 1
+min_custom_rule_test_cases = 1
+```
+
+## Naming policy
+
+Naming and layer rules can use a closed project vocabulary:
+
+```toml
+[kata]
+domains = ["finance", "market"]
+approved_source_tokens = ["salesforce", "stripe"]
+cte_name_whitelist = ["finalized_rows"]
+cte_name_denylist = ["scratch_result"]
+
+[kata.retired_source_tokens]
+old_crm = "salesforce"
+```
+
+Valid Kata layers are `stg`, `stg_v`, `int_clean`, `int_v`, `int_enriched`, `mart`, and
+`mart_v`. Configuration supplies vocabulary to active rules; it does not activate them. When
+`SQBKR001` or `SQBKH201` is active, a non-empty `domains` list constrains model or declaration
+domains respectively.
+
+## Exceptions and scoped ignores
+
+Choose the narrowest mechanism that represents the policy:
+
+| Mechanism | Scope | Reason required | Stale-checked |
+|-----------|-------|-----------------|---------------|
+| `ignore` | Disable rules globally | No | No |
+| `rule_exceptions` | One exact rule and exact file | Yes | Yes |
+| `rule_ignores` | Rule prefixes or codes across path globs | Yes | No |
+| `select_star_allow` | Path-glob allowance for `SQBKS201` | Yes | No |
+
+```toml
+[[kata.rule_exceptions]]
+rule = "SQBKJ002"
+path = "models/mart/market__mart__matrix.sql"
+reason = "Intentional Cartesian product over a bounded dimension"
+
+[[kata.rule_ignores]]
+rules = ["SQBKS"]
+paths = ["models/legacy/**"]
+reason = "Legacy migration boundary"
+
+[[kata.select_star_allow]]
+paths = ["models/mart/*_export.sql"]
+reason = "Intentional passthrough export"
+```
+
+An exact exception fails when its active rule no longer produces a fault at that file, prompting
+the repository to remove obsolete exceptions. Broad migration boundaries and lone-star allowances
+remain reasoned but are intentionally not stale-checked.
+
+## Cache and CI
+
+Built-in policies use a persistent cache under `target/kata-cache`. Compiled model content, active
+rules, options, thresholds, naming vocabulary, and relevant project files participate in cache
+identity. Disable it when diagnosing cache behavior:
+
+```toml
+[kata.cache]
+enabled = false
+```
+
+Run Kata directly in CI. It exits `1` when faults remain:
+
+```bash
+sqb kata
+sqb kata --json
+```
+
+Generate agent guidance from the same resolved policy and verify that committed guidance remains
+fresh:
+
+```bash
+sqb kata skills
+sqb kata skills --check
+```
+
+Kata manages `.agents/skills/sqlbuild-kata/SKILL.md`,
+`.claude/skills/sqlbuild-kata/SKILL.md`, and `.opencode/skills/sqlbuild-kata/SKILL.md`. It refuses
+to overwrite divergent or unowned files.
+
+See [Custom Kata Rules](/concepts/kata/custom-rules) to encode repository-specific policy and the
+[Kata CLI reference](/cli/kata) for command output and exit behavior.
