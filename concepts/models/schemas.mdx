@@ -105,13 +105,13 @@ SCHEMA (
 
 Inheritance may be transitive. Parent columns resolve before child columns. An inherited column cannot be redeclared or overridden in a child schema. SQLBuild rejects unknown parents, cycles, case-insensitive duplicates, and multiple parents.
 
-Physical SQL output order is not currently enforced. Contract matching uses names, types, and nullability.
+Physical SQL output order is not currently enforced. Static contract analysis matches names and checks declared types and proven non-nullability. Runtime exact-contract validation matches names and types but does not validate nullability.
 
 ## Contracts and planning
 
-`contract enforced` requires the actual output to equal the complete named-plus-local declaration. `contract none`, the default, requires declared columns but permits further undeclared output columns. See [Contracts](/concepts/models/contracts).
+`contract enforced` treats the complete named-plus-local declaration as the exact output shape. With `contract none`, the default, SQLBuild checks declared columns when static inference is available and permits additional output columns; it does not add a runtime shape requirement. See [Contracts](/concepts/models/contracts).
 
-Schema metadata and model-specific audit augmentation participate in model execution identity. Changing a parent affects models bound through descendants; unrelated reusable schemas do not affect other models.
+For models bound to a reusable schema, effective column names, types, nullability, and enum members participate in model version identity. Changing those fields on a parent therefore affects models bound through descendants. Descriptions do not change model identity. Audits have their own audit-gate identities, so audit changes invalidate reusable audit results without changing the model version itself.
 
 ## Limitations
 
