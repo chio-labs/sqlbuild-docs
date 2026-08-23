@@ -1,0 +1,158 @@
+---
+title: "kata"
+description: "Run configured SQL architecture checks, inspect rules, and generate policy guidance."
+---
+
+# sqb kata
+
+Compiles the project and applies its configured [Kata architecture policy](/concepts/kata)
+to compiled models. Built-in checks run offline and never connect to the warehouse or rewrite SQL.
+Kata reports coded, error-only faults with source locations and remediations. Repository-defined
+custom rules are trusted Python code.
+
+## Usage
+
+```bash
+sqb --project-dir <path> kata [flags]
+sqb kata rule <rule-code>
+sqb kata skills [--check]
+```
+
+## Evaluation flags
+
+| Flag | Description |
+|------|-------------|
+| `--json` | Emit structured JSON instead of text |
+| `--select`, `-s` | Evaluate selected models using normal SQLBuild selector syntax |
+| `--exclude` | Exclude models from a non-empty `--select` scope |
+
+Rule policy comes from `[kata].select` in `sqlbuild_project.toml`; CLI `--select` and `--exclude`
+scope models within that policy. Model selectors support names, `tag:`, `path:`, graph `+`, and
+path-between syntax.
+
+<Note>
+In SQLBuild 0.54.1, `--exclude` is applied only when `--select` is also provided. To evaluate all
+models except one, start with an explicit broad selector such as `--select path:models`.
+</Note>
+
+## Text output
+
+A clean policy prints its model and cache counts:
+
+```text
+Kata passed: 42 models evaluated, 0 faults (40 cache hits, 2 misses)
+```
+
+Faults include a source location, rule code, message, and remediation. Model-level checks use
+line 1, column 1:
+
+```text
+models/mart/orders.sql:1:1 [SQBKS001] model SQL must keep transformation logic in top-level CTEs
+  Remediation: Move transformation logic into named top-level CTEs before the terminal SELECT.
+Found 1 kata faults
+```
+
+## JSON output
+
+```bash
+sqb kata --json
+```
+
+```json
+{
+  "cache_hits": 0,
+  "cache_misses": 1,
+  "evaluated_models": 1,
+  "fault_count": 1,
+  "faults": [
+    {
+      "code": "SQBKS001",
+      "column": 1,
+      "line": 1,
+      "message": "model SQL must keep transformation logic in top-level CTEs",
+      "path": "models/mart/orders.sql",
+      "remediation": "Move transformation logic into named top-level CTEs before the terminal SELECT."
+    }
+  ]
+}
+```
+
+Faults are ordered deterministically by path, position, code, and content.
+
+## Inspect a rule
+
+`rule` prints metadata for any exact built-in or configured custom code. The rule does not need to
+be active:
+
+```bash
+sqb kata rule SQBKS101
+```
+
+```text
+SQBKS101: dependency-import-ctes
+Family: structure
+Enabled by default: no
+Kind: built-in
+
+dependencies must be isolated in import CTEs
+
+Remediation: Move each __ref(...) or __source(...) into one named top-level import CTE and reference that CTE from later logic.
+```
+
+Custom rules also show their source and declared option defaults.
+
+## Generate policy skills
+
+Generate agent guidance from the active rules, options, thresholds, naming vocabulary, and scoped
+deviations:
+
+```bash
+sqb kata skills
+```
+
+Kata writes the same policy-specific guidance to:
+
+- `.agents/skills/sqlbuild-kata/SKILL.md`
+- `.claude/skills/sqlbuild-kata/SKILL.md`
+- `.opencode/skills/sqlbuild-kata/SKILL.md`
+
+Check committed guidance in CI without rewriting it:
+
+```bash
+sqb kata skills --check
+```
+
+Install mode refuses to overwrite divergent, malformed, or unowned files. See
+[SQLBuild skills](/cli/skills) for the separate general framework guidance command.
+
+## Exit codes
+
+| Command | Code | Meaning |
+|---------|------|---------|
+| `sqb kata` | `0` | No retained faults |
+| `sqb kata` | `1` | Faults found or Kata could not evaluate the project |
+| `sqb kata rule` | `0` | Exact rule found |
+| `sqb kata rule` | `2` | Unknown rule code |
+| `sqb kata skills` | `0` | Guidance installed |
+| `sqb kata skills --check` | `0` | All guidance is fresh |
+| `sqb kata skills --check` | `1` | Guidance is not fresh: missing, stale, divergent, malformed, or unowned |
+
+## Examples
+
+```bash
+# Evaluate the configured policy
+sqb kata
+
+# Emit machine-readable CI output
+sqb kata --json
+
+# Scope evaluation to marts and their downstream models
+sqb kata --select tag:marts+
+
+# Inspect an opt-in rule before adopting it
+sqb kata rule SQBKJ002
+
+# Keep policy-derived agent guidance current
+sqb kata skills
+sqb kata skills --check
+```
