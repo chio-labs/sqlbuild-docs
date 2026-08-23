@@ -88,7 +88,10 @@ Model-local names must start with `_`. They are available only in that model's q
 
 Enums must contain at least one member and use one consistent scalar type. String and integer members cannot be mixed. Integer values use explicit member syntax.
 
-Names must be SQL identifiers. Duplicate declaration names, duplicate member names, invalid visibility prefixes, and malformed references all fail compilation.
+Names must be SQL identifiers. Enum member identifiers must be uppercase, even when an explicit
+member's stored value is lowercase. Member lookup is case-sensitive, so `.WIN` is valid for
+`WIN "win"` and `.win` is not. Duplicate declaration names, duplicate member names, invalid
+visibility prefixes, and malformed references all fail compilation.
 
 ## Enum-typed contracts
 

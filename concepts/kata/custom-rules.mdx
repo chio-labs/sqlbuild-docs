@@ -133,12 +133,6 @@ Selected custom rules execute in a bounded Python subprocess with a 30-second ti
 are reported with the rule code and model path, and returned faults rejoin normal suppressions and
 deterministic ordering.
 
-<Warning>
-Custom rules are trusted repository Python, not sandboxed plugins. Rule modules execute when they
-are loaded, and rules that are not required to be cacheable may access external resources. Review
-them like any other project code.
-</Warning>
-
 Selecting any custom rule disables the model cache by default. To keep the built-in cache available,
 require hermetic custom rules explicitly:
 
