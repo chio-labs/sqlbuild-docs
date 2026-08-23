@@ -1,0 +1,77 @@
+---
+title: "Contracts"
+description: "Validate required or exact model output schemas."
+---
+
+A model's declared columns define required output metadata. The `contract` policy determines whether that declaration is open or exact.
+
+| Value | Behavior |
+|-------|----------|
+| `none` | Every declared column is required, while undeclared output columns are allowed. This is the default. |
+| `enforced` | Declared columns are the complete authoritative output schema; missing and additional columns fail. |
+
+```sql
+MODEL (
+  materialized table,
+  contract enforced,
+  columns (
+    order_id (type INTEGER, nullable false),
+    customer_id (type INTEGER, nullable false),
+    amount_cents (type INTEGER),
+    status (type VARCHAR),
+  ),
+);
+```
+
+## Validation
+
+At compile time, SQLBuild checks inferred output names, types, and nullability. Configuration fields that reference columns, including `unique_key`, `cursor`, `updated_at`, and `check_columns`, are also checked against an enforced contract.
+
+At runtime, SQLBuild validates the materialized staging relation before promotion:
+
+- Missing declared columns fail.
+- Additional columns fail only for `contract enforced`.
+- Type mismatches fail using adapter-aware type normalization.
+
+When pre-promotion validation fails, the existing production relation remains untouched.
+
+## Type enforcement
+
+Declaring a column `type` enables type enforcement automatically. SQLBuild uses declared types for compile-time analysis, materialization casts where required, and schema-change detection. There is no separate `type_enforcement` setting.
+
+## Reusable schemas
+
+Contracts apply to the effective declaration, not only the reusable base:
+
+```sql
+MODEL (
+  model_schema order,
+  columns (
+    ingestion_batch_id (type VARCHAR, nullable false),
+  ),
+  contract enforced,
+);
+```
+
+This requires exactly the resolved `order` columns plus `ingestion_batch_id`. Changing the policy to `none` still requires those columns but permits further output. See [Schemas](/concepts/models/schemas).
+
+## Enum columns
+
+A column may use a declared enum as its type:
+
+```sql
+MODEL (
+  contract enforced,
+  columns (
+    market_type (type market_type),
+  ),
+);
+```
+
+SQLBuild resolves the enum to its physical string or integer type and adds accepted-values validation. See [Enums and Constants](/concepts/enums-and-constants).
+
+## Related policies
+
+The core default is `contract none`. A repository can enable [`SQBKR401`](/concepts/kata#layers-and-model-grammar) to require enforced contracts through Kata architecture policy.
+
+Contracts also constrain schema-change behavior. For example, `snapshot_schema_change append_new_columns` is incompatible with `contract enforced` because an unannounced appended column would violate the exact declaration.

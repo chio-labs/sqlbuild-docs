@@ -1,0 +1,89 @@
+---
+title: "Materializations"
+description: "Choose how SQLBuild persists model output."
+---
+
+The `materialized` field selects how a model becomes a warehouse relation.
+
+## View
+
+Creates a database view and replaces it on each build:
+
+```sql
+MODEL (materialized view);
+
+SELECT id AS order_id, customer_id, status
+FROM __source("raw__orders")
+```
+
+## Table
+
+Creates a table through a staging relation. SQLBuild runs blocking audits before promoting the staging table to the destination.
+
+```sql
+MODEL (materialized table);
+
+SELECT customer_id, COUNT(*) AS total_orders
+FROM __ref("stg_orders")
+GROUP BY customer_id
+```
+
+## Incremental
+
+Inserts or updates rows using append, delete/insert, or merge behavior. Cursor configuration controls replay bounds and may split work into microbatches.
+
+```sql
+MODEL (
+  materialized incremental,
+  incremental_strategy delete_insert,
+  cursor activity_hour,
+  cursor_type timestamp,
+  cursor_grain hour,
+  unique_key [activity_hour],
+);
+```
+
+See [Incremental](/concepts/incremental) for cursor semantics, replay, schema changes, and microbatch execution.
+
+## Snapshot
+
+Maintains historical row versions with SCD Type 2 semantics:
+
+```sql
+MODEL (
+  materialized snapshot,
+  unique_key [customer_id],
+  snapshot_strategy timestamp,
+  updated_at updated_at,
+);
+
+SELECT customer_id, name, plan, status, updated_at
+FROM __source("customers")
+```
+
+See [Snapshots](/concepts/snapshots) for timestamp and check strategies, historical inputs, and full-refresh policies.
+
+## Custom
+
+A project-local Python materialization can manage specialized persistence while retaining adapter access, schema-change signals, query-change detection, and audit hooks.
+
+```sql
+MODEL (
+  materialized partition_tracked,
+  placeholders (
+    partition_start "'2026-04-01'",
+    partition_end "'2026-04-05'",
+  ),
+  config (
+    tracking_table partition_state,
+    partition_column order_date,
+  ),
+);
+
+SELECT *
+FROM __ref("stg_orders")
+WHERE ordered_at >= @@@partition_start
+  AND ordered_at < @@@partition_end
+```
+
+The `config` block is passed to the Python function through `ctx.config`. Runtime-owned `@@@placeholder` values remain unresolved until materialization execution.

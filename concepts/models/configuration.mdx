@@ -1,0 +1,68 @@
+---
+title: "Configuration"
+description: "MODEL() header fields and SQL-validation controls."
+---
+
+## Common fields
+
+| Field | Description |
+|-------|-------------|
+| `materialized` | `view`, `table`, `incremental`, `snapshot`, or a custom materialization name |
+| `tags` | Tags used by selectors |
+| `description` | Human-readable model description |
+| `columns` | Model-local column declarations or inherited-column audit augmentation |
+| `model_schema` | Reusable column schema name |
+| `audits` | Model-level audit instances |
+| `schema` | Destination warehouse schema override |
+| `database` | Destination database override |
+| `alias` | Destination relation-name override |
+| `pre_hooks` | SQL or Python hooks before materialization |
+| `post_hooks` | SQL or Python hooks after materialization |
+| `enabled` | Set to `false` to disable the model |
+| `contract` | `none` or `enforced` |
+| `sql_validation` | Per-model SQL-validation override |
+
+## SQL validation
+
+Four controls gate compile-time SQL validation, from broadest to narrowest:
+
+1. `settings.sql_analysis`: project-wide master switch for SQL-analysis features.
+2. `--no-sql-validation`: per-run CLI kill switch.
+3. `settings.sql_validation`: project-level validation setting.
+4. `MODEL (sql_validation ...)`: per-model project-setting override.
+
+Validation runs only when every broader control permits it.
+
+## Incremental fields
+
+| Field | Description |
+|-------|-------------|
+| `incremental_strategy` | `append`, `delete_insert`, or `merge` |
+| `cursor` | Output column used to track incremental position |
+| `cursor_type` | `timestamp` or `integer` |
+| `cursor_grain` | Timestamp grain such as `second`, `hour`, or `day` |
+| `cursor_start` | Lower cursor bound |
+| `cursor_inputs` | Upstream names mapped to cursor columns |
+| `unique_key` | Merge or delete/insert matching columns |
+| `incremental_mode` | Set to `microbatch` for batched execution |
+| `batch_size` | Batch window such as `1d`, `1h`, or an integer |
+| `lookback` | Backward replay extension |
+| `on_schema_change` | `append_new_columns`, `sync_all_columns`, `ignore`, or `fail` |
+| `replay_on_change` | `forward`, `full`, or `bounded-<duration>` |
+| `run_despite_unchanged` | `always` or a periodic duration |
+
+See [Incremental](/concepts/incremental) for full semantics.
+
+## Custom materialization fields
+
+| Field | Description |
+|-------|-------------|
+| `config` | Arbitrary values passed to `ctx.config` |
+| `placeholders` | Defaults for runtime `@@@placeholder` tokens |
+
+## Diff fields
+
+| Field | Description |
+|-------|-------------|
+| `row_diff_exclude_columns` | Columns excluded from row-level comparison |
+| `row_diff_tolerances` | Numeric comparison tolerances |
