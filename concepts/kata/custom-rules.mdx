@@ -52,8 +52,9 @@ A directory in `rule_paths` is scanned recursively for Python files containing `
 modules must resolve beneath the project root. Codes must be unique across built-in and custom
 rules.
 
-Setting `enabled_by_default=True` on the decorator lets a matching custom prefix activate the rule;
-it does not enable Kata when `[kata].select` is empty.
+Custom rules require exact selectors by default. Set `enabled_by_default=True` on the decorator to
+include a rule in matching prefix selections. This does not activate Kata when
+`[kata].select` is empty.
 
 ## Typed options
 
