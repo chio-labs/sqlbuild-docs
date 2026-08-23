@@ -1,0 +1,80 @@
+---
+title: "Hooks"
+description: "Run validated SQL or Python lifecycle hooks around model materialization."
+---
+
+Pre-hooks and post-hooks run before and after materialization. Each entry is either `sql("...")` or `python("hook_name")`.
+
+## SQL hooks
+
+```sql
+MODEL (
+  materialized table,
+  post_hooks [sql('GRANT SELECT ON @@CTX:destination.qualified TO analyst_role')],
+);
+```
+
+SQL hooks support macros, project variables, environment variables, and context variables. SQL is validated at compile time when SQL analysis is enabled.
+
+| Variable | Value |
+|----------|-------|
+| `@@CTX:destination.qualified` | Fully qualified destination relation |
+| `@@CTX:destination.schema` | Destination schema |
+| `@@CTX:destination.table` | Destination relation name |
+| `@@CTX:model.name` | Model name |
+| `@@CTX:run.target` | Active target name |
+| `@@CTX:run.id` | Current run ID |
+
+## Python hooks
+
+SQLBuild discovers `@hook` functions recursively under `hooks/`:
+
+```python
+from sqlbuild.hooks import hook
+
+@hook
+def grant_analyst(ctx, role="analyst_role"):
+    ctx.execute_sql(f"GRANT SELECT ON {ctx.destination.qualified} TO {role}")
+```
+
+Reference the hook by name and optionally pass keyword arguments:
+
+```sql
+MODEL (
+  materialized table,
+  post_hooks [python("grant_analyst", role: "reader_role")],
+);
+```
+
+SQL and Python hooks can appear in the same list.
+
+## Hook context
+
+Python hooks receive a `HookContext` as their first parameter, conventionally named `ctx`:
+
+| Field | Description |
+|-------|-------------|
+| `ctx.model_name` | Model being built |
+| `ctx.phase` | `pre_hooks` or `post_hooks` |
+| `ctx.hook_name` | Invoked hook name |
+| `ctx.run_id` | Current run ID |
+| `ctx.target` | Active target |
+| `ctx.vars` | Effective project variables |
+| `ctx.destination` | Destination relation metadata |
+| `ctx.adapter` | Adapter instance |
+| `ctx.connection` | Live connection |
+| `ctx.execute_sql(sql)` | Execute SQL |
+| `ctx.query(sql)` | Execute SQL and return rows |
+| `ctx.log(message)` | Write run output |
+| `ctx.skip(reason, mode=...)` | Soft-skip the model or hard-block downstream models |
+| `ctx.providers` | Access discovered [providers](/concepts/python-nodes/providers) |
+
+Providers may also be injected into hook parameters by name.
+
+## Discovery and validation
+
+- Files beginning with `_`, including `__init__.py`, are skipped.
+- Hook names must be unique across the project.
+- The decorator accepts optional `name` and `description` arguments.
+- Unknown hooks, unknown keyword arguments, and missing required arguments fail compilation.
+- A function without `**kwargs` rejects undeclared hook arguments.

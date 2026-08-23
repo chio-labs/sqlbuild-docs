@@ -25,7 +25,7 @@ The rule is simple: if it's any SQL that will be executed, it uses `@`. If it's 
 | `${CTX:...}` | TOML/YAML config values | Config compilation |
 | `${ENV:...}` | TOML/YAML config values | Config compilation |
 
-`@@CTX:` is intentionally SQL-hook-only. Model SQL describes a relation's data and should not reference its own destination identity. SQL hooks are the operational SQL layer where destination context is useful - grants, logging, post-materialization DDL. Python hooks access the same information through `ctx.destination` on the `HookContext` object (see [Hooks](/concepts/models#hooks)).
+`@@CTX:` is intentionally SQL-hook-only. Model SQL describes a relation's data and should not reference its own destination identity. SQL hooks are the operational SQL layer where destination context is useful - grants, logging, post-materialization DDL. Python hooks access the same information through `ctx.destination` on the `HookContext` object (see [Hooks](/concepts/models/hooks)).
 
 See [Enums and Constants](/concepts/enums-and-constants) for declaration syntax, visibility, and contract integration.
 
