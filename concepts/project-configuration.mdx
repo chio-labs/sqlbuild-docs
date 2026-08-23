@@ -262,16 +262,14 @@ architecture rules:
 
 ```toml
 [kata]
-select = ["SQBK", "SQBKS001", "SQBKS101"]
-
-[kata.thresholds]
-min_audits_per_model = 1
-min_tests_per_model = 1
+select = ["SQBK"]
 ```
 
-Kata is opt-in. Prefix selectors activate matching default-enabled rules; exact codes also activate
-opt-in rules. See [Kata SQL Architecture Checks](/concepts/kata) for the complete rule,
-configuration, and suppression reference.
+Kata is opt-in. `SQBK` activates every built-in rule; narrower prefixes activate a rule family, and
+exact codes activate individual rules. Audit, SQL test, and custom-rule test-case minimums each
+default to one and can be overridden under `[kata.thresholds]`. See
+[Kata SQL Architecture Checks](/concepts/kata) for the complete rule, configuration, and suppression
+reference.
 
 ## Project variables
 
