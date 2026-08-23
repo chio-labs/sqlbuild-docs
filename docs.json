@@ -49,7 +49,17 @@
           },
           "concepts/sources",
           "concepts/seeds",
-          "concepts/models",
+          {
+            "group": "Models",
+            "pages": [
+              "concepts/models",
+              "concepts/models/materializations",
+              "concepts/models/schemas",
+              "concepts/models/contracts",
+              "concepts/models/hooks",
+              "concepts/models/configuration"
+            ]
+          },
           {
             "group": "Kata",
             "pages": [
