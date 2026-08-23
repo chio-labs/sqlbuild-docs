@@ -33,28 +33,17 @@ Commit the shared policy to `sqlbuild_project.toml`:
 
 ```toml
 [kata]
-select = [
-  "SQBK",
-  "SQBKS001",
-  "SQBKS101",
-  "SQBKS201",
-  "SQBKX001",
-  "SQBKX002",
-]
-
-[kata.thresholds]
-min_audits_per_model = 1
-min_tests_per_model = 1
+select = ["SQBK"]
 ```
 
-This is an example policy, not a universal preset. Select only conventions that the repository is
-ready to enforce.
+This activates the complete built-in policy. Select a narrower family prefix or exact codes when a
+repository is not ready to enforce every convention.
 
 <Note>
 Kata evaluates no rules until `[kata].select` resolves at least one rule. Prefix selectors activate
-only matching rules that are enabled by default. Exact rule codes also activate opt-in rules. In
-SQLBuild 0.54.1, `select = ["SQBK"]` activates `SQBKR401` only; it does not enable every built-in
-rule.
+matching default-enabled rules. All built-ins are default-enabled within this opt-in policy, while
+custom rules are default-off unless their definition says otherwise. Exact rule codes activate
+individual rules regardless of their default.
 </Note>
 
 Rule selectors are case-sensitive prefixes. They do not use `*` wildcards:
@@ -73,7 +62,7 @@ sqb kata rule SQBKS101
 
 ## Built-in rules
 
-All built-ins are opt-in except `SQBKR401`.
+All built-ins are default-enabled when selected by a matching prefix. Kata itself remains opt-in.
 
 ### Structure
 
@@ -100,7 +89,7 @@ All built-ins are opt-in except `SQBKR401`.
 | `SQBKR002` | Model layer names agree with their folders |
 | `SQBKR201` | Model source suffixes and source dependency names use approved, current tokens |
 | `SQBKR301` | Referenced model identifiers follow Kata model-name grammar |
-| `SQBKR401` | Models declare `contract enforced` (default-enabled) |
+| `SQBKR401` | Models declare `contract enforced` |
 
 ### Joins
 
@@ -124,10 +113,15 @@ These checks use declared contract columns, not inferred output columns.
 
 | Code | Check |
 |------|-------|
-| `SQBKH001` | Enum comparisons use declared enum members |
+| `SQBKH001` | Enum comparisons use declared members and normalized operands |
 | `SQBKH002` | Non-canonical numeric decisions use named constants |
 | `SQBKH101` | Identical enum domains are consolidated |
 | `SQBKH201` | Public enum and constant files live under domain folders |
+
+`SQBKH001` requires direct comparisons to `@enum("<enum>").<MEMBER>`. Normalize controlled values
+upstream rather than wrapping either comparison operand. A direct source-side value may be
+normalized in the comparison because the project does not control source casing; the enum member
+must still remain unwrapped.
 
 ### Tests and coverage
 

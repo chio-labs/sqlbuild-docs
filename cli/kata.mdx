@@ -8,7 +8,7 @@ description: "Run configured SQL architecture checks, inspect rules, and generat
 Compiles the project and applies its configured [Kata architecture policy](/concepts/kata)
 to compiled models. Built-in checks run offline and never connect to the warehouse or rewrite SQL.
 Kata reports coded, error-only faults with source locations and remediations. Repository-defined
-custom rules are trusted Python code.
+custom rules run in a bounded Python subprocess.
 
 ## Usage
 
@@ -31,8 +31,8 @@ scope models within that policy. Model selectors support names, `tag:`, `path:`,
 path-between syntax.
 
 <Note>
-In SQLBuild 0.54.1, `--exclude` is applied only when `--select` is also provided. To evaluate all
-models except one, start with an explicit broad selector such as `--select path:models`.
+`--exclude` is applied only when `--select` is also provided. To evaluate all models except one,
+start with an explicit broad selector such as `--select path:models`.
 </Note>
 
 ## Text output
