@@ -55,6 +55,7 @@
               "concepts/models",
               "concepts/models/materializations",
               "concepts/models/schemas",
+              "concepts/models/type-enforcement",
               "concepts/models/contracts",
               "concepts/models/hooks",
               "concepts/models/configuration"

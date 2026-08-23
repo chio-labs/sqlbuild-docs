@@ -57,7 +57,7 @@ If a source audit with `error` severity fails, all downstream models that depend
 
 ## Type enforcement
 
-Type enforcement is implicit for sources, the same as for models. If any column declares a `type`, SQLBuild automatically casts that column and uses declared types for schema-change detection:
+Type enforcement is implicit for sources. If any column declares a `type`, SQLBuild activates source type enforcement, casts that column during source resolution, and uses declared types for schema-change detection:
 
 ```yaml
 sources:

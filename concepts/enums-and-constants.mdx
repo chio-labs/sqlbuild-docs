@@ -95,7 +95,12 @@ visibility prefixes, and malformed references all fail compilation.
 
 ## Enum-typed contracts
 
-An enum name can be used as a model column type:
+Enum references and enum-typed columns are separate capabilities:
+
+- `@enum("market_type").WIN` inserts one compiler-validated scalar literal into SQL.
+- `type market_type` uses the complete enum as a portable logical domain type for a model column.
+
+For the second form, use an enum name in a model column declaration:
 
 ```sql
 MODEL (
@@ -106,6 +111,25 @@ MODEL (
 );
 ```
 
-SQLBuild resolves the physical type to `VARCHAR` or `INTEGER`. With `contract enforced`, it also adds an `accepted_values` audit for the enum members, so an out-of-domain value blocks promotion.
+`market_type` is not sent to the warehouse as a physical type name. SQLBuild does not create a warehouse-native enum or emit enum DDL. Instead, it lowers the logical domain to portable model metadata:
+
+| Enum member values | Physical column type | Enforced domain check |
+|--------------------|----------------------|-----------------------|
+| Strings such as `WIN` and `PLACE` | `VARCHAR` | `accepted_values` for the declared strings |
+| Integers such as `1` and `3` | `INTEGER` | `accepted_values` for the declared integers |
+
+With `contract enforced`, the generated `accepted_values` audit runs with the model's other audits even though the warehouse column itself is an ordinary `VARCHAR` or `INTEGER`:
+
+```sql
+-- Conceptual physical shape and validation, not generated source syntax:
+market_type VARCHAR
+accepted_values(market_type, ["WIN", "PLACE", "SHOW"])
+```
+
+Its severity and timing follow ordinary audit configuration and materialization behavior. With the default error severity, an out-of-domain value gates staged-table promotion and pre-DML delta paths. Views run audits after replacement, and custom materializations control their own audit timing.
+
+With `contract none`, SQLBuild still resolves the logical enum to its physical scalar type, but it does not generate the domain audit. Use `contract enforced` when SQLBuild should generate member validation, and choose a materialization path whose audit timing provides the gate your workflow requires.
+
+This behavior is intentionally independent of whether a particular warehouse supports native enums. A project has the same model contract and validation semantics across adapters.
 
 Declaration changes participate in change detection. A changed referenced value changes compiled SQL; changed members of an enum-typed contract change the model's contract identity.

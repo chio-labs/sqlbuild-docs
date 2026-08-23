@@ -14,7 +14,7 @@ MODEL (
 );
 ```
 
-SQL hooks support macros, project variables, environment variables, and context variables. SQL is validated at compile time when SQL analysis is enabled.
+SQL hooks support macros, project variables, environment variables, and context variables. Hook SQL is syntax-validated when the model's effective SQL-validation gate is enabled: SQL analysis must be enabled, `--no-sql-validation` must be absent, and the effective project or model `sql_validation` value must be true.
 
 | Variable | Value |
 |----------|-------|
@@ -50,7 +50,7 @@ SQL and Python hooks can appear in the same list.
 
 ## Hook context
 
-Python hooks receive a `HookContext` as their first parameter, conventionally named `ctx`:
+Python hooks declare a `HookContext` parameter named `ctx`, `context`, `_ctx`, or `hook_context`. It need not be the first parameter when providers or configured arguments are also present:
 
 | Field | Description |
 |-------|-------------|
@@ -66,10 +66,20 @@ Python hooks receive a `HookContext` as their first parameter, conventionally na
 | `ctx.execute_sql(sql)` | Execute SQL |
 | `ctx.query(sql)` | Execute SQL and return rows |
 | `ctx.log(message)` | Write run output |
-| `ctx.skip(reason, mode=...)` | Soft-skip the model or hard-block downstream models |
+| `ctx.skip(reason="...", mode="soft")` | Return a soft or hard skip result; arguments are keyword-only |
 | `ctx.providers` | Access discovered [providers](/concepts/python-nodes/providers) |
 
 Providers may also be injected into hook parameters by name.
+
+## Skip timing
+
+Returning `ctx.skip(...)` from a pre-hook prevents materialization. Returning it from a post-hook changes the reported execution result, but the relation has already been created, promoted, or incrementally updated and audited.
+
+`mode="hard"` blocks downstream nodes. A soft skip does not automatically block every downstream node; scheduler propagation depends on the other upstream results.
+
+## Failure timing
+
+Post-hooks are not promotion gates. A failed post-hook marks the model run as failed after warehouse mutation has already occurred. Put logic that must prevent materialization in a pre-hook, contract, pre-promotion audit, or the materialization itself.
 
 ## Discovery and validation
 

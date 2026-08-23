@@ -7,7 +7,7 @@ The `materialized` field selects how a model becomes a warehouse relation.
 
 ## View
 
-Creates a database view and replaces it on each build:
+Creates or replaces a database view on each build:
 
 ```sql
 MODEL (materialized view);
@@ -16,9 +16,11 @@ SELECT id AS order_id, customer_id, status
 FROM __source("raw__orders")
 ```
 
+View audits run after the view has been replaced. A failing audit marks the build as failed but cannot preserve the previous view. Views use compile-time contract and type analysis; SQLBuild does not rewrite the view with runtime casts or run the staged runtime-contract step.
+
 ## Table
 
-Creates a table through a staging relation. SQLBuild runs blocking audits before promoting the staging table to the destination.
+By default, creates a staging table, applies supported type and contract enforcement, runs blocking audits, and only then promotes it to the destination. A pre-promotion failure leaves the previous destination unchanged.
 
 ```sql
 MODEL (materialized table);
@@ -28,9 +30,11 @@ FROM __ref("stg_orders")
 GROUP BY customer_id
 ```
 
+Projects may opt into `settings.table_promotion_mode = "direct"`. Direct mode replaces the destination before audits, so a failed audit does not restore the old table. Direct mode rejects models that require declared-type enforcement or `contract enforced`; use staged promotion for those guarantees.
+
 ## Incremental
 
-Inserts or updates rows using append, delete/insert, or merge behavior. Cursor configuration controls replay bounds and may split work into microbatches.
+On a normal incremental run, applies append, delete/insert, or merge DML from a staged delta. Delete/insert removes matching keys or cursor ranges before inserting replacement rows. Cursor configuration controls replay bounds and may split work into microbatches.
 
 ```sql
 MODEL (
@@ -42,6 +46,8 @@ MODEL (
   unique_key [activity_hour],
 );
 ```
+
+For non-microbatch models, the first run, `--full-refresh`, and a full replay-on-change rebuild use the full-table path rather than incremental DML. Microbatch models retain batched execution: a full rebuild drops the existing target, creates its replacement from the first batch, and applies later batches with incremental DML. A failed full-refresh microbatch does not preserve the previous target.
 
 See [Incremental](/concepts/incremental) for cursor semantics, replay, schema changes, and microbatch execution.
 
@@ -65,7 +71,7 @@ See [Snapshots](/concepts/snapshots) for timestamp and check strategies, histori
 
 ## Custom
 
-A project-local Python materialization can manage specialized persistence while retaining adapter access, schema-change signals, query-change detection, and audit hooks.
+A project-local Python materialization can manage specialized persistence with adapter access, schema findings, query-change state, declared columns, and `ctx.run_audits`.
 
 ```sql
 MODEL (
@@ -87,3 +93,5 @@ WHERE ordered_at >= @@@partition_start
 ```
 
 The `config` block is passed to the Python function through `ctx.config`. Runtime-owned `@@@placeholder` values remain unresolved until materialization execution.
+
+The custom function owns staging, runtime type or contract enforcement, audit timing, promotion, and rollback. Framework final audits run after the function returns unless `MaterializationResult.audit_results` is populated. A custom materialization can call `ctx.run_audits` against a staging relation before applying changes and return those results through `MaterializationResult.audit_results`.
