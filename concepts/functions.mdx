@@ -88,15 +88,24 @@ WHERE customer_id = p_customer_id
 
 Table functions are designed as an alternative to final-layer views for cases where views don't push predicates efficiently. A view over `fact_orders` with a `WHERE customer_id = ?` filter may scan the entire table if the engine doesn't push the predicate down. A table function accepts the filter as an argument and guarantees the predicate is applied at execution time.
 
-### Table functions are terminal
+### Managed table function dependencies
 
-Table functions sit at the edge of the DAG, facing the consumer. They can reference models, seeds, sources, and other functions - but models cannot reference table functions. This is enforced at compile time.
+Models call managed table functions with `__table_fn("name")(arguments...)`:
 
-The semantic reason: table functions are parameterized queries meant to be called by applications or analysts, not intermediate pipeline steps. Interleaving them into the model DAG would break the clean separation between pipeline computation and consumer-facing access patterns.
+```sql
+SELECT customer_id, order_id
+FROM __table_fn("table_fn__customer_orders")(42)
+```
+
+The name must be double quoted and the second argument list is required, including for a zero-argument function. SQLBuild validates that the target exists, is a table function, and receives the declared number of arguments.
+
+The reference creates a typed dependency in the project DAG. Selecting a consuming model also selects the required function, function changes propagate to consumers, and cycles through models and functions are rejected. SQLBuild treats the call as an opaque relation for SQL analysis and uses the function's declared `returns table(...)` columns for star expansion and terminal lineage.
+
+Incremental state still belongs to the consuming model. A table function does not own a cursor interval or retain execution state.
 
 ### Using table functions
 
-Table functions are called directly in SQL contexts that support table-valued functions:
+Applications and analysts can call the deployed warehouse function directly:
 
 ```sql
 SELECT * FROM table_fn__customer_orders(42)
@@ -112,12 +121,13 @@ SQL functions can reference the same resources as models:
 | Seed | `__seed("seed_name")` |
 | Source | `__source("source_name")` |
 | Scalar UDF | `__udf("function_name")` |
+| Table function | `__table_fn("function_name")(arguments...)` |
 
 These references are resolved at compile time and create DAG edges. If a referenced model changes, the function is redeployed.
 
 ## Change propagation
 
-Functions participate in fingerprint-based change detection. If a function's SQL body or Python source changes, SQLBuild redeploys the function and marks all dependent models as needing a rebuild.
+Functions participate in fingerprint-based change detection. Their identity includes dependencies and declared return contracts in addition to the function body and runtime metadata. If a function changes, SQLBuild redeploys it and marks dependent models as changed.
 
 ## Project layout
 
