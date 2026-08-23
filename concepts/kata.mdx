@@ -36,14 +36,13 @@ Commit the shared policy to `sqlbuild_project.toml`:
 select = ["SQBK"]
 ```
 
-This activates the complete built-in policy. Select a narrower family prefix or exact codes when a
-repository is not ready to enforce every convention.
+This activates the complete standard policy. Start here, then use `ignore` to switch off conventions
+the repository is not ready to enforce.
 
 <Note>
-Kata evaluates no rules until `[kata].select` resolves at least one rule. Prefix selectors activate
-matching default-enabled rules. All built-ins are default-enabled within this opt-in policy, while
-custom rules are default-off unless their definition says otherwise. Exact rule codes activate
-individual rules regardless of their default.
+Kata evaluates no rules when `[kata].select` is empty. Prefixes select matching rules that are
+enabled by default; exact codes also select individually opt-in rules. All current built-ins are
+enabled by default, so `SQBK` selects the complete built-in catalogue.
 </Note>
 
 Rule selectors are case-sensitive prefixes. They do not use `*` wildcards:
@@ -62,7 +61,7 @@ sqb kata rule SQBKS101
 
 ## Built-in rules
 
-All built-ins are default-enabled when selected by a matching prefix. Kata itself remains opt-in.
+All current built-ins form the standard policy and are enabled by matching prefixes.
 
 ### Structure
 
