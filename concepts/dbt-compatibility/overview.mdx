@@ -1,17 +1,17 @@
 ---
 title: "Using SQLBuild with dbt"
-description: "Run your existing dbt project through SQLBuild. No SQLBuild models and no migration."
+description: "Run dbt and SQLBuild side by side with coordinated selection and SQLBuild models downstream."
 ---
 
-Point SQLBuild at your existing dbt project and run your dbt selections through it, layering SQLBuild models, tests, and audits downstream when you want them. No migration, no edits to your dbt files.
+Use the dbt compatibility bridge to coordinate dbt selections with SQLBuild-owned models downstream of their outputs.
 
 <Note>
-SQLBuild reads your dbt manifest and drives the `dbt` CLI as a subprocess. It never edits, patches, or moves files in your dbt project, and it does not reimplement Jinja, profiles, or dbt's selection language. Your dbt project runs exactly as it does today.
+SQLBuild reads the dbt manifest and drives the `dbt` CLI as a subprocess. dbt remains responsible for compiling and executing dbt-owned models; SQLBuild statically analyzes and executes only SQLBuild-owned models downstream. `sqb dbt` runs in standard mode, so change-aware execution and virtual environments are not supported by the bridge.
 </Note>
 
 ## Start with your existing dbt project
 
-From inside your dbt project, run a `sqb dbt` command. Selection works exactly like dbt: scope to whatever you would normally build with `--select`, or omit it to plan the whole project.
+From inside your dbt project, run a `sqb dbt` command. Scope dbt work with familiar `--select` values, or omit selection to plan the whole project.
 
 ```bash
 sqb dbt plan --select path:models/marts
@@ -61,7 +61,7 @@ target = "dev"
 1. SQLBuild runs `dbt compile` to produce a `manifest.json` with model metadata
 2. SQLBuild reads the manifest to understand dbt model names and their qualified warehouse tables
 3. SQLBuild resolves your `--select`/`--exclude` against dbt by running `dbt ls`, so dbt-native selectors like `state:modified` and `package:` are evaluated by dbt itself, not reimplemented
-4. `sqb dbt plan/run/build` orchestrates the run: dbt builds the full selection, exactly like dbt
+4. `sqb dbt plan/run/build` orchestrates the run: dbt executes the selected dbt work
 5. (Optional) any SQLBuild models you have added run last, against the dbt outputs
 
 Each step calls the `dbt` CLI directly: `dbt compile` for the manifest, `dbt ls` for selection, and `dbt build`/`dbt run` for execution.

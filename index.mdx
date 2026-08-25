@@ -1,12 +1,12 @@
 ---
 title: "Introduction"
 
-description: "Verify early, test properly, and deploy reversibly. SQL pipelines with the rigor of real software - on your existing dbt project, free and open source."
+description: "Verify early, test properly, and deploy reversibly. SQL pipelines with the rigor of real software - free and open source."
 ---
 
 **Valid isn't the same as correct.** Your SQL compiles, runs, and returns rows - none of that means the number is right, and a silently-wrong number a stakeholder already trusted is the bug that actually hurts.
 
-SQLBuild brings software-engineering rigor to SQL pipelines: **verify early, test properly, deploy reversibly.** Catch errors before the warehouse runs them and test your logic locally - with change-aware builds and reversible deploys there when you need them, not forced on you on day one. It works on a standalone SQL project or [points at your existing dbt project](/concepts/dbt-compatibility/overview) with no migration - free and open source.
+SQLBuild brings software-engineering rigor to SQL pipelines: **verify early, test properly, deploy reversibly.** Catch errors before the warehouse runs them and test your logic locally - with change-aware builds and reversible deploys there when you need them, not forced on you on day one. It is a standalone framework for building SQL and Python data pipelines - free and open source.
 
 ## Test properly
 
@@ -69,7 +69,7 @@ When enabled, change detection covers the whole graph:
 - **Cascade propagation:** when a model does change, the signal propagates downstream, with configurable replay windows (`replay_on_change`).
 - **Python nodes:** loaders, tasks, assets, checks, and hooks are fingerprinted by source and dependency hashes; skip/run is user-controlled via `ctx.skip()`.
 
-State is plain append-only rows in your own warehouse (`_sqlbuild_fingerprints`, `_sqlbuild_source_freshness`, `_sqlbuild_node_results`) - no external state database, no manifest files, no state machine that can corrupt. SQLBuild-owned models can also depend on models from an [existing dbt project](/concepts/dbt-compatibility/overview) - nothing metered, no account, nothing to log into.
+State is plain append-only rows in your own warehouse (`_sqlbuild_fingerprints`, `_sqlbuild_source_freshness`, `_sqlbuild_node_results`) - no external state database, no manifest files, no state machine that can corrupt.
 
 ## Deploy reversibly (opt-in)
 
