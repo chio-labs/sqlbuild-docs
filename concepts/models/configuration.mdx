@@ -18,8 +18,8 @@ description: "MODEL() header fields and SQL-validation controls."
 | `schema` | Destination warehouse schema override |
 | `database` | Destination database override |
 | `alias` | Destination relation-name override |
-| `pre_hooks` | SQL or Python hooks before materialization |
-| `post_hooks` | SQL or Python hooks after materialization |
+| `pre_hooks` | Ordered `inline_sql(...)`, `sql("name", ...)`, or `python("name", ...)` hooks before materialization |
+| `post_hooks` | Ordered `inline_sql(...)`, `sql("name", ...)`, or `python("name", ...)` hooks after materialization |
 | `enabled` | Set to `false` to disable the model |
 | `contract` | `none` for an open statically checked declaration, or `enforced` for an exact declaration |
 | `sql_validation` | Per-model SQL-validation override |

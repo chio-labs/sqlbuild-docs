@@ -16,7 +16,7 @@ Every node in the graph has a versioned identity stored in `_sqlbuild_fingerprin
 Each model and function has a **fingerprint** derived from:
 
 - **Query hash** - the normalized SQL after macro expansion and reference resolution.
-- **Config hash** - version-identity config values (materialization settings, contracts, hooks, custom config/placeholders).
+- **Config hash** - version-identity config values (materialization settings, contracts, ordered rendered SQL hooks, Python hook invocations and version hashes, custom config/placeholders).
 - **Function hashes** - for models that depend on user-defined functions, the function's own fingerprint is included. A function change cascades to all dependent models.
 
 ### Seeds
@@ -25,7 +25,7 @@ Seeds are fingerprinted by content hash and load-affecting config. Unchanged see
 
 ### Python nodes
 
-Loaders, tasks, assets, checks, and hooks are fingerprinted by source-code hash, transitive project-dependency hashes (scoped to the git root, so third-party package changes don't count), and decorator config.
+Loaders, tasks, assets, checks, and Python hooks are fingerprinted by source-code hash, transitive project-dependency hashes (scoped to the git root, so third-party package changes don't count), and decorator config. A Python hook's version hash is also included in every model that invokes it. Reusable SQL hooks are compiled into each consuming model, so their rendered statements participate directly in model identity.
 
 Python identity tracking is primarily a **visual indicator** in the plan: when a node's identity changes, the plan shows source and dependency diffs. Unlike SQL models, the framework can't observe a Python node's external inputs (an API, a file, a service), so skip/run decisions are **user-controlled** via `ctx.skip()` - the node's own logic decides whether it needs to run. See [Python node pruning](#python-node-pruning).
 

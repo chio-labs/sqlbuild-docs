@@ -14,3 +14,38 @@ sqb init
 ```
 
 No flags. Run in the directory where you want to create the project.
+
+## Project layout
+
+`sqb init` creates the configuration, linter settings, and empty resource directories needed for a standalone project:
+
+```text
+my-project/
+  sqlbuild_project.toml
+  .sqruff
+  models/
+    staging/
+    marts/
+  schemas/
+  sources/
+  seeds/
+  loaders/
+  tasks/
+  assets/
+  checks/
+  hooks/
+    sql/
+    python/
+  tests/
+    unit/
+    scenarios/
+  functions/
+    sql/
+    python/
+  macros/
+  audits/
+```
+
+Empty directories contain `.gitkeep` files so the scaffold can be committed. Add reusable SQL lifecycle hooks to `hooks/sql/` and decorated Python lifecycle hooks to `hooks/python/`; see [Hooks](/concepts/models/hooks).
+
+The generated project uses DuckDB, creates `dev` and `prod` targets, and defaults models to table materialization. The project name is derived from the current directory name, with hyphens converted to underscores.

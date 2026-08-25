@@ -3,38 +3,147 @@ title: "Hooks"
 description: "Run validated SQL or Python lifecycle hooks around model materialization."
 ---
 
-Pre-hooks and post-hooks run before and after materialization. Each entry is either `sql("...")` or `python("hook_name")`.
+Pre-hooks and post-hooks run before and after model materialization. Hook lists use three explicit entry types:
 
-## SQL hooks
+| Entry | Definition | Use |
+|-------|------------|-----|
+| `inline_sql("...")` | SQL written directly in the model header | Short, model-specific SQL |
+| `sql("name", args...)` | A reusable SQL hook under `hooks/sql/` | Shared, parameterized SQL |
+| `python("name", args...)` | A decorated function under `hooks/python/` | Control flow, providers, queries, or skip decisions |
 
 ```sql
 MODEL (
   materialized table,
-  post_hooks [sql('GRANT SELECT ON @@CTX:destination.qualified TO analyst_role')],
+  pre_hooks [inline_sql("INSERT INTO audit.build_log VALUES ('starting')")],
+  post_hooks [
+    sql(
+      "grant_access",
+      relation: "@@CTX:destination.qualified",
+      role: "analyst_role",
+    ),
+    python("notify_complete", channel: "#data-builds"),
+  ],
 );
+
+SELECT 1 AS id
 ```
 
-SQL hooks support macros, project variables, environment variables, and context variables. Hook SQL is syntax-validated when the model's effective SQL-validation gate is enabled: SQL analysis must be enabled, `--no-sql-validation` must be absent, and the effective project or model `sql_validation` value must be true.
+Entries execute in the order authored, including when SQL and Python entries are mixed. A Python hook that returns `ctx.skip(...)` stops the remaining entries in that phase.
+
+Bare SQL strings are not hook entries. The singular `pre_hook` and `post_hook` fields are also invalid; use `pre_hooks` and `post_hooks` with one of the three typed forms above. `sql("...")` always means a named SQL hook and never falls back to inline SQL.
+
+## Reusable SQL hooks
+
+SQLBuild discovers `.sql` files recursively under `hooks/sql/`. Each file defines exactly one hook and must start with a single `HOOK(...)` header as its first non-whitespace content. For `hooks/sql/grant_access.sql`:
+
+```sql
+HOOK (description: "Grant a role access to the model relation");
+
+GRANT SELECT ON @relation TO @role
+```
+
+The hook name is always the filename stem, so the example is invoked as `sql("grant_access", ...)`. Nested directories organize files but do not namespace names: `hooks/sql/admin/grant_access.sql` is still named `grant_access`.
+
+`HOOK()` accepts only an optional, non-empty `description`. It does not accept a `name`; rename the file to rename the hook. The SQL after the header must contain one executable statement.
+
+Files beginning with `_` are skipped. All other `.sql` files under `hooks/sql/` are parsed as hook resources and must have a valid `HOOK()` header.
+
+### SQL hook arguments
+
+Named SQL hooks declare parameters by using them in the SQL body. Arguments are supplied as named values in `sql("name", args...)`:
+
+| Syntax | Behavior |
+|--------|----------|
+| `@name` | Raw substitution. Strings are inserted verbatim for relations, identifiers, keywords, or SQL fragments. |
+| `@'name'` | SQL-literal substitution. Strings are single-quoted and embedded quotes are escaped. |
+
+In `hooks/sql/record_access.sql`:
+
+```sql
+HOOK (description: "Record access configuration");
+
+INSERT INTO audit.access_log (relation_name, role_name)
+VALUES (@'relation', @'role')
+```
+
+```sql
+MODEL (
+  post_hooks [
+    sql(
+      "record_access",
+      relation: "@@CTX:destination.qualified",
+      role: "O'Brien",
+    ),
+  ],
+);
+
+SELECT 1 AS id
+```
+
+For both forms, booleans render as `TRUE` or `FALSE`, numbers render directly, and `null` renders as `NULL`. Lists render as comma-separated values, applying raw or quoted behavior to each item. For example, `@'roles'` with `roles: ["reader", "writer"]` renders as `'reader', 'writer'`.
+
+Every referenced argument is required and every supplied argument must be used. Missing arguments, unused arguments, and unsupported values such as maps fail compilation. Raw string arguments are not escaped; use `@'name'` for data values and reserve `@name` for trusted SQL structure.
+
+## Inline SQL hooks
+
+Use `inline_sql("...")` for SQL that is specific to one model:
+
+```sql
+MODEL (
+  materialized table,
+  post_hooks [
+    inline_sql("GRANT SELECT ON @@CTX:destination.qualified TO analyst_role"),
+  ],
+);
+
+SELECT 1 AS id
+```
+
+An inline hook accepts exactly one quoted SQL string and no additional arguments. It must compile to one executable statement.
+
+## SQL compilation
+
+Both named and inline SQL hooks are compiled in the model's context. They support:
+
+- Project variables such as `@@audit_schema`
+- Environment variables such as `@@ENV:DEPLOY_ROLE`
+- Hook context variables such as `@@CTX:destination.qualified`
+- Enums and constants such as `@enum("role").ANALYST` and `@const("retention_days")`
+- Python macros such as `@grant_target("@@CTX:destination.qualified")`
+
+For named SQL hooks, SQLBuild first substitutes `@name` and `@'name'` arguments into the hook body. It then resolves interpolation, declarations, and macros in the calling model's effective context. This means a supplied argument such as `relation: "@@CTX:destination.qualified"` resolves to that model's final target-overridden destination.
+
+`${...}` config-template syntax is not valid in SQL hooks. Python hook arguments are ordinary configuration values and are not SQL-expanded: a Python argument containing `@@CTX:...` or `@macro()` reaches the function unchanged.
+
+Every named SQL hook is required to render to exactly one executable statement. This statement-shape check is unconditional, so `sql_validation: false` and `--no-sql-validation` do not permit multiple statements or standalone expressions such as `1 + 1`.
+
+Full dialect syntax validation runs separately after expansion when the model's effective SQL-validation gate is enabled: SQL analysis must be enabled, `--no-sql-validation` must be absent, and the effective project or model `sql_validation` value must be true.
 
 | Variable | Value |
 |----------|-------|
 | `@@CTX:destination.qualified` | Fully qualified destination relation |
 | `@@CTX:destination.schema` | Destination schema |
+| `@@CTX:destination.database` | Destination database |
 | `@@CTX:destination.table` | Destination relation name |
 | `@@CTX:model.name` | Model name |
+| `@@CTX:model.database` | Model database |
+| `@@CTX:model.schema` | Model schema |
+| `@@CTX:model.alias` | Model alias |
 | `@@CTX:run.target` | Active target name |
 | `@@CTX:run.id` | Current run ID |
 
 ## Python hooks
 
-SQLBuild discovers `@hook` functions recursively under `hooks/`:
+SQLBuild discovers decorated functions recursively from `.py` files under `hooks/python/`:
 
 ```python
+# hooks/python/permissions.py
 from sqlbuild.hooks import hook
 
+
 @hook
-def grant_analyst(ctx, role="analyst_role"):
-    ctx.execute_sql(f"GRANT SELECT ON {ctx.destination.qualified} TO {role}")
+def notify_complete(ctx, channel="#data-builds"):
+    ctx.log(f"Notify {channel}: {ctx.model_name} is complete")
 ```
 
 Reference the hook by name and optionally pass keyword arguments:
@@ -42,13 +151,17 @@ Reference the hook by name and optionally pass keyword arguments:
 ```sql
 MODEL (
   materialized table,
-  post_hooks [python("grant_analyst", role: "reader_role")],
+  post_hooks [python("notify_complete", channel: "#model-alerts")],
 );
+
+SELECT 1 AS id
 ```
 
-SQL and Python hooks can appear in the same list.
+By default, the hook name is the function name. The decorator accepts optional `name` and `description` arguments. A Python file may define multiple decorated hooks. Files named `__init__.py` or beginning with `_` are skipped, and imported decorated functions are not registered again from the importing module.
 
-## Hook context
+Unknown hooks, unknown keyword arguments, missing required arguments, required positional-only arguments, and arguments that conflict with context or provider injection fail compilation. A function with `**kwargs` can accept additional configured arguments.
+
+### Hook context
 
 Python hooks declare a `HookContext` parameter named `ctx`, `context`, `_ctx`, or `hook_context`. It need not be the first parameter when providers or configured arguments are also present:
 
@@ -57,10 +170,12 @@ Python hooks declare a `HookContext` parameter named `ctx`, `context`, `_ctx`, o
 | `ctx.model_name` | Model being built |
 | `ctx.phase` | `pre_hooks` or `post_hooks` |
 | `ctx.hook_name` | Invoked hook name |
+| `ctx.hook_index` | Zero-based position in the authored hook list |
 | `ctx.run_id` | Current run ID |
 | `ctx.target` | Active target |
 | `ctx.vars` | Effective project variables |
 | `ctx.destination` | Destination relation metadata |
+| `ctx.adapter_name` | Active adapter name |
 | `ctx.adapter` | Adapter instance |
 | `ctx.connection` | Live connection |
 | `ctx.execute_sql(sql)` | Execute SQL |
@@ -69,22 +184,56 @@ Python hooks declare a `HookContext` parameter named `ctx`, `context`, `_ctx`, o
 | `ctx.skip(reason="...", mode="soft")` | Return a soft or hard skip result; arguments are keyword-only |
 | `ctx.providers` | Access discovered [providers](/concepts/python-nodes/providers) |
 
-Providers may also be injected into hook parameters by name.
+Python hooks must return `None` or `ctx.skip(...)`. Any other return value fails execution.
 
-## Skip timing
+### Providers
 
-Returning `ctx.skip(...)` from a pre-hook prevents materialization. Returning it from a post-hook changes the reported execution result, but the relation has already been created, promoted, or incrementally updated and audited.
+Providers may be injected into Python hook parameters by name or accessed through `ctx.providers`. Providers are resolved lazily using the same lifecycle as loaders, tasks, assets, and checks. SQL hooks cannot use providers because they are compiled SQL statements rather than Python callables.
 
-`mode="hard"` blocks downstream nodes. A soft skip does not automatically block every downstream node; scheduler propagation depends on the other upstream results.
+```python
+# hooks/python/notifications.py
+from sqlbuild.hooks import hook
+
+
+@hook
+def notify_complete(ctx, slack_notifier):
+    slack_notifier.send(f"Model {ctx.model_name} built successfully")
+```
+
+### Skip timing
+
+Returning `ctx.skip(...)` stops the remaining hooks in the current phase. From a pre-hook it prevents materialization; from a post-hook it changes the reported model result and prevents downstream execution, but the relation has already been created, promoted, or incrementally updated and audited.
+
+`mode="hard"` blocks downstream nodes. A soft skip does not automatically block every downstream node; scheduler propagation also depends on the other upstream results.
 
 ## Failure timing
 
 Post-hooks are not promotion gates. A failed post-hook marks the model run as failed after warehouse mutation has already occurred. Put logic that must prevent materialization in a pre-hook, contract, pre-promotion audit, or the materialization itself.
 
-## Discovery and validation
+## Names and identity
 
-- Files beginning with `_`, including `__init__.py`, are skipped.
-- Hook names must be unique across the project.
-- The decorator accepts optional `name` and `description` arguments.
-- Unknown hooks, unknown keyword arguments, and missing required arguments fail compilation.
-- A function without `**kwargs` rejects undeclared hook arguments.
+SQL hook names and Python hook names share the project-wide resource namespace with models, sources, seeds, functions, loaders, tasks, assets, checks, and providers. Any collision fails discovery, including two same-stem SQL hook files in different directories or a SQL and Python hook with the same name.
+
+The ordered hook list participates in each model's version identity:
+
+- Inline and named SQL hooks contribute their fully rendered statements. Named hooks also retain their resource name and source path in identity metadata.
+- Python hooks contribute the invocation name, configured arguments, and a version hash derived from the decorated function, its transitive first-party dependencies, and decorator configuration.
+- Changing a hook body, arguments, or order changes the consuming model's identity and makes it stale for change-aware planning. Named SQL hooks are compiled into their consumers rather than scheduled as independent model nodes.
+- Executed Python hooks record their own hook fingerprints after either successful completion or an explicit skip.
+
+## Diagnostics
+
+Discovery and compilation fail early for malformed resources and invocations. Diagnostics include the resource path and, for model entries, the model name and indexed label such as `post_hooks[1] sql("grant_access")`.
+
+Common errors include:
+
+- Missing, repeated, or misplaced `HOOK(...)` headers; unsupported header keys; empty descriptions; and missing SQL bodies
+- Duplicate or globally conflicting resource names
+- Unknown named SQL or Python hooks
+- Missing or unused SQL hook arguments and unsupported argument values
+- Invalid inline hook arguments, unquoted hook names, and bare hook strings
+- Invalid SQL, multiple statements, or non-statement expressions after compile-time expansion
+- Missing, unknown, positional-only, context-conflicting, or provider-conflicting Python arguments
+- Python runtime exceptions and unsupported return values
+
+SQL validation errors for named hooks point to the hook file; invocation and argument errors also identify the consuming model entry. Runtime output preserves the authored hook index and reports whether each entry was SQL or Python.
