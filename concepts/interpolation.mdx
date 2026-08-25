@@ -26,7 +26,7 @@ The rule is simple: if it's any SQL that will be executed, it uses `@`. If it's 
 | `${CTX:...}` | TOML/YAML config values | Config compilation |
 | `${ENV:...}` | TOML/YAML config values | Config compilation |
 
-`@@CTX:` is intentionally SQL-hook-only. Model SQL describes a relation's data and should not reference its own destination identity. SQL hooks are the operational SQL layer where destination context is useful - grants, logging, post-materialization DDL. Python hooks access the same information through `ctx.destination` on the `HookContext` object (see [Hooks](/concepts/models/hooks)).
+`@@CTX:` is intentionally SQL-hook-only. Model SQL describes a relation's data and should not reference its own destination identity. SQL hooks are the operational SQL layer where destination context is useful - grants, logging, post-materialization DDL. Python hooks access the same information through `ctx.destination` on the [`HookContext`](/concepts/models/hooks/python#hook-context) object.
 
 See [Enums and Constants](/concepts/enums-and-constants) for declaration syntax, visibility, and contract integration.
 
@@ -158,7 +158,7 @@ This is distinct from `@@name` (project variables) and `@macro()` (macro calls),
 
 ## Named SQL hook parameters
 
-Reusable hooks under `hooks/sql/` use `@name` for raw SQL substitution and `@'name'` for escaped SQL-literal substitution. These parameters are supplied by `sql("name", args...)` and resolved before the rest of the hook SQL is compiled. See [Hooks](/concepts/models/hooks#sql-hook-arguments) for value rendering and validation rules.
+Reusable hooks under `hooks/sql/` use `@name` for raw SQL substitution and `@'name'` for escaped SQL-literal substitution. These parameters are supplied by `sql("name", args...)` and resolved before the rest of the hook SQL is compiled. See [SQL hooks](/concepts/models/hooks/sql#sql-hook-arguments) for value rendering and validation rules.
 
 ## Compilation order
 

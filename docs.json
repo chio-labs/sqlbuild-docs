@@ -57,7 +57,14 @@
               "concepts/models/schemas",
               "concepts/models/type-enforcement",
               "concepts/models/contracts",
-              "concepts/models/hooks",
+              {
+                "group": "Hooks",
+                "root": "concepts/models/hooks",
+                "pages": [
+                  "concepts/models/hooks/sql",
+                  "concepts/models/hooks/python"
+                ]
+              },
               "concepts/models/configuration"
             ]
           },
