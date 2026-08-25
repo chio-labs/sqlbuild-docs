@@ -1,0 +1,147 @@
+---
+title: "SQL Hooks"
+description: "Define, parameterize, compile, and invoke reusable or inline SQL lifecycle hooks."
+---
+
+SQL hooks execute one warehouse statement before or after model materialization. Use a named SQL hook for reusable behavior and `inline_sql(...)` for short model-specific statements.
+
+For shared lifecycle ordering, failure timing, naming, and identity rules, see the [Hooks overview](/concepts/models/hooks).
+
+## Reusable SQL hooks
+
+SQLBuild discovers `.sql` files recursively under `hooks/sql/`. Each file defines exactly one hook and must start with a `HOOK(...)` header as its first non-whitespace content.
+
+**`hooks/sql/permissions/grant_access.sql`**
+
+```sql
+HOOK (
+  description: "Grant a warehouse role access to the model relation"
+);
+
+GRANT SELECT ON @relation TO @role
+```
+
+The hook name is always the filename stem, so this resource is invoked as `sql("grant_access", ...)`. Nested directories organize files but do not namespace names: `hooks/sql/admin/grant_access.sql` is still named `grant_access`.
+
+`HOOK()` accepts only an optional, non-empty `description`. It does not accept a `name`; rename the file to rename the hook. The SQL after the header must contain one executable statement.
+
+Files beginning with `_` are skipped. All other `.sql` files under `hooks/sql/` are parsed as hook resources and must have a valid `HOOK()` header.
+
+## Invoke a named hook
+
+Pass the hook name and its arguments from a model's `pre_hooks` or `post_hooks` list:
+
+**`models/marts/orders.sql`**
+
+```sql
+MODEL (
+  materialized table,
+  post_hooks [
+    sql(
+      "grant_access",
+      relation: "@@CTX:destination.qualified",
+      role: "analyst_role",
+    ),
+  ],
+);
+
+SELECT 1 AS id
+```
+
+## SQL hook arguments
+
+Named SQL hooks declare parameters by using them in the SQL body. Arguments are supplied as named values in `sql("name", args...)`:
+
+| Syntax | Behavior |
+|--------|----------|
+| `@name` | Raw substitution. Strings are inserted verbatim for relations, identifiers, keywords, or SQL fragments. |
+| `@'name'` | SQL-literal substitution. Strings are single-quoted and embedded quotes are escaped. |
+
+**`hooks/sql/record_access.sql`**
+
+```sql
+HOOK (
+  description: "Record access configuration"
+);
+
+INSERT INTO audit.access_log (relation_name, role_name)
+VALUES (@'relation', @'role')
+```
+
+```sql
+MODEL (
+  post_hooks [
+    sql(
+      "record_access",
+      relation: "@@CTX:destination.qualified",
+      role: "O'Brien",
+    ),
+  ],
+);
+
+SELECT 1 AS id
+```
+
+For both forms, booleans render as `TRUE` or `FALSE`, numbers render directly, and `null` renders as `NULL`. Lists render as comma-separated values, applying raw or quoted behavior to each item. For example, `@'roles'` with `roles: ["reader", "writer"]` renders as `'reader', 'writer'`.
+
+Every referenced argument is required and every supplied argument must be used. Missing arguments, unused arguments, and unsupported values such as maps fail compilation. Raw string arguments are not escaped; use `@'name'` for data values and reserve `@name` for trusted SQL structure.
+
+## Inline SQL hooks
+
+Use `inline_sql("...")` for SQL that is specific to one model:
+
+```sql
+MODEL (
+  materialized table,
+  post_hooks [
+    inline_sql("GRANT SELECT ON @@CTX:destination.qualified TO analyst_role"),
+  ],
+);
+
+SELECT 1 AS id
+```
+
+An inline hook accepts exactly one quoted SQL string and no additional arguments. It must compile to one executable statement.
+
+## Compile-time context
+
+Both named and inline SQL hooks are compiled in the model's context. They support:
+
+- Project variables such as `@@audit_schema`
+- Environment variables such as `@@ENV:DEPLOY_ROLE`
+- Hook context variables such as `@@CTX:destination.qualified`
+- Enums and constants such as `@enum("role").ANALYST` and `@const("retention_days")`
+- Python macros such as `@grant_target("@@CTX:destination.qualified")`
+
+For named hooks, SQLBuild first substitutes `@name` and `@'name'` arguments into the hook body. It then resolves interpolation, declarations, and macros in the calling model's effective context. A supplied argument such as `relation: "@@CTX:destination.qualified"` therefore resolves to that model's final target-overridden destination.
+
+`${...}` config-template syntax is not valid in SQL hooks.
+
+| Variable | Value |
+|----------|-------|
+| `@@CTX:destination.qualified` | Fully qualified destination relation |
+| `@@CTX:destination.schema` | Destination schema |
+| `@@CTX:destination.database` | Destination database |
+| `@@CTX:destination.table` | Destination relation name |
+| `@@CTX:model.name` | Model name |
+| `@@CTX:model.database` | Model database |
+| `@@CTX:model.schema` | Model schema |
+| `@@CTX:model.alias` | Model alias |
+| `@@CTX:run.target` | Active target name |
+| `@@CTX:run.id` | Current run ID |
+
+## Validation and diagnostics
+
+Every named SQL hook is required to render to exactly one executable statement. This statement-shape check is unconditional, so `sql_validation: false` and `--no-sql-validation` do not permit multiple statements or standalone expressions such as `1 + 1`.
+
+Full dialect syntax validation runs separately after expansion when the model's effective SQL-validation gate is enabled: SQL analysis must be enabled, `--no-sql-validation` must be absent, and the effective project or model `sql_validation` value must be true.
+
+Common errors include:
+
+- Missing, repeated, or misplaced `HOOK(...)` headers
+- Unsupported header keys, empty descriptions, and missing SQL bodies
+- Missing or unused arguments and unsupported argument values
+- Unknown named hooks, unquoted hook names, and bare hook strings
+- Invalid SQL, multiple statements, or non-statement expressions after compile-time expansion
+
+Definition errors point to the hook file. Invocation and argument errors also identify the consuming model entry, such as `post_hooks[1] sql("grant_access")`. Runtime output preserves the authored hook index and identifies named and inline SQL entries.
