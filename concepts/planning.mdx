@@ -50,7 +50,7 @@ By default, every selected node runs regardless of its reason. Under `--changes-
 
 ## Changes-only mode
 
-Change-aware pruning requires virtual environments (`virtual_environments = true`); it is rejected in standard mode. Within a virtual environment, `--changes-only` narrows the scope to only models that are actually stale:
+Change-aware pruning requires virtual environments (`virtual_environments = true`); it is rejected in direct mode. Within a virtual environment, `--changes-only` narrows the scope to only models that are actually stale:
 
 ```bash
 sqb build --virtual-env pr_123 --changes-only
@@ -99,9 +99,9 @@ When unchanged SQL models are skipped, read-side Python nodes (tasks, assets, ch
 
 Python nodes also have their own identity fingerprints: if a node's source code or dependencies change, it runs even if its SQL dependencies haven't.
 
-## Warehouse-native state (standard mode)
+## Warehouse-native state (direct mode)
 
-In standard mode, all change-tracking state lives in the warehouse as append-only tables in the same schemas as your data:
+In direct mode, all change-tracking state lives in the warehouse as append-only tables in the same schemas as your data:
 
 - **`_sqlbuild_fingerprints`** - version identities for models, functions, seeds, and Python nodes. One row per successful build per identity.
 - **`_sqlbuild_source_freshness`** - source freshness observations. One row per successful build per source identity.

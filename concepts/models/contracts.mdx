@@ -56,7 +56,7 @@ Runtime exact-schema validation currently runs for:
 
 Views and custom materializations rely on compile-time contract analysis. Microbatch incrementals currently apply type enforcement and audits but do not perform the framework runtime exact-schema validation step.
 
-Staged table validation happens before promotion, so a failure leaves the existing destination untouched. Direct table promotion is incompatible with `contract enforced` because SQLBuild cannot validate output before replacing the destination.
+Staged table validation happens before promotion, so a failure leaves the existing destination untouched. Immediate table promotion is incompatible with `contract enforced` because SQLBuild cannot validate output before replacing the destination.
 
 ## Type enforcement
 

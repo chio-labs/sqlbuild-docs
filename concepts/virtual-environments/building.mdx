@@ -3,10 +3,10 @@ title: "Building"
 description: "Virtual builds, VDE creation, partial builds, and seeded incrementals."
 ---
 
-Virtual builds create versioned physical relations and update VDE pointer sets. The build lifecycle is the same as standard mode (seeds, tests, models, audits), but model outputs are written to versioned physical tables and exposed through logical VDE views.
+Virtual builds create versioned physical relations and update VDE pointer sets. The build lifecycle is the same as direct mode (seeds, tests, models, audits), but model outputs are written to versioned physical tables and exposed through logical VDE views.
 
 <Warning>
-Virtual builds run ingress (loaders and Python nodes that feed sources) as a separate phase before SQL model execution. This means independent SQL models that do not depend on loaders will wait for all ingress to complete before starting. Standard mode does not have this limitation. This keeps VDE state persistence simpler and safer but may add wall time when ingress is slow and independent SQL work is available. A future optimization may allow overlapping ingress with independent SQL execution.
+Virtual builds run ingress (loaders and Python nodes that feed sources) as a separate phase before SQL model execution. This means independent SQL models that do not depend on loaders will wait for all ingress to complete before starting. Direct mode does not have this limitation. This keeps VDE state persistence simpler and safer but may add wall time when ingress is slow and independent SQL work is available. A future optimization may allow overlapping ingress with independent SQL execution.
 </Warning>
 
 ## Default VDE
@@ -90,7 +90,7 @@ sqb build --virtual-env pr_123 --select fact_orders --include-stale-upstreams
 
 ### Stale-driven selection
 
-Virtual environment builds run the full selection by default, like standard mode. Add `--changes-only` to intersect the selection with the stale-driven set, so only models that are both selected and stale are built:
+Virtual environment builds run the full selection by default, like direct mode. Add `--changes-only` to intersect the selection with the stale-driven set, so only models that are both selected and stale are built:
 
 ```bash
 sqb build --virtual-env pr_123 --select path:models/marts --changes-only
@@ -98,7 +98,7 @@ sqb build --virtual-env pr_123 --select path:models/marts --changes-only
 
 This is useful when the stale cascade is large and you want to build a coherent subgraph without running unchanged models. Without `--changes-only`, every selected model is built regardless of state.
 
-Change-aware pruning is opt-in in both standard mode and virtual environments. See [Planning and Change Detection](/concepts/planning) for how fingerprints, source freshness, and identity tracking determine what gets built.
+Change-aware pruning is opt-in within virtual environments and unavailable in direct mode. See [Planning and Change Detection](/concepts/planning) for how fingerprints, source freshness, and identity tracking determine what gets built.
 
 ## Stale detection
 
@@ -129,7 +129,7 @@ For append models with bounded replay (`replay_on_change bounded-7d`), the seed 
 
 ## Custom materializations
 
-Custom materializations are supported in virtual mode. By default, SQLBuild seeds new physical versions using the standard clone/copy strategy before calling the custom `materialize` function.
+Custom materializations are supported in virtual mode. By default, SQLBuild seeds new physical versions using the direct clone/copy strategy before calling the custom `materialize` function.
 
 For custom materializations that need different seeding behavior, define a `prepare_version` function alongside `materialize`:
 

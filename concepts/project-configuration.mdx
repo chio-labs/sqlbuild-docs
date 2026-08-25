@@ -240,20 +240,20 @@ default_audit_run_scope = "final"
 | Field | Default | Description |
 |-------|---------|-------------|
 | `sql_analysis` | `true` | Enable SQL validation and static analysis at compile time |
-| `changes_only` | `false` | Enable [change-aware pruning](/concepts/planning#changes-only-mode) for `plan` and `build` without passing `--changes-only` each run. Requires `virtual_environments = true`; rejected in standard mode. Can also be set per target under `[targets.<name>]`. The CLI flag takes precedence, then the selected target, then local settings, then this project setting. |
-| `virtual_environments` | `false` | Enable [virtual environments](/concepts/virtual-environments) (versioned model outputs, promotion, rollback, state management). When `false`, the project runs in standard mode. |
+| `changes_only` | `false` | Enable [change-aware pruning](/concepts/planning#changes-only-mode) for `plan` and `build` without passing `--changes-only` each run. Requires `virtual_environments = true`; rejected in direct mode. Can also be set per target under `[targets.<name>]`. The CLI flag takes precedence, then the selected target, then local settings, then this project setting. |
+| `virtual_environments` | `false` | Enable [virtual environments](/concepts/virtual-environments) (versioned model outputs, promotion, rollback, state management). When `false`, the project runs in direct mode. |
 | `query_change_tracking` | `true` | Track query fingerprints for change detection |
 | `sql_validation` | `true` | Validate SQL syntax during compilation |
 | `concurrency` | `1` | Maximum parallel model execution (currently serial only) |
 | `auto_load_sources` | `true` | Automatically run source loaders before building dependent models during `sqb build`. See [Loaders](/concepts/python-nodes/loaders). |
-| `table_promotion_mode` | adapter default | `staged` (CTAS to staging, audit, then promote) or `direct` (CTAS directly to target) |
+| `table_promotion_mode` | adapter default | `staged` (CTAS to staging, audit, then promote) or `immediate` (CTAS directly to target, then audit) |
 | `default_audit_severity` | `warn` | Default severity for audits: `warn` or `error` |
 | `default_audit_run_scope` | `final` | Default run scope for audits: `final` or `delta_and_final` |
 
 ### Table promotion mode
 
 - **`staged`** (default for most adapters): Materializes into a staging table, runs audits, then swaps into the target. If audits fail, the production table is untouched.
-- **`direct`**: Creates the table directly at the target location. Audits run after materialization. Simpler but no pre-promotion safety net.
+- **`immediate`**: Creates the table directly at the target location. Audits run after materialization. Simpler but no pre-promotion safety net.
 
 ## Kata
 
