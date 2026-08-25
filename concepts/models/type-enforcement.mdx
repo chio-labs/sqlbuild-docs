@@ -50,9 +50,9 @@ Runtime cast support currently depends on materialization:
 | View | No; the view query defines the warehouse output type |
 | Snapshot | No framework cast reconstruction |
 | Custom materialization | Owned by the custom materialization |
-| Full table with direct promotion | Rejected when type enforcement is required |
+| Full table with immediate promotion | Rejected when type enforcement is required |
 
-Staged promotion is the default table mode. If a project selects direct table promotion, a typed model fails with guidance to use staged promotion because SQLBuild cannot inspect and reconstruct output before mutating the destination.
+Staged promotion is the default table mode. If a project selects immediate table promotion, a typed model fails with guidance to use staged promotion because SQLBuild cannot inspect and reconstruct output before mutating the destination.
 
 ## Type enforcement versus contracts
 
