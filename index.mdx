@@ -73,13 +73,13 @@ State is plain append-only rows in your own warehouse (`_sqlbuild_fingerprints`,
 
 ## Deploy reversibly (opt-in)
 
-By default, SQLBuild runs in standard mode with state as append-only rows in your warehouse. When you want more, [virtual environments](/concepts/virtual-environments) add a reversibility layer on top:
+By default, SQLBuild runs in direct mode with state as append-only rows in your warehouse. When you want more, [virtual environments](/concepts/virtual-environments) add a reversibility layer on top:
 
 - **Instant branching, promotion, and rollback** as low-copy pointer operations.
 - **Partial promotion.** Promote the models that are ready without re-running everything downstream of them - you don't have to rebuild the whole closure to ship one fix.
 - **Checkpoints and reconciliation** so a bad change is something you undo, not an incident.
 
-Virtual environments are opt-in, not a tax you pay upfront - standard mode stays the default, so the floor stays low and you reach for them only when a workflow needs them.
+Virtual environments are opt-in, not a tax you pay upfront - direct mode stays the default, so the floor stays low and you reach for them only when a workflow needs them.
 
 ## Supported adapters
 

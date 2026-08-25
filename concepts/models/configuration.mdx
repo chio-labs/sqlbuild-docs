@@ -40,7 +40,7 @@ The model override can re-enable validation when the project-level `settings.sql
 |-------|-------------|
 | `run_despite_unchanged` | Table-only change-aware policy. `always` rebuilds whenever selected. A duration such as `30d`, `12h`, or `90m` rebuilds while the newest timestamp-based upstream source observation is within that age; it is not a periodic schedule. |
 
-Table promotion mode is a project setting rather than a `MODEL()` field. Staged promotion is the default. Direct promotion is incompatible with model type enforcement and exact contracts; see [Materializations](/concepts/models/materializations#table).
+Table promotion mode is a project setting rather than a `MODEL()` field. Staged promotion is the default. Immediate promotion is incompatible with model type enforcement and exact contracts; see [Materializations](/concepts/models/materializations#table).
 
 ## Incremental fields
 
