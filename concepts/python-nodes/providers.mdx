@@ -41,7 +41,7 @@ class WarehouseClient(Provider):
     api_key: str
 ```
 
-Provider names must be unique across all provider files and must be valid Python identifiers (`lower_snake_case`).
+Provider names must be valid Python identifiers (`lower_snake_case`). They share the global project resource namespace with models, sources, seeds, functions, loaders, tasks, assets, checks, and hooks.
 
 ## Using providers in Python nodes
 
@@ -82,7 +82,7 @@ Provider injection works in all Python node types:
 Python lifecycle hooks also support provider injection by parameter name:
 
 ```python
-# hooks/notify.py
+# hooks/python/notify.py
 from sqlbuild.hooks import hook
 
 @hook
@@ -159,7 +159,7 @@ See the [pydantic-settings documentation](https://docs.pydantic.dev/latest/conce
 - Provider classes are discovered from `.py` files under `providers/` recursively
 - Files named `__init__.py` or starting with `_` are skipped
 - Each concrete (non-abstract) subclass of `Provider` is registered
-- Provider names must be unique across all provider files
+- Provider names must be globally unique across project resources
 - Settings are validated at discovery time. Missing required fields (without environment variables set) raise a discovery error immediately, not at runtime
 
 ## Plan output
@@ -182,7 +182,10 @@ my-project/
     warehouse_client.py
     slack_notifier.py
   hooks/
-    notify.py
+    sql/
+      record_notification.sql
+    python/
+      notify.py
   loaders/
     load_orders.py
   tasks/

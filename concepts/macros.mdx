@@ -76,7 +76,7 @@ SELECT 1
 
 ## Using macros in hooks
 
-Macros are expanded inside `sql(...)` hook entries in `pre_hooks` and `post_hooks`:
+Macros are expanded inside `inline_sql(...)` entries and reusable `sql("name", ...)` hook files in `pre_hooks` and `post_hooks`:
 
 ```python
 # macros/permissions.py
@@ -87,7 +87,7 @@ def grant_target(target):
 ```sql
 MODEL (
   materialized table,
-  post_hooks [sql('@grant_target(@@CTX:destination.qualified)')],
+  post_hooks [inline_sql('@grant_target(@@CTX:destination.qualified)')],
 );
 
 SELECT 1 AS id
@@ -95,7 +95,7 @@ SELECT 1 AS id
 
 Hook SQL is validated at compile time, so invalid hook SQL is caught before execution. SQL hooks also support `@@CTX:` context variables, `@@name` project variables, and `@@ENV:NAME` environment variables directly without needing a macro wrapper.
 
-For hooks that need more than string interpolation, use `python(...)` hooks instead. See [Hooks](/concepts/models/hooks) for the full Python hook API.
+For shared parameterized SQL, put the statement under `hooks/sql/` and invoke it with `sql("name", args...)`. For hooks that need runtime control flow, providers, or skip decisions, use `python(...)` hooks instead. See [Hooks](/concepts/models/hooks) for the complete lifecycle hook syntax.
 
 ## Macro context
 
@@ -174,7 +174,7 @@ def revenue_column(column, alias):
 ## Where macros are allowed
 
 - **Model query SQL** - the SELECT statement after the MODEL() header
-- **Hook strings** - `sql(...)` entries in `pre_hooks` and `post_hooks` in MODEL() config
+- **SQL hooks** - `inline_sql(...)` entries and named hook files invoked by `sql("name", ...)`
 - **Test SQL** - unit test CTE bodies
 - **Audit SQL** - singular audit queries
 
