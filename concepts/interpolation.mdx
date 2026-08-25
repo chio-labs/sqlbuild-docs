@@ -21,7 +21,8 @@ The rule is simple: if it's any SQL that will be executed, it uses `@`. If it's 
 | `@@ENV:NAME` | Model SQL, SQL hooks, tests, audits, inline source expressions | Compile time - environment variable |
 | `@@CTX:name` | SQL hooks only | Compile time - destination relation, target, run ID |
 | `@@@name` | Model SQL | Preserved for runtime (custom materializations) |
-| `@name` / `@'name'` | Generic audit SQL only | Audit engine parameter |
+| `@name` / `@'name'` | Named SQL hook bodies | Raw / SQL-literal invocation argument, resolved at compile time |
+| `@name` / `@'name'` | Generic audit SQL | Raw / SQL-literal audit argument |
 | `${CTX:...}` | TOML/YAML config values | Config compilation |
 | `${ENV:...}` | TOML/YAML config values | Config compilation |
 
@@ -92,7 +93,7 @@ Context variables provide access to the current model's destination relation, ac
 **In SQL hooks** (`@@CTX:` syntax):
 
 ```sql
-post_hooks [sql('GRANT SELECT ON @@CTX:destination.qualified TO analyst_role')],
+post_hooks [inline_sql('GRANT SELECT ON @@CTX:destination.qualified TO analyst_role')],
 ```
 
 **In TOML/YAML config values** (`${CTX:...}` syntax):
@@ -139,7 +140,7 @@ WHERE CAST(ordered_at AS DATE) >= CAST(@@@partition_start AS DATE)
 
 ## Audit parameters
 
-Generic audit SQL uses `@name` (single `@`, no parentheses) for audit-engine placeholders. These are resolved by the audit engine, not the compiler:
+Generic audit SQL uses `@name` (single `@`, no parentheses) for raw SQL placeholders and `@'name'` for escaped SQL-literal placeholders. These are resolved when the audit is attached:
 
 ```sql
 SELECT @column
@@ -147,20 +148,33 @@ FROM @relation
 WHERE @column IS NULL
 ```
 
+Use the quoted form for values rather than SQL identifiers or expressions:
+
+```sql
+WHERE status = @'expected_status'
+```
+
 This is distinct from `@@name` (project variables) and `@macro()` (macro calls), so there is no ambiguity. See [Audits](/concepts/audits) for details on generic audit parameters.
+
+## Named SQL hook parameters
+
+Reusable hooks under `hooks/sql/` use `@name` for raw SQL substitution and `@'name'` for escaped SQL-literal substitution. These parameters are supplied by `sql("name", args...)` and resolved before the rest of the hook SQL is compiled. See [Hooks](/concepts/models/hooks#sql-hook-arguments) for value rendering and validation rules.
 
 ## Compilation order
 
 SQLBuild processes authored SQL in this order:
 
 1. **Config templates** (`${CTX:...}`, `${ENV:...}`) in TOML/YAML config values are resolved during config compilation
-2. **Project variables** (`@@name`), **environment variables** (`@@ENV:NAME`), and **context variables** (`@@CTX:name` in SQL hooks) are substituted
-3. **Enum and constant references** are validated and expanded to scalar SQL literals
-4. **Macro calls** (`@name(args)`) are expanded
-5. **SQL analysis validation** runs against the fully expanded SQL
+2. **Named SQL hook arguments** (`@name` and `@'name'`) are substituted into reusable hook bodies
+3. **Project variables** (`@@name`), **environment variables** (`@@ENV:NAME`), and **context variables** (`@@CTX:name` in SQL hooks) are substituted
+4. **Enum and constant references** are validated and expanded to scalar SQL literals
+5. **Macro calls** (`@name(args)`) are expanded
+6. **SQL analysis validation** runs against the fully expanded SQL
 
 This means:
 - Config templates resolve first, before any SQL processing
+- Named SQL hook arguments can contain `@@CTX:...`, `@@ENV:...`, project-variable, declaration, or macro text that is resolved in the calling model's context
 - Macros see already-substituted variable values in the SQL
 - `@@CTX:destination.qualified` in SQL hooks sees the final target-overridden destination name because hooks are expanded after destination naming is fully resolved
 - SQL analysis validates the final expanded SQL, catching syntax errors from both vars and macros
+- Python hook arguments are not SQL and remain unexpanded

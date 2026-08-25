@@ -72,7 +72,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | SQL models | `MODEL()` header with inline config | Jinja-templated SQL + YAML sidecar | `MODEL` DDL |
 | Python models | Coming soon | Pandas, PySpark, Snowpark, BigFrames | Pandas, PySpark, Snowpark, BigFrames |
 | Custom materializations | Python with full framework hooks | Jinja-based | Python-based custom model kinds |
-| Lifecycle hooks | Typed `sql()`/`python()` hooks with compile-time validation and `HookContext` | Jinja pre/post hooks | Python pre/post hooks |
+| Lifecycle hooks | Typed inline SQL, reusable parameterized SQL resources, and Python hooks with compile-time validation and `HookContext` | Jinja pre/post hooks | Python pre/post hooks |
 
 ### Python nodes
 
