@@ -14,7 +14,7 @@ description: "MODEL() header fields and SQL-validation controls."
 | `model_schema` | Reusable column schema name |
 | `audits` | Model-level audit instances |
 | `enums` | Model-local enum declarations; names must begin with `_` |
-| `constants` | Model-local scalar constants; names must begin with `_` |
+| `constants` | Model-local scalar, list, set, or object constants; names must begin with `_`. Use `constant(...)` for an explicit decimal type or collection rendering override. |
 | `schema` | Destination warehouse schema override |
 | `database` | Destination database override |
 | `alias` | Destination relation-name override |

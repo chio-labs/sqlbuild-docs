@@ -46,6 +46,9 @@ default_audit_severity = "warn"
 [defaults]
 materialized = "table"
 
+[constants]
+collection_rendering = "value_list"
+
 [targets.prod]
 schema = "prod"
 
@@ -189,6 +192,19 @@ tags = ["managed"]
 ```
 
 These apply to all models unless overridden by path defaults or the model's own `MODEL()` header.
+
+## Constants
+
+Collection constants default to parenthesized SQL value lists. Set a project-wide default when lists and sets should instead compile to first-class adapter-native arrays:
+
+```toml
+[constants]
+collection_rendering = "array"
+```
+
+`collection_rendering` accepts `value_list` (the SQLBuild default) or `array`. A public constant's `render_as` field or a model-local `constant(...)` wrapper overrides the project setting. The complete precedence order is declaration override, project setting, then `value_list`.
+
+This setting does not make unsupported adapter features portable. In particular, SQL Server rejects native arrays, and BigQuery rejects nested arrays. See [Enums and Constants](/concepts/enums-and-constants#rendering-configuration) for syntax, adapter output, and value-list usage constraints.
 
 ## Path defaults
 
