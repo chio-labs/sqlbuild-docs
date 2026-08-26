@@ -71,7 +71,7 @@ Every public declaration name must remain globally unique within its kind, inclu
 
 Macro, constant, and enum namespaces are independent. A macro, constant, and enum may all use the same public name because references identify the kind: `@format_currency()`, `@const("format_currency")`, and `@enum("format_currency")`.
 
-Model-private constants and enums declared with an underscore name in `MODEL()` are different: they belong only to that model. They are available in the owner's query and inline SQL hooks, but not to descendants, tests, scenarios, or any other resource.
+Model-private constants and enums declared with an underscore name in `MODEL()` are different: they belong only to that model. Private names must begin with exactly one `_`; names beginning with `__` are reserved for SQLBuild. They are available in the owner's query and inline SQL hooks, but not to descendants, tests, scenarios, or any other resource. Their introspection identities include the owner, for example `enum:model:stg_orders._state`, so private names may repeat across models without shadowing.
 
 ## Which path resolves SQL
 
@@ -126,6 +126,7 @@ Expected-model grants anchor test and scenario use through the granting models, 
 
 ## Related declarations
 
+- [`sqb scope`](/cli/scope) - inspect visibility, usage, placement, prospective paths, and move impact offline
 - [Python Macros](/concepts/macros)
 - [Enums and Constants](/concepts/enums-and-constants)
 - [Interpolation](/concepts/interpolation)

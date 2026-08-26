@@ -258,7 +258,7 @@ MODEL (
 );
 ```
 
-The wrapper is distinct from object syntax, so an object with keys named `value` or `render_as` remains unambiguous. Model-private names must start with `_`. They are available only in that model's query and inline SQL hooks; named SQL hooks resolve from their own definition paths, and no test, scenario, descendant, or other model can resolve them.
+The wrapper is distinct from object syntax, so an object with keys named `value` or `render_as` remains unambiguous. Model-private names must start with exactly one `_`; names beginning with `__` are reserved for SQLBuild. They are available only in that model's query and inline SQL hooks; named SQL hooks resolve from their own definition paths, and no test, scenario, descendant, or other model can resolve them. Scope introspection qualifies private identities with their owner, such as `constant:model:stg_orders._minimum_value`; this does not change SQL reference syntax.
 
 ## Determinism and identity
 
