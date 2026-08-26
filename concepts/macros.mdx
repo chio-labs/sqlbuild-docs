@@ -9,7 +9,7 @@ For the full picture of how macros fit into SQLBuild's interpolation system, see
 
 ## Defining macros
 
-Create Python files under `macros/` in your project. Every public ordinary function defined by a macro module becomes a callable macro:
+Create Python files under the top-level `macros/` directory for project-wide macros. Every public ordinary function defined by a macro module becomes a callable macro:
 
 ```python
 # macros/currency.py
@@ -44,6 +44,8 @@ def completed_orders() -> str:
 ```
 
 Here, only `completed_orders` is exported as a macro. `quote`, `_ColumnFormatter`, and `_status_filter` are implementation details.
+
+Macros may instead be inherited from `_macros/` directories or restricted to an exact directory with `_local_macros/`. See [Declaration Scopes](/concepts/declaration-scopes) for placement and lexical visibility. Public macro names remain globally unique even when their scopes do not overlap.
 
 ## Using macros in models
 
@@ -185,7 +187,7 @@ Inner macros used as arguments don't have to return strings - they can return an
 
 ## Composing macros
 
-Macro output cannot contain macro calls. Expansion is single-pass: if a macro returns SQL containing `@another_macro()`, SQLBuild raises an error.
+Macro output may contain further `@macro()` calls. SQLBuild expands those calls under the emitting macro's definition-path scope. Calls written as nested arguments resolve under the current SQL author's scope before the outer macro runs. Inaccessible dependencies and dependency cycles fail compilation.
 
 For implementation details used by one macro, call an underscore-private helper in the same file:
 
@@ -212,6 +214,16 @@ FROM __ref("fact_orders")
 
 In this example, `cents_to_dollars` and `revenue_column` can be defined in separate macro files. Do not import one from the other in Python.
 
+An emitting macro can also compose lexically in its returned SQL:
+
+```python
+# models/commerce/_macros/revenue.py
+def revenue_column(column):
+    return f"@cents_to_dollars('{column}') AS revenue_dollars"
+```
+
+Here `cents_to_dollars` must be visible from `models/commerce/_macros/revenue.py`. It is not borrowed from whichever model calls `revenue_column`. In particular, a project-wide macro under `macros/` cannot depend on an inherited or local macro.
+
 ## Where macros are allowed
 
 - **Model query SQL** - the SELECT statement after the MODEL() header
@@ -223,10 +235,11 @@ Macros are **not allowed** in MODEL() config values (other than SQL hook entries
 
 ## Discovery rules
 
-- SQLBuild discovers all `.py` files under `macros/` recursively
+- SQLBuild discovers `.py` files recursively under top-level `macros/` and scoped `_macros/` or `_local_macros/` directories below canonical authored roots
 - Only public ordinary functions defined by the macro module become macros
 - Imported callables and classes are not exported as macros
 - Module-owned constants, classes, type aliases, and helper functions must start with `_`
 - A macro module must not Python-import another project macro module
-- Macro names must be unique across all macro files - duplicates raise a compile error
+- Public macro names must be unique across all macro files; scopes do not provide shadowing
 - Macros are loaded once at compile time, not per-model
+- Manifest macro nodes expose declaration scope, owning path, and tracked macro dependencies

@@ -171,6 +171,10 @@ SELECT 1
 
 If the expected models form a chain (e.g. `stg_orders` feeds into `fact_orders` which feeds into `dim_customers`), SQLBuild resolves them in dependency order, using the output of earlier steps as input to later ones.
 
+Each explicit `__expected__<model>` CTE also grants the test authored SQL the public enums and constants visible to that model. A test with multiple expected models receives the deterministic union, with provenance retained for every granting model. Public names remain globally unique, so the union cannot shadow declarations.
+
+Only explicit expected CTEs create grants. A matching test filename, `__ref__` mock, or nearby model path does not. Model-private declarations and macros are never granted through expected models.
+
 ## Macro-powered mocks
 
 Because unit tests are written in SQL, they support macro calls. This lets you write reusable mock generators instead of copy-pasting mock data across test files:
@@ -193,6 +197,8 @@ SELECT 1
 ```
 
 The `@mock_orders()` call expands at compile time to whatever SQL the Python macro function returns.
+
+Macros and directly visible enums and constants in authored test SQL resolve from that test file's path under `tests/unit/`. This includes inherited declarations from every matching ancestor and local declarations owned by the test's exact parent directory; sibling and descendant declarations are inaccessible. Public enums and constants may also be available through explicit expected-model grants. Model-private constants and enums are not exported to tests. See [Declaration Scopes](/concepts/declaration-scopes).
 
 ## Macro mocking
 

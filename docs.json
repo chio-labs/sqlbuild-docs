@@ -76,6 +76,7 @@
             ]
           },
           "concepts/enums-and-constants",
+          "concepts/declaration-scopes",
           "concepts/interpolation",
           "concepts/macros",
           "concepts/functions",
