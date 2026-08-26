@@ -36,6 +36,18 @@ All fields in `connection` are passed to `pymssql.connect()`. See the [pymssql d
 
 SQL Server supports schema-only, full-row, and bounded `sqb diff` comparisons.
 
+## Typed constants
+
+SQL Server supports scalar and parenthesized `value_list` constants. Strings use Unicode literals where required, and objects render through a JSON expression such as:
+
+```sql
+JSON_QUERY(N'{"GB":"Great Britain"}')
+```
+
+SQL Server has no supported first-class native array expression. Any list or set that resolves to `render_as array`, whether through its declaration or `[constants].collection_rendering`, fails at compile time. SQLBuild does not silently substitute a value list or quoted JSON string.
+
+See [Enums and Constants](/concepts/enums-and-constants#adapter-matrix) for declarations, rendering precedence, and the cross-adapter matrix.
+
 ## Per-target connections
 
 ```toml
