@@ -254,7 +254,7 @@ By default, `TEST()` runs in model mode - mocking sources/refs and comparing mod
 Test macro output by calling the macro in `__macro_actual__` and comparing against `__macro_expected__`:
 
 ```sql
-TEST (mode: macro, name: "calculates line total cents");
+TEST (mode macro, name "calculates line total cents");
 
 WITH
 input_values AS (
@@ -277,7 +277,7 @@ Macros are compile-time code, so macro tests expand the macro at compile time an
 Test scalar UDFs by calling them in `__udf_actual__` and comparing against `__udf_expected__`:
 
 ```sql
-TEST (mode: udf, name: "detects completed orders");
+TEST (mode udf, name "detects completed orders");
 
 WITH
 input_values AS (
@@ -306,7 +306,7 @@ UDFs are warehouse objects, so the function is created before the test runs. Dur
 Test table functions by calling them in `__table_fn_actual__` and comparing against `__table_fn_expected__`:
 
 ```sql
-TEST (mode: table_fn, name: "returns customer orders");
+TEST (mode table_fn, name "returns customer orders");
 
 WITH
 __table_fn_actual__ AS (
@@ -341,7 +341,7 @@ CTE prefixes from other modes are not allowed. For example, `__source__` in a ma
 A single test file can contain multiple `TEST()` blocks. Each block must have a unique `name`:
 
 ```sql
-TEST (name: "completed orders only");
+TEST (name "completed orders only");
 
 WITH
 __source__raw__orders AS (
@@ -352,7 +352,7 @@ __expected__stg_orders AS (
 )
 SELECT 1
 
-TEST (name: "cancelled orders excluded");
+TEST (name "cancelled orders excluded");
 
 WITH
 __source__raw__orders AS (
