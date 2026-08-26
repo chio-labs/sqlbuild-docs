@@ -5,7 +5,8 @@ description: "Run SQL unit tests and multi-model tests in isolation."
 
 # sqb test
 
-Runs SQL unit tests and multi-model tests without building models. Useful for validating test logic independently.
+Runs SQL unit tests, independently reported parameterized cases, and multi-model tests without
+building models. Useful for validating test logic independently.
 
 ## Usage
 
@@ -20,6 +21,14 @@ sqb --project-dir <path> test [flags]
 | `--no-sql-validation` | Skip compile-time SQL syntax validation |
 | `--select`, `-s` | Select tests targeting specific models |
 | `--exclude` | Exclude tests targeting specific models |
+
+Parameterized cases use parent-level selection. Selecting a target model includes every case in
+each matching `TEST` template; case names are not model selectors.
+
+Text output identifies each case as `<parent> [<case>]` and includes its source path and safe typed
+parameters. Structured JSON emits one check per case with stable source/block/case identity,
+declared parameter types and nullability, typed values, and a content fingerprint. Exact decimals
+are strings in JSON so their scale is preserved.
 
 ## Examples
 
