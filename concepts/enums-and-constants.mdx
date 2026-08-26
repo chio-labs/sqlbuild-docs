@@ -7,7 +7,9 @@ Enums name a fixed domain of string or integer values. Constants name a compiler
 
 ## Public declarations
 
-Public declarations are available throughout the project. Put enum files anywhere under `enums/` and constant files anywhere under `constants/`; both roots are discovered recursively.
+Project-wide declarations are available throughout the project. Put enum files anywhere under the top-level `enums/` root and constant files anywhere under the top-level `constants/` root; both roots are discovered recursively.
+
+For narrower visibility, use inherited `_enums` and `_constants` directories or exact-directory `_local_enums` and `_local_constants` directories below an authored resource root. Public names remain globally unique within each declaration kind and cannot shadow one another. An enum and a constant may use the same name because their namespaces are independent. See [Declaration Scopes](/concepts/declaration-scopes) for directory placement, composition, and resource-path rules.
 
 ```sql
 -- enums/market/market_type.sql
@@ -210,7 +212,7 @@ Allowed values are `value_list` and `array`. Rendering mode is resolved in this 
 2. Project `[constants].collection_rendering`
 3. SQLBuild's `value_list` default
 
-The project default applies to both public and model-local collection constants. There is no reference-site override: one declaration has one representation throughout a compilation. Changing the resolved mode changes dependent rendered SQL and query identity.
+The project default applies to project-wide, inherited, local, and model-private collection constants. There is no reference-site override: one declaration has one representation throughout a compilation. Changing the resolved mode changes dependent rendered SQL and query identity.
 
 ## Model-local declarations
 
@@ -256,7 +258,7 @@ MODEL (
 );
 ```
 
-The wrapper is distinct from object syntax, so an object with keys named `value` or `render_as` remains unambiguous. Model-local names must start with `_`. They are available only in that model's query and SQL hooks; another model cannot resolve them.
+The wrapper is distinct from object syntax, so an object with keys named `value` or `render_as` remains unambiguous. Model-private names must start with exactly one `_`; names beginning with `__` are reserved for SQLBuild. They are available only in that model's query and inline SQL hooks; named SQL hooks resolve from their own definition paths, and no test, scenario, descendant, or other model can resolve them. Scope introspection qualifies private identities with their owner, such as `constant:model:stg_orders._minimum_value`; this does not change SQL reference syntax.
 
 ## Determinism and identity
 
@@ -266,7 +268,7 @@ SQLBuild normalizes constants before rendering and fingerprinting:
 - Set declaration order is ignored; membership is canonicalized, so reordering alone changes neither rendered SQL nor query identity.
 - Object key declaration order is ignored; keys are canonicalized, so reordering alone changes neither rendered SQL nor query identity.
 - Set membership, object values, rendering mode, and an applicable project rendering default all participate in dependent query identity.
-- An unused declaration does not invalidate unrelated models.
+- A declaration change affects the identities of its consumers rather than unrelated models. Completely unused declarations fail project validation.
 
 ## Enum validation
 
