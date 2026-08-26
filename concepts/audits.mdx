@@ -103,7 +103,10 @@ Singular audits are standalone SQL files under `audits/` (outside the `generic/`
 
 ```sql
 -- audits/orders_have_payments.sql
-AUDIT ();
+AUDIT (
+  name "completed orders have payments",
+  severity error
+);
 
 SELECT o.order_id
 FROM __ref("fact_orders") o

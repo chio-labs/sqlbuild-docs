@@ -15,7 +15,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | Macros as test helpers | Tests are SQL - macros work as reusable fixture generators | No (YAML stubs) | No |
 | E2E scenario tests | Fixture worlds with real graph execution | No | No |
 | Local E2E replay | Capture from warehouse, replay in DuckDB | No | No |
-| Macro / UDF / table function tests | `TEST(mode: macro/udf/table_fn)` | No | No |
+| Macro / UDF / table function tests | `TEST(mode macro)`, `TEST(mode udf)`, or `TEST(mode table_fn)` | No | No |
 | Zero-row assertions | `__assert__` CTEs in tests and scenarios | No | No |
 
 ### Audits
