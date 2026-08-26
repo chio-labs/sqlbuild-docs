@@ -52,6 +52,18 @@ models/mart/orders.sql:1:1 [SQBKS001] model SQL must keep transformation logic i
 Found 1 kata faults
 ```
 
+Project-phase SQL test policy also reports the authored test or scenario path. A finding can name
+the compiler-resolved target and exact destination:
+
+```text
+tests/unit/test_stg_orders.sql:1:1 [SQBKT003] unit test block 1 resolves to resources mirrored by tests/unit/staging/
+  Remediation: Move this test file beneath tests/unit/staging/.
+Found 1 kata faults
+```
+
+`SQBKT` rules run once per project, including projects with direct-resource tests but no models.
+Path-scoped exceptions and ignores match the reported test or scenario path.
+
 ## JSON output
 
 ```bash
@@ -101,10 +113,17 @@ Remediation: Move each __ref(...) or __source(...) into one named top-level impo
 
 Custom rules also show their source and declared option defaults.
 
+Inspecting an `SQBKT` rule also prints the effective canonical roots and configured cross-domain
+pipeline directory:
+
+```bash
+sqb kata rule SQBKT003
+```
+
 ## Generate policy skills
 
-Generate agent guidance from the active rules, options, thresholds, naming vocabulary, and scoped
-deviations:
+Generate agent guidance from the active rules, options, thresholds, naming vocabulary, SQL test
+paths, and scoped deviations:
 
 ```bash
 sqb kata skills
