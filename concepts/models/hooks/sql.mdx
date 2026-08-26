@@ -15,7 +15,7 @@ SQLBuild discovers `.sql` files recursively under `hooks/sql/`. Each file define
 
 ```sql
 HOOK (
-  description: "Grant a warehouse role access to the model relation"
+  description "Grant a warehouse role access to the model relation"
 );
 
 GRANT SELECT ON @relation TO @role
@@ -48,6 +48,8 @@ MODEL (
 SELECT 1 AS id
 ```
 
+SQLBuild resource-header fields use native `key value` syntax, as in `TEST (mode macro)`, `SCENARIO (tags ["revenue"])`, `AUDIT (severity error)`, and `HOOK (description "...")`. The `relation: ...` and `role: ...` entries above intentionally retain `key: value` syntax because they are nested named arguments to the `sql(...)` hook call, not resource-header fields. The same distinction applies to named arguments passed to `python(...)`.
+
 ## SQL hook arguments
 
 Named SQL hooks declare parameters by using them in the SQL body. Arguments are supplied as named values in `sql("name", args...)`:
@@ -61,7 +63,7 @@ Named SQL hooks declare parameters by using them in the SQL body. Arguments are 
 
 ```sql
 HOOK (
-  description: "Record access configuration"
+  description "Record access configuration"
 );
 
 INSERT INTO audit.access_log (relation_name, role_name)
