@@ -76,6 +76,7 @@
             ]
           },
           "concepts/enums-and-constants",
+          "concepts/declaration-scopes",
           "concepts/interpolation",
           "concepts/macros",
           "concepts/functions",
@@ -150,6 +151,7 @@
           "cli/playground",
           "cli/skills",
           "cli/compile",
+          "cli/scope",
           "cli/kata",
           "cli/plan",
           "cli/build",

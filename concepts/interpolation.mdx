@@ -30,6 +30,8 @@ The rule is simple: if it's any SQL that will be executed, it uses `@`. If it's 
 
 See [Enums and Constants](/concepts/enums-and-constants) for scalar and collection syntax, visibility, collection-rendering precedence, adapter behavior, and contract integration.
 
+Macros, enums, and constants are resolved lexically. The authored resource path normally supplies the scope; named SQL hooks and macro-emitted calls use their definition paths. See [Declaration Scopes](/concepts/declaration-scopes) for the complete path and composition rules.
+
 ## Project variables
 
 Project variables use `@@name` syntax in SQL and are defined in `sqlbuild_project.toml` or per-target:
@@ -173,7 +175,7 @@ SQLBuild processes authored SQL in this order:
 
 This means:
 - Config templates resolve first, before any SQL processing
-- Named SQL hook arguments can contain `@@CTX:...`, `@@ENV:...`, project-variable, declaration, or macro text that is resolved in the calling model's context
+- Named SQL hook arguments can contain `@@CTX:...`, `@@ENV:...`, project-variable, declaration, or macro text; model context values describe the invoking model, while declarations and macros in the resulting named hook body resolve from the hook definition path
 - Macros see already-substituted variable values in the SQL
 - `@@CTX:destination.qualified` in SQL hooks sees the final target-overridden destination name because hooks are expanded after destination naming is fully resolved
 - SQL analysis validates the final expanded SQL, catching syntax errors from both vars and macros

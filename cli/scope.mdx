@@ -1,0 +1,242 @@
+---
+title: "scope"
+description: "Inspect declaration visibility, usage, placement, and move impact offline."
+---
+
+`sqb scope` explains the lexical environment around native SQLBuild macros, enums, and constants. Use it to see what a resource can access, what it actually uses, why a declaration is visible or inaccessible, and whether a move would cross a scope boundary.
+
+The command is read-only and offline. It does not connect to a warehouse, require warehouse credentials, or inspect relations. It reads the compiler-owned declaration-scope index and reuses a deterministic cache when the relevant source and configuration fingerprint has not changed. Building a cold cache uses the normal compiler expansion path, which loads the configured adapter and may execute authored Python macros; a warm cache hit reconstructs scope facts without importing macro modules.
+
+Text output is deterministic, bounded, and requires no interactive pager.
+
+## Usage
+
+```bash
+# Inspect an existing resource, declaration, or exact resource path
+sqb scope TARGET [flags]
+
+# Inspect the scope at a prospective file or directory
+sqb scope --at PATH [flags]
+
+# Preview moving an existing resource to a new path
+sqb scope TARGET --as-path PATH [flags]
+```
+
+`TARGET` is either a kind-qualified identity or an exact project-relative resource path:
+
+```bash
+sqb scope model:stg_orders
+sqb scope test:stg_orders__excludes_cancelled
+sqb scope scenario:daily_revenue
+sqb scope hook:grant_select
+sqb scope function:normalize_status
+sqb scope audit:positive_order_value
+sqb scope source:raw__orders
+
+sqb scope macro:normalize_order_status
+sqb scope enum:order_status
+sqb scope constant:minimum_order_value
+
+sqb scope models/staging/orders/stg_orders.sql
+```
+
+Bare names such as `stg_orders` and `order_status` are rejected even if they are currently unique. Qualification keeps commands stable when names collide across resource or declaration kinds. Public declaration identities are `macro:<name>`, `enum:<name>`, and `constant:<name>`.
+
+Model-private constants and enums include their owner in the introspection identity:
+
+```text
+enum:model:stg_orders._state
+constant:model:stg_orders._minimum_value
+```
+
+These identities are for inspection. SQL authored inside the owning model continues to use `@enum("_state")` and `@const("_minimum_value")`.
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--at PATH` | Inspect path-derived visibility for a prospective file or directory. A trailing `/` denotes a directory whose direct children are being considered. |
+| `--as-path PATH` | Preview moving the existing target resource to `PATH`. No file or configuration is changed. |
+| `--browse PATH` | Show direct child declaration folders and recursive counts without listing declarations. |
+| `--list PATH` | Recursively list declarations under one declaration folder. |
+| `--defined-under PATH` | Keep declarations whose definitions are under the project-relative path. |
+| `--kind KIND` | Keep `macro`, `enum`, or `constant` declarations. Repeat to include multiple kinds. |
+| `--match GLOB` | Match declaration names or qualified identities with a deterministic, case-sensitive glob. |
+| `--used-only` | Keep declarations used by the target. |
+| `--include-nearby` | Include bounded nearby declarations that are unavailable to the target. |
+| `--nearby-depth N` | Set filesystem proximity for nearby descendant and sibling discovery (default: `1`). |
+| `--dependency-depth N` | Expand dependencies from declarations in the used section by `N` edges (default: `0`). |
+| `--explain QUALIFIED_NAME` | Explain one qualified declaration in detail at the target. |
+| `--globals POLICY` | Control global declarations in the main report: `summary` (default), `used`, or `all`. |
+| `--page-size N` | Return at most `N` declarations per paged section (default: `100`). |
+| `--after CURSOR` | Continue after a declaration identity returned as the previous section's next cursor. |
+| `--paths MODE` | Render paths as `relative`, `compact`, or `none`. |
+| `--json` | Write the canonical versioned JSON report instead of the text tree. |
+
+Filters are orthogonal and combine in a fixed order: definition path, kind, glob, then usage. `--dependency-depth` expands the filtered used declarations afterward. Effective ancestor visibility is never depth-limited: every inherited ancestor always contributes to the scope.
+
+## Reading A Report
+
+The default text report keeps distinct facts in distinct sections:
+
+- **Available** contains declarations visible through the resource's own lexical path.
+- **Used** contains declarations consumed by the resource, including tracked declaration dependencies.
+- **Relationship scope** contains public enums and constants granted to a test or scenario through explicit expected-model relationships.
+- **Nearby unavailable** is opt-in and explains close declarations that are outside the target's scope.
+- **Scope chain** shows the exact local directory, every inherited ancestor, and the global tier.
+
+Each declaration includes its qualified identity, definition, scope and owning path, visibility reason, and safe type or signature metadata where useful. Placement information includes the narrowest required scope and path, current consumers, and promotion impact when those facts are complete.
+
+Global declarations are an intentional project-wide API and can be numerous. The default `--globals summary` always retains globals used by the target but collapses the unused global inventory with exact counts. Use `--globals used` for only used globals or `--globals all` when a bounded full list is appropriate.
+
+```bash
+# Include every global declaration in the paged report
+sqb scope model:stg_orders --globals all
+
+# Focus on constants and enums defined in finance
+sqb scope model:stg_orders \
+  --kind constant \
+  --kind enum \
+  --defined-under models/finance
+
+# Find visible or used settlement declarations
+sqb scope model:stg_orders --match '*settlement*'
+sqb scope model:stg_orders --used-only
+```
+
+## Relationship Scope
+
+Tests and scenarios have two independent sources of declaration visibility. Their authored paths provide ordinary lexical visibility. Each explicit `__expected__<model>` relationship separately grants the public enums and constants visible to that model.
+
+`sqb scope` does not flatten these grants into the path scope. Relationship entries retain the expected model or models that granted them. They never grant macros or model-private declarations, and a test filename, mirrored path, or mock does not create a relationship.
+
+```bash
+sqb scope test:orders__completed_only
+sqb scope scenario:daily_revenue --used-only
+```
+
+## Nearby And Explain
+
+Nearby discovery is deliberately opt-in and bounded. It considers relevant declarations in the same authored resource tree, ancestor scopes, close sibling and descendant domains, and relationship-connected domains. It does not dump every private declaration in the project.
+
+```bash
+# Find declarations just outside the model's effective scope
+sqb scope model:stg_orders --include-nearby
+
+# Include descendants and siblings two directory levels away
+sqb scope model:stg_orders --include-nearby --nearby-depth 2
+
+# Explain one declaration's visibility and placement at this model
+sqb scope model:stg_orders --explain enum:customer_status
+```
+
+An explanation distinguishes an inaccessible known declaration from an unknown identity. It reports the declaration's definition and ownership, the visibility or boundary reason, consumers and macro dependencies, expected-model grants, required placement, and promotion impact. It does not move or rewrite the declaration.
+
+`--dependency-depth` is separate from `--nearby-depth`: it follows tracked declaration dependencies from the used section rather than filesystem proximity.
+
+```bash
+sqb scope model:stg_orders --used-only --dependency-depth 2
+```
+
+## Prospective Paths
+
+Use `--at` before creating a resource. A prospective file receives the declarations implied by that exact authored path. A prospective directory describes what a direct child resource would receive.
+
+```bash
+sqb scope --at models/staging/orders/new_model.sql
+sqb scope --at tests/unit/staging/orders/
+```
+
+The path must be project-relative, below a configured authored resource root, and use the appropriate resource suffix (`.sql`, or `.yml`/`.yaml` for sources). Paths outside those roots produce a diagnostic rather than borrowing scope from a nearby directory.
+
+Prospective reports are intentionally partial: static path visibility is available, but runtime usage and expected-model relationship facts do not exist yet. The report marks those sections incomplete and exits nonzero while preserving the useful static result.
+
+## Move Preview
+
+`--as-path` calculates the visibility delta for moving one existing resource. It reports retained, gained, and lost declarations; direct usages that the move would invalidate; the new ownership root; owner-private declarations retained with the resource; and expected-model relationship grants retained independently of path visibility.
+
+```bash
+sqb scope model:stg_orders \
+  --as-path models/marts/orders/stg_orders.sql
+```
+
+The destination must be a valid project-relative file path for that resource kind. This is a pure preview: `sqb scope` never moves files, edits declarations, or changes configuration.
+
+## Folder Browsing
+
+Browse and list are separate so a project with 10,000 or more declarations remains safe to explore. `--browse` returns only direct child declaration folders. Each folder has exact recursive declaration, usage, kind, and nested-folder counts; no arbitrary alphabetical prefix of declarations is printed.
+
+Global roots appear in the browse namespace as `global/macros`, `global/constants`, and `global/enums`, regardless of how files are organized recursively beneath the top-level declaration roots.
+
+```bash
+# Start with folder summaries only
+sqb scope model:stg_orders --browse .
+
+# Walk down without listing declarations
+sqb scope model:stg_orders --browse global
+sqb scope model:stg_orders --browse global/macros/finance
+
+# List declarations only after choosing a bounded domain
+sqb scope model:stg_orders --list global/macros/finance/payments
+```
+
+`--list` is recursive and supports `--kind`, `--match`, `--defined-under`, `--used-only`, `--page-size`, and `--after`. Browse output itself stays folder-first.
+
+## Pagination
+
+Flat lists and report sections use qualified declaration identities as stable lexical cursors, not page numbers. Every paged section reports its total, returned count, completeness, truncation state, and `next_cursor`. Repeat the same command and filters with that identity as `--after`:
+
+```bash
+# First page
+sqb scope model:stg_orders \
+  --list global/macros/legacy \
+  --page-size 50
+
+# Continue with the next_cursor from the first result
+sqb scope model:stg_orders \
+  --list global/macros/legacy \
+  --page-size 50 \
+  --after macro:legacy_batch_0049
+```
+
+Keep all semantic filters unchanged while continuing. Qualified cursors avoid cross-kind ambiguity. A bare cursor is accepted only when it resolves uniquely; invalid or ambiguous cursors produce a diagnostic and nonzero status rather than silently selecting a different page.
+
+For automation, read each section's `next_cursor` from JSON and continue until it is `null`:
+
+```bash
+sqb scope model:stg_orders \
+  --list global/macros/legacy \
+  --page-size 50 \
+  --json > scope-page.json
+```
+
+## Paths And JSON
+
+`--paths relative` shows normalized project-relative paths. `compact` shortens repeated path context in text output, while `none` omits display paths when identities are sufficient. Paths in stable machine output never expose an absolute workspace root.
+
+`--json` emits the canonical schema rather than serializing the visual tree. The top-level `schema_version` is currently `1`. Reports include the target, scope chain, declaration sections, applied filters, section totals, collapsed and truncated flags, cursors, diagnostics, and aggregate and section-level completeness. Move previews and explanations appear when requested.
+
+JSON is deterministically ordered, ASCII, newline-terminated, and byte-stable for identical inputs. It contains no ANSI formatting. Consumers should check `schema_version` before relying on fields.
+
+## Partial Projects
+
+Scope inspection remains useful while a project is broken. SQLBuild retains valid facts and independently marks discovery, static visibility, runtime usage, expected-model relationships, placement, and promotion impact complete or incomplete. Text and JSON never present a partial section as complete.
+
+Diagnostics are stable and include project-relative source locations when available. A partial result, invalid target or cursor, or any error diagnostic produces a nonzero exit status after the available report is written. This lets an editor or agent consume path visibility while still treating incomplete analysis as a failed check.
+
+## Output Safety
+
+Scope reports describe declarations without exposing authored values or runtime secrets:
+
+- Constants show logical type, nullability, collection kind, item count, and rendering mode, not values.
+- Enums show scalar type, member count, and a bounded preview of member names, not member values.
+- Macros show parameters and tracked declaration dependencies, not source bodies, callables, or source digests.
+- Credentials, connection fields, environment variables, warehouse data, and absolute machine paths are not inspected or emitted.
+
+There is no `--show-values` option.
+
+## Native SQLBuild Only
+
+`sqb scope` inspects native SQLBuild authored resources and declarations. It does not discover or emulate dbt models, dbt or Jinja macros, package dispatch, dbt manifests, dbt selectors, dbt tests, or dbt schema YAML visibility. An external dbt graph dependency does not contribute declarations or lexical scope.
+
+For the declaration directory rules, all-ancestor composition, placement validation, expected-model grants, and macro expansion semantics, see [Declaration Scopes](/concepts/declaration-scopes).

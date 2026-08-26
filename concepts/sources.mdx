@@ -35,6 +35,8 @@ sources:
 
 Expression sources are resolved at compile time. They're the escape hatch for anything the framework doesn't natively model: external tables, warehouse-specific syntax, function calls, or any other relation type that doesn't fit a standard table reference.
 
+Macros, constants, and enums in an inline expression resolve from the source definition's authored path under `sources/`. Scoped declaration directories beside or above one source definition do not leak into sibling source paths. See [Declaration Scopes](/concepts/declaration-scopes).
+
 ## Source audits
 
 Sources support the same audit system as models. Audits attached to sources run before any dependent model is built:

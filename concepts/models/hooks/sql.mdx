@@ -107,7 +107,7 @@ An inline hook accepts exactly one quoted SQL string and no additional arguments
 
 ## Compile-time context
 
-Both named and inline SQL hooks are compiled in the model's context. They support:
+Both named and inline SQL hooks receive the invoking model's runtime context. They support:
 
 - Project variables such as `@@audit_schema`
 - Environment variables such as `@@ENV:DEPLOY_ROLE`
@@ -115,7 +115,9 @@ Both named and inline SQL hooks are compiled in the model's context. They suppor
 - Enums and constants such as `@enum("role").ANALYST` and `@const("retention_days")`
 - Python macros such as `@grant_target("@@CTX:destination.qualified")`
 
-For named hooks, SQLBuild first substitutes `@name` and `@'name'` arguments into the hook body. It then resolves interpolation, declarations, and macros in the calling model's effective context. A supplied argument such as `relation: "@@CTX:destination.qualified"` therefore resolves to that model's final target-overridden destination.
+For named hooks, SQLBuild first substitutes `@name` and `@'name'` arguments into the hook body. A supplied argument such as `relation: "@@CTX:destination.qualified"` therefore resolves to the invoking model's final target-overridden destination.
+
+Declaration visibility is lexical: an inline hook resolves macros, constants, and enums from the model file's path, while a named hook resolves them from its definition path under `hooks/sql/`. See [Declaration Scopes](/concepts/declaration-scopes#which-path-resolves-sql).
 
 `${...}` config-template syntax is not valid in SQL hooks.
 

@@ -8,6 +8,8 @@ SQLBuild projects are configured with two files in the project root:
 - **`sqlbuild_project.toml`** - shared project configuration, committed to version control
 - **`sqlbuild_local.toml`** - local developer overrides, gitignored
 
+Macro, constant, and enum visibility is not configured in either file. Declaration scopes use filesystem conventions; see [Declaration Scopes](/concepts/declaration-scopes).
+
 Most projects need only one committed `sqlbuild_project.toml`. Define shared targets such
 as `dev` and `prod` there, including clone policies and team-wide defaults. Do not maintain
 separate complete project files for each environment.

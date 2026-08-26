@@ -125,6 +125,8 @@ SQL functions can reference the same resources as models:
 
 These references are resolved at compile time and create DAG edges. If a referenced model changes, the function is redeployed.
 
+Macros, constants, and enums used in a SQL function resolve from the function definition's authored path. Put inherited declarations in `_macros/`, `_constants/`, or `_enums/` above that function, or exact-directory declarations in the corresponding `_local_...` directory. See [Declaration Scopes](/concepts/declaration-scopes).
+
 ## Change propagation
 
 Functions participate in fingerprint-based change detection. Their identity includes dependencies and declared return contracts in addition to the function body and runtime metadata. If a function changes, SQLBuild redeploys it and marks dependent models as changed.
