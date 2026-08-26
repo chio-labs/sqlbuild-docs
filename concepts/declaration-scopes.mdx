@@ -110,6 +110,20 @@ Macro modules must not import other project macro modules in Python. Compose the
 
 The generated manifest exposes each macro's declaration visibility and owning scope path, and records tracked macro dependencies in the macro node's dependency metadata.
 
+## Usage and placement
+
+SQLBuild records resolved enum, constant, and macro use while expanding the complete project. Comments, quoted text, macro test identity checks, and mocks do not count as runtime use. Generated enum contracts and audits do count because they depend on the enum domain.
+
+Every declaration must have a genuine use. Unused project-wide, inherited, local, and model-private declarations fail compilation.
+
+Project-wide declarations are an explicit stable API decision. Once used, they remain valid even when all current consumers happen to be close together; SQLBuild does not tell you to narrow them. Narrow declarations must use the closest exact placement required by all consumers:
+
+- One owning directory requires the corresponding `_local_.../` directory.
+- Multiple directories in one authored resource root require the inherited `_.../` directory at their lowest common ancestor.
+- Consumers in different authored resource roots require the top-level project-wide root.
+
+Expected-model grants anchor test and scenario use through the granting models, not through the test or scenario directory. Macro dependencies anchor through the consuming macro's lexical scope. Placement errors report the current definition, required scope and path, consumers, and exact target directory.
+
 ## Related declarations
 
 - [Python Macros](/concepts/macros)

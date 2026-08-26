@@ -268,7 +268,7 @@ SQLBuild normalizes constants before rendering and fingerprinting:
 - Set declaration order is ignored; membership is canonicalized, so reordering alone changes neither rendered SQL nor query identity.
 - Object key declaration order is ignored; keys are canonicalized, so reordering alone changes neither rendered SQL nor query identity.
 - Set membership, object values, rendering mode, and an applicable project rendering default all participate in dependent query identity.
-- An unused declaration does not invalidate unrelated models.
+- A declaration change affects the identities of its consumers rather than unrelated models. Completely unused declarations fail project validation.
 
 ## Enum validation
 
