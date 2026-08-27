@@ -1,132 +1,88 @@
 ---
-title: "Declaration Scopes"
-description: "Control where macros, enums, and constants are visible with filesystem-based lexical scopes."
+title: "Declarations and Scopes"
+description: "Place macros, enums, and constants where the SQL that owns them can see them."
 ---
 
-SQLBuild gives macros, enums, and constants lexical visibility based on where they are declared and where SQL is authored. Use a top-level declaration root for project-wide vocabulary, or place an underscored declaration directory beside the SQL that owns narrower vocabulary.
+SQLBuild gives macros, enums, and constants lexical visibility based on the filesystem. Put shared
+vocabulary in a top-level declaration root, or place an underscored declaration directory beside
+the SQL that owns narrower vocabulary. The compiler resolves visibility, records usage, and checks
+that narrow declarations use the closest valid location.
 
-Declaration scopes are a filesystem convention. There is no TOML configuration for them.
+Declaration scopes require no TOML configuration.
 
-## Scope directories
+| Scope | Declaration form | Visibility |
+|-------|------------------|------------|
+| Project-wide | `macros/`, `constants/`, `enums/` | Every supported SQL surface |
+| Inherited | `_macros/`, `_constants/`, `_enums/` | Owning path and every descendant |
+| Exact-local | `_local_macros/`, `_local_constants/`, `_local_enums/` | Direct children of one owning path |
+| Model-private | Underscore-prefixed constants and enums in `MODEL()` | One model and its inline SQL hooks |
 
-The three declaration kinds use parallel directory names:
+## Read a scope tree
 
-| Visibility | Macros | Constants | Enums |
-|------------|--------|-----------|-------|
-| Project-wide | `macros/` | `constants/` | `enums/` |
-| Inherited | `_macros/` | `_constants/` | `_enums/` |
-| Local | `_local_macros/` | `_local_constants/` | `_local_enums/` |
-
-Project-wide declarations remain under the top-level roots and are visible from every supported SQL surface. Inherited and local directories must be below one of these canonical authored roots:
-
-- `models/`
-- `tests/unit/`
-- `tests/scenarios/`
-- `hooks/sql/`
-- `functions/sql/`
-- `audits/`
-- `sources/`
-
-The parent of an underscored declaration directory is its owning path. Files may be organized recursively inside the declaration directory without changing that owning path.
-
-## One path example
-
-Consider this model tree:
+The declaration directory's parent is its owning path:
 
 ```text
 models/
-  _constants/
-    warehouse.sql
-  commerce/
-    _macros/
-      currency.py
-    _constants/
-      statuses.sql
-    _local_enums/
-      grain.sql
-    orders.sql
-    finance/
-      _macros/
-        tax.py
-      revenue.sql
-    fulfillment/
-      shipments.sql
+|-- _constants/                 inherited by every model below models/
+|   `-- warehouse.sql
+`-- commerce/
+    |-- _macros/                inherited throughout commerce/
+    |   `-- currency.py
+    |-- _local_enums/           exact commerce/ directory only
+    |   `-- grain.sql
+    |-- orders.sql              sees warehouse, currency, and grain
+    |-- finance/
+    |   |-- _macros/            inherited throughout finance/
+    |   |   `-- tax.py
+    |   `-- revenue.sql         sees warehouse, currency, and tax
+    `-- fulfillment/
+        `-- shipments.sql       sees warehouse and currency
 ```
 
-The effective declarations are:
+Inherited declarations compose from every matching ancestor. They do not stop at the nearest
+declaration directory. Exact-local declarations do not flow into child directories.
 
-| Authored SQL | Visible declarations |
-|--------------|----------------------|
-| `models/commerce/orders.sql` | Project-wide declarations, `models/_constants/warehouse.sql`, declarations under `models/commerce/_macros/` and `_constants/`, and `models/commerce/_local_enums/grain.sql` |
-| `models/commerce/finance/revenue.sql` | All matching inherited ancestors, including `models/_constants/`, `models/commerce/_macros/`, `models/commerce/_constants/`, and `models/commerce/finance/_macros/`; not the commerce-local enum |
-| `models/commerce/fulfillment/shipments.sql` | The inherited declarations from `models/` and `models/commerce/`; not the sibling `finance/_macros/` or the commerce-local enum |
+| Resource | Visible from the example tree | Not visible |
+|----------|-------------------------------|-------------|
+| `orders.sql` | Warehouse constant, commerce macro, commerce-local enum | Finance macro |
+| `finance/revenue.sql` | Warehouse constant, commerce macro, finance macro | Commerce-local enum |
+| `fulfillment/shipments.sql` | Warehouse constant, commerce macro | Commerce-local enum, finance macro |
 
-Inherited declarations compose from every matching ancestor. They do not stop at the nearest declaration directory. Local declarations apply only to resources whose exact parent is the owning path; they are not inherited by descendants.
+Declarations never flow upward, sideways into siblings, or out of their authored resource root.
+An inaccessible name produces a different compiler diagnostic from a name that does not exist.
 
-Declarations never flow upward, sideways into siblings, or out of their canonical authored root. An inaccessible name produces a compile error that distinguishes it from an unknown name.
+## Choose a scope
 
-## Names and shadowing
+| Consumer shape | Choose | Placement |
+|----------------|--------|-----------|
+| One model only | Model-private | In that model's `MODEL()` header |
+| One exact directory | Exact-local | Beside the consumers |
+| Multiple directories in one resource tree | Inherited | At their lowest common ancestor |
+| Multiple authored resource roots | Project-wide | Top-level declaration root |
 
-Every public declaration name must remain globally unique within its kind, including names in inherited and local directories. A narrower declaration cannot shadow a project-wide or ancestor declaration. For example, two public macros named `format_currency` conflict even when their owning paths do not overlap.
+Public project-wide declarations are a deliberate stable API. SQLBuild does not ask you to narrow
+one merely because its current consumers happen to be close together. For narrow declarations, the
+compiler reports the exact required scope and destination when placement is too broad or too narrow.
 
-Macro, constant, and enum namespaces are independent. A macro, constant, and enum may all use the same public name because references identify the kind: `@format_currency()`, `@const("format_currency")`, and `@enum("format_currency")`.
+## Explore the feature
 
-Model-private constants and enums declared with an underscore name in `MODEL()` are different: they belong only to that model. Private names must begin with exactly one `_`; names beginning with `__` are reserved for SQLBuild. They are available in the owner's query and inline SQL hooks, but not to descendants, tests, scenarios, or any other resource. Their introspection identities include the owner, for example `enum:model:stg_orders._state`, so private names may repeat across models without shadowing.
+<CardGroup cols={2}>
+  <Card title="Visibility and Resolution" icon="eye" href="/concepts/declaration-scopes/visibility">
+    Learn which authored path controls resolution, how expected-model grants work, and why macro
+    dependencies resolve from their definition paths.
+  </Card>
+  <Card title="Placement and Usage" icon="location-dot" href="/concepts/declaration-scopes/placement">
+    Understand genuine usage, closest placement, unused declarations, and move diagnostics.
+  </Card>
+  <Card title="Scope Explorer" icon="compass" href="/concepts/declaration-scopes/explorer">
+    Inspect a resource's scope chain, explain visibility, browse nearby declarations, and preview
+    moves offline.
+  </Card>
+  <Card title="Enums and Constants" icon="brackets-curly" href="/concepts/enums-and-constants">
+    Define typed domain vocabulary and model-private values.
+  </Card>
+</CardGroup>
 
-## Which path resolves SQL
-
-Most SQL resolves declarations from the path where that SQL is authored:
-
-| SQL surface | Scope path |
-|-------------|------------|
-| Model query | Model file |
-| Inline SQL hook | Model file containing `inline_sql(...)` |
-| Named SQL hook | Hook definition under `hooks/sql/` |
-| SQL function | Function definition under `functions/sql/` |
-| Singular or generic audit | Audit definition under `audits/` |
-| Inline source expression | Source definition under `sources/` |
-| Unit test | Test file under `tests/unit/` |
-| Scenario | Scenario file under `tests/scenarios/` |
-
-Named hook arguments are still supplied by the model invocation, and hook context such as `@@CTX:destination.qualified` still describes that model. The declarations and macros used by the named hook body, however, resolve from the hook definition path. Inline hooks resolve from the model path because that is where their SQL is authored.
-
-Tests and scenarios resolve macros and their directly visible enums and constants from the authored test or scenario path. Each explicit `__expected__<model>` relationship additionally grants the public enums and constants visible to that expected model. Grants are the deterministic union across all expected models and retain per-model provenance. They do not grant macros or model-private declarations, and filenames never imply a relationship.
-
-This lets expected SQL use the same public domain vocabulary as the model it describes without pretending that the test file lives in the model directory. Path visibility and relationship visibility remain separate facts.
-
-## Macro lexical scope
-
-Macro calls written directly in a model, hook, function, audit, source, test, or scenario resolve from that current author's path. This includes nested argument calls:
-
-```sql
-@format_money(@net_amount("amount_cents"))
-```
-
-Both `format_money` and `net_amount` are selected from the scope of the SQL containing this expression.
-
-A macro may return SQL containing further `@macro()` calls. Those emitted calls resolve from the callee macro's definition path, not from the original model or other caller. This keeps a macro's dependencies lexical and lets an inherited macro compose with project-wide declarations and declarations visible beside its own module.
-
-Macro modules must not import other project macro modules in Python. Compose them through tracked `@macro()` calls instead. SQLBuild rejects inaccessible emitted dependencies and dependency cycles. A project-wide macro therefore cannot depend on an inherited or local macro: its top-level definition has no access to narrower scopes.
-
-The generated manifest exposes each macro's declaration visibility and owning scope path, and records tracked macro dependencies in the macro node's dependency metadata.
-
-## Usage and placement
-
-SQLBuild records resolved enum, constant, and macro use while expanding the complete project. Comments, quoted text, macro test identity checks, and mocks do not count as runtime use. Generated enum contracts and audits do count because they depend on the enum domain.
-
-Every declaration must have a genuine use. Unused project-wide, inherited, local, and model-private declarations fail compilation.
-
-Project-wide declarations are an explicit stable API decision. Once used, they remain valid even when all current consumers happen to be close together; SQLBuild does not tell you to narrow them. Narrow declarations must use the closest exact placement required by all consumers:
-
-- One owning directory requires the corresponding `_local_.../` directory.
-- Multiple directories in one authored resource root require the inherited `_.../` directory at their lowest common ancestor.
-- Consumers in different authored resource roots require the top-level project-wide root.
-
-Expected-model grants anchor test and scenario use through the granting models, not through the test or scenario directory. Macro dependencies anchor through the consuming macro's lexical scope. Placement errors report the current definition, required scope and path, consumers, and exact target directory.
-
-## Related declarations
-
-- [`sqb scope`](/cli/scope) - inspect visibility, usage, placement, prospective paths, and move impact offline
-- [Python Macros](/concepts/macros)
-- [Enums and Constants](/concepts/enums-and-constants)
-- [Interpolation](/concepts/interpolation)
+See [Python Macros](/concepts/macros) for macro authoring and lexical macro composition.
+See [Interpolation](/concepts/interpolation) for project, environment, and runtime context values;
+those are separate from declarations.
