@@ -75,10 +75,18 @@
               "concepts/kata/custom-rules"
             ]
           },
-          "concepts/enums-and-constants",
-          "concepts/declaration-scopes",
+          {
+            "group": "Declarations and Scopes",
+            "pages": [
+              "concepts/declaration-scopes",
+              "concepts/declaration-scopes/visibility",
+              "concepts/declaration-scopes/placement",
+              "concepts/enums-and-constants",
+              "concepts/macros",
+              "concepts/declaration-scopes/explorer"
+            ]
+          },
           "concepts/interpolation",
-          "concepts/macros",
           "concepts/functions",
           "concepts/incremental",
           {

@@ -1,0 +1,120 @@
+---
+title: "Visibility and Resolution"
+description: "Understand authored-path visibility, expected-model grants, and lexical macro resolution."
+---
+
+SQLBuild resolves declarations from the path where SQL is authored. Visibility is a compiler fact;
+filenames, test placement, and runtime execution order do not create implicit relationships.
+
+## Authored resource roots
+
+Inherited and exact-local declaration directories may appear below these canonical roots:
+
+| Root | Authored SQL |
+|------|--------------|
+| `models/` | Model queries and inline model hooks |
+| `tests/unit/` | SQL unit tests |
+| `tests/scenarios/` | Scenario worlds and assertions |
+| `hooks/sql/` | Named SQL hooks |
+| `functions/sql/` | SQL UDFs and table functions |
+| `audits/` | Singular and generic audits |
+| `sources/` | Inline source expressions |
+
+Files may be organized recursively inside a declaration directory. That internal organization does
+not change the directory's owning path.
+
+## Which path resolves SQL
+
+<Tabs>
+  <Tab title="Models">
+    A model query and its inline SQL hooks resolve from the model file. Model-private constants and
+    enums are available only in that model's query and inline hooks.
+  </Tab>
+  <Tab title="Tests and scenarios">
+    Authored test or scenario SQL resolves from its file path. Expected-model relationships can add
+    public constants and enums through a separate compiler grant.
+  </Tab>
+  <Tab title="Hooks and functions">
+    A named hook resolves from its definition under `hooks/sql/`. A SQL function resolves from its
+    definition under `functions/sql/`, even when a model invokes it elsewhere.
+  </Tab>
+  <Tab title="Audits and sources">
+    Audit SQL resolves from its audit definition. An inline source expression resolves from the
+    source definition under `sources/`.
+  </Tab>
+</Tabs>
+
+Named hook arguments and `@@CTX` values still describe the invoking model. Only declaration
+resolution comes from the named hook's definition path.
+
+## Expected-model grants
+
+A test or scenario has two distinct visibility sources:
+
+```text
+tests/unit/commerce/test_orders.sql
+|-- path scope
+|   |-- macros visible from the test path
+|   |-- enums visible from the test path
+|   `-- constants visible from the test path
+|
+`-- __expected__orders relationship
+    |-- grants public enums visible to orders
+    |-- grants public constants visible to orders
+    |-- does not grant macros
+    `-- does not grant model-private declarations
+```
+
+Multiple expected models contribute a deterministic union with provenance retained for every
+granting model. Public names remain globally unique, so grants cannot shadow one another.
+
+Only explicit expected-model relationships create grants. A matching filename, mirrored test path,
+mocked `__ref__`, or nearby model does not.
+
+## Macro lexical resolution
+
+Calls written directly in authored SQL resolve from that SQL's path, including nested argument calls:
+
+```sql
+@format_money(@net_amount("amount_cents"))
+```
+
+Both calls initially resolve from the path containing the expression. If `format_money` returns SQL
+containing another macro call, that emitted call resolves from `format_money`'s definition path:
+
+```text
+models/commerce/orders.sql
+`-- calls commerce/_macros/format_money.py
+    `-- emitted @currency_symbol() resolves from commerce/_macros/
+        `-- not from orders.sql or whichever model called format_money
+```
+
+This keeps macro dependencies lexical and statically trackable. Project macro modules must compose
+through `@macro()` calls rather than importing one another in Python. SQLBuild rejects inaccessible
+emitted dependencies and dependency cycles. A project-wide macro cannot depend on an inherited or
+exact-local macro because its top-level definition path cannot see narrower declarations.
+
+Generated manifest macro nodes expose declaration scope, owning path, and tracked macro dependencies.
+
+## Names and shadowing
+
+Every public name must be globally unique within its declaration kind. A narrower declaration
+cannot shadow a project-wide or ancestor declaration, even when their visible scopes do not overlap.
+
+Macro, constant, and enum namespaces remain independent. These may coexist because each reference
+identifies its kind:
+
+```sql
+@format_currency()
+@const("format_currency")
+@enum("format_currency").USD
+```
+
+Model-private constants and enums are different. Their names begin with exactly one underscore and
+their identities include the owning model, such as `enum:model:stg_orders._state`. They may repeat
+across models because they never enter the public namespace. Names beginning with `__` are reserved
+for SQLBuild.
+
+<Card title="Next: Placement and Usage" icon="arrow-right" href="/concepts/declaration-scopes/placement">
+  See how compiler-recorded usage determines the closest valid declaration directory.
+</Card>

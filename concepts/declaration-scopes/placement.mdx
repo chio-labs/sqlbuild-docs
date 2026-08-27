@@ -1,0 +1,93 @@
+---
+title: "Placement and Usage"
+description: "Use compiler-recorded consumers to place declarations at the closest valid scope."
+---
+
+SQLBuild records resolved enum, constant, and macro use while expanding the complete project. It
+uses those relationships to reject unused declarations and validate the placement of narrow ones.
+
+## What counts as usage
+
+| Evidence | Counts as usage? |
+|----------|------------------|
+| Expanded model, hook, function, audit, source, test, or scenario SQL | Yes |
+| Generated enum contracts and enum-backed audits | Yes |
+| A macro dependency reached through an expanded macro call | Yes |
+| Expected-model enum or constant grant used by a test | Yes |
+| A reference inside a SQL comment or quoted string | No |
+| A mock, direct macro-test identity check, comment, or quoted value | No |
+| A declaration that is merely visible | No |
+
+Every project-wide, inherited, exact-local, and model-private declaration must have a genuine use.
+Unused declarations fail compilation.
+
+## Closest valid placement
+
+Use the consumer shape to choose the directory:
+
+| First matching consumer shape | Required scope | Required location |
+|-------------------------------|----------------|-------------------|
+| One model, with no intended external consumer | Model-private | The model's `MODEL()` header |
+| One exact parent directory | Exact-local | `_local_.../` beside the consumers |
+| Multiple directories in one authored root | Inherited | `_.../` at their lowest common ancestor |
+| Multiple authored resource roots | Project-wide | Top-level `macros/`, `constants/`, or `enums/` |
+
+## Placement examples
+
+### One exact directory
+
+```text
+Consumers
+models/commerce/orders.sql
+models/commerce/customers.sql
+
+Required placement
+models/commerce/_local_constants/minimum_value.sql
+```
+
+### Multiple descendant directories
+
+```text
+Consumers
+models/commerce/finance/revenue.sql
+models/commerce/fulfillment/shipments.sql
+
+Lowest common ancestor
+models/commerce/
+
+Required placement
+models/commerce/_constants/reporting_day.sql
+```
+
+### Multiple authored roots
+
+```text
+Consumers
+models/commerce/orders.sql
+tests/scenarios/commerce/order_lifecycle.sql
+
+Required placement
+constants/order_status.sql
+```
+
+Expected-model grants anchor test and scenario enum/constant use through the granting model, not
+through the test file's directory. Macro dependencies anchor through the consuming macro's lexical
+scope. These rules prevent relationship-driven use from producing misleading filesystem placement.
+
+## Stable project-wide APIs
+
+A used project-wide declaration remains valid even if all current consumers could fit under a
+narrower root. Moving a public declaration is an API decision, not automatic cleanup. Closest exact
+placement applies when a declaration is already narrow.
+
+When placement is wrong, the compiler reports:
+
+- The current declaration path and scope
+- The required scope and owning path
+- The consumers that determine that placement
+- The exact destination directory
+
+<Card title="Inspect consumers and resource moves" icon="compass" href="/concepts/declaration-scopes/explorer">
+  Use Scope Explorer to inspect placement facts and preview whether moving an authored resource
+  preserves its declaration visibility.
+</Card>
