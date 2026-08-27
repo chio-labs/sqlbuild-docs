@@ -202,12 +202,6 @@
       }
     ]
   },
-  "redirects": [
-    {
-      "source": "/concepts/enums-and-constants",
-      "destination": "/concepts/enums"
-    }
-  ],
   "topbar": {
     "links": [
       {
