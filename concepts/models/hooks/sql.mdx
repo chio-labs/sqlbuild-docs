@@ -117,7 +117,9 @@ Both named and inline SQL hooks receive the invoking model's runtime context. Th
 
 For named hooks, SQLBuild first substitutes `@name` and `@'name'` arguments into the hook body. A supplied argument such as `relation: "@@CTX:destination.qualified"` therefore resolves to the invoking model's final target-overridden destination.
 
-Declaration visibility is lexical: an inline hook resolves macros, constants, and enums from the model file's path, while a named hook resolves them from its definition path under `hooks/sql/`. See [Visibility and Resolution](/concepts/declaration-scopes/visibility#which-path-resolves-sql).
+An inline hook uses macros, constants, and enums available to its model file. A named hook uses those
+available to its own file under `hooks/sql/`. See
+[How Visibility Works](/concepts/declaration-scopes/visibility#which-file-controls-visibility).
 
 `${...}` config-template syntax is not valid in SQL hooks.
 
