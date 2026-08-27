@@ -1,5 +1,5 @@
 ---
-title: "Declarations and Scopes"
+title: "Overview"
 description: "Place macros, enums, and constants where the SQL that owns them can see them."
 ---
 
@@ -23,20 +23,20 @@ The declaration directory's parent is its owning path:
 
 ```text
 models/
-|-- _constants/                 inherited by every model below models/
-|   `-- warehouse.sql
-`-- commerce/
-    |-- _macros/                inherited throughout commerce/
-    |   `-- currency.py
-    |-- _local_enums/           exact commerce/ directory only
-    |   `-- grain.sql
-    |-- orders.sql              sees warehouse, currency, and grain
-    |-- finance/
-    |   |-- _macros/            inherited throughout finance/
-    |   |   `-- tax.py
-    |   `-- revenue.sql         sees warehouse, currency, and tax
-    `-- fulfillment/
-        `-- shipments.sql       sees warehouse and currency
+├── _constants/                 inherited throughout models/
+│   └── warehouse.sql
+└── commerce/
+    ├── _macros/                inherited throughout commerce/
+    │   └── currency.py
+    ├── _local_enums/           exact commerce/ directory only
+    │   └── grain.sql
+    ├── orders.sql              sees warehouse, currency, and grain
+    ├── finance/
+    │   ├── _macros/            inherited throughout finance/
+    │   │   └── tax.py
+    │   └── revenue.sql         sees warehouse, currency, and tax
+    └── fulfillment/
+        └── shipments.sql       sees warehouse and currency
 ```
 
 Inherited declarations compose from every matching ancestor. They do not stop at the nearest
