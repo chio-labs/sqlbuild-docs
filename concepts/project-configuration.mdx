@@ -206,7 +206,7 @@ collection_rendering = "array"
 
 `collection_rendering` accepts `value_list` (the SQLBuild default) or `array`. A public constant's `render_as` field or a model-local `constant(...)` wrapper overrides the project setting. The complete precedence order is declaration override, project setting, then `value_list`.
 
-This setting does not make unsupported adapter features portable. In particular, SQL Server rejects native arrays, and BigQuery rejects nested arrays. See [Enums and Constants](/concepts/enums-and-constants#rendering-configuration) for syntax, adapter output, and value-list usage constraints.
+This setting does not make unsupported adapter features portable. In particular, SQL Server rejects native arrays, and BigQuery rejects nested arrays. See [Collections and Rendering](/concepts/constants/collections-and-rendering#project-default) for syntax, adapter output, and value-list usage constraints.
 
 ## Path defaults
 

@@ -130,7 +130,10 @@ sqb scope model:stg_orders --include-nearby --nearby-depth 2
 sqb scope model:stg_orders --explain enum:customer_status
 ```
 
-An explanation distinguishes an inaccessible known declaration from an unknown identity. It reports the declaration's definition and ownership, the visibility or boundary reason, consumers and macro dependencies, expected-model grants, required placement, and promotion impact. It does not move or rewrite the declaration.
+An explanation distinguishes a known but unavailable declaration from an unknown name. It reports
+where the declaration is defined, why it is or is not available, which files use it, expected-model
+access, required placement, and the impact of broadening its scope. It does not move or rewrite the
+declaration.
 
 `--dependency-depth` is separate from `--nearby-depth`: it follows tracked declaration dependencies from the used section rather than filesystem proximity.
 
@@ -239,4 +242,5 @@ There is no `--show-values` option.
 
 `sqb scope` inspects native SQLBuild authored resources and declarations. It does not discover or emulate dbt models, dbt or Jinja macros, package dispatch, dbt manifests, dbt selectors, dbt tests, or dbt schema YAML visibility. An external dbt graph dependency does not contribute declarations or lexical scope.
 
-For the declaration directory rules, all-ancestor composition, placement validation, expected-model grants, and macro expansion semantics, see [Declaration Scopes](/concepts/declaration-scopes).
+For declaration directory rules, placement checks, test access through expected models, and scoped
+macro imports, see [Declarations and Scopes](/concepts/declaration-scopes).

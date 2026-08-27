@@ -28,9 +28,13 @@ The rule is simple: if it's any SQL that will be executed, it uses `@`. If it's 
 
 `@@CTX:` is intentionally SQL-hook-only. Model SQL describes a relation's data and should not reference its own destination identity. SQL hooks are the operational SQL layer where destination context is useful - grants, logging, post-materialization DDL. Python hooks access the same information through `ctx.destination` on the [`HookContext`](/concepts/models/hooks/python#hook-context) object.
 
-See [Enums and Constants](/concepts/enums-and-constants) for scalar and collection syntax, visibility, collection-rendering precedence, adapter behavior, and contract integration.
+See [Enums](/concepts/enums) and [Constants](/concepts/constants) for reusable validated values. See
+[Collections and Rendering](/concepts/constants/collections-and-rendering) for lists, sets, objects,
+and adapter-specific rendering.
 
-Macros, enums, and constants are resolved lexically. The authored resource path normally supplies the scope; named SQL hooks and macro-emitted calls use their definition paths. See [Declaration Scopes](/concepts/declaration-scopes) for the complete path and composition rules.
+SQLBuild uses the location of a SQL file to determine which macros, enums, and constants it can
+use. Named SQL hooks use their own file location rather than the location of the calling model. See
+[How Visibility Works](/concepts/declaration-scopes/visibility) for the complete directory rules.
 
 ## Project variables
 

@@ -1,93 +1,91 @@
 ---
-title: "Placement and Usage"
-description: "Use compiler-recorded consumers to place declarations at the closest valid scope."
+title: "Where to Put Declarations"
+description: "Choose project-wide, inherited, exact-local, or model-private placement."
 ---
 
-SQLBuild records resolved enum, constant, and macro use while expanding the complete project. It
-uses those relationships to reject unused declarations and validate the placement of narrow ones.
-
-## What counts as usage
-
-| Evidence | Counts as usage? |
-|----------|------------------|
-| Expanded model, hook, function, audit, source, test, or scenario SQL | Yes |
-| Generated enum contracts and enum-backed audits | Yes |
-| A macro dependency reached through an expanded macro call | Yes |
-| Expected-model enum or constant grant used by a test | Yes |
-| A reference inside a SQL comment or quoted string | No |
-| A mock, direct macro-test identity check, comment, or quoted value | No |
-| A declaration that is merely visible | No |
-
-Every project-wide, inherited, exact-local, and model-private declaration must have a genuine use.
-Unused declarations fail compilation.
-
-## Closest valid placement
-
-Use the consumer shape to choose the directory:
-
-| First matching consumer shape | Required scope | Required location |
-|-------------------------------|----------------|-------------------|
-| One model, with no intended external consumer | Model-private | The model's `MODEL()` header |
-| One exact parent directory | Exact-local | `_local_.../` beside the consumers |
-| Multiple directories in one authored root | Inherited | `_.../` at their lowest common ancestor |
-| Multiple authored resource roots | Project-wide | Top-level `macros/`, `constants/`, or `enums/` |
-
-## Placement examples
-
-### One exact directory
+Start with the ordinary project-wide directories unless you have a reason to limit access:
 
 ```text
-Consumers
-models/commerce/orders.sql
-models/commerce/customers.sql
-
-Required placement
-models/commerce/_local_constants/minimum_value.sql
+macros/
+enums/
+constants/
 ```
 
-### Multiple descendant directories
+Use scoped directories when a declaration belongs to one part of a large project.
+
+## Choose a location
+
+| Where it is needed | Location |
+|--------------------|----------|
+| One model only | Inside that model's `MODEL()` header, for enums and constants |
+| SQL files directly in one directory | `_local_macros/`, `_local_enums/`, or `_local_constants/` |
+| A directory and its descendants | `_macros/`, `_enums/`, or `_constants/` |
+| Different trees, such as models and tests | Top-level `macros/`, `enums/`, or `constants/` |
+
+## One directory
+
+These two models use the same constant and both sit directly in `commerce/`:
 
 ```text
-Consumers
-models/commerce/finance/revenue.sql
-models/commerce/fulfillment/shipments.sql
-
-Lowest common ancestor
-models/commerce/
-
-Required placement
-models/commerce/_constants/reporting_day.sql
+models/
+└── commerce/
+    ├── _local_constants/
+    │   └── minimum_value.sql
+    ├── orders.sql
+    └── customers.sql
 ```
 
-### Multiple authored roots
+Use `_local_constants/` because no descendant directory needs the value.
+
+## One directory tree
+
+These models use the same constant across two child directories:
 
 ```text
-Consumers
-models/commerce/orders.sql
-tests/scenarios/commerce/order_lifecycle.sql
-
-Required placement
-constants/order_status.sql
+models/
+└── commerce/
+    ├── _constants/
+    │   └── reporting_day.sql
+    ├── finance/
+    │   └── revenue.sql
+    └── fulfillment/
+        └── shipments.sql
 ```
 
-Expected-model grants anchor test and scenario enum/constant use through the granting model, not
-through the test file's directory. Macro dependencies anchor through the consuming macro's lexical
-scope. These rules prevent relationship-driven use from producing misleading filesystem placement.
+Use `_constants/` in `commerce/` so both child directories inherit it.
 
-## Stable project-wide APIs
+## Different resource trees
 
-A used project-wide declaration remains valid even if all current consumers could fit under a
-narrower root. Moving a public declaration is an API decision, not automatic cleanup. Closest exact
-placement applies when a declaration is already narrow.
+When a declaration is used directly from unrelated trees, make it project-wide:
 
-When placement is wrong, the compiler reports:
+```text
+my_project/
+├── constants/
+│   └── order_status.sql
+├── models/
+│   └── commerce/orders.sql
+└── tests/
+    └── scenarios/order_lifecycle.sql
+```
 
-- The current declaration path and scope
-- The required scope and owning path
-- The consumers that determine that placement
-- The exact destination directory
+Top-level placement is also valid when you deliberately want a stable, easy-to-discover project API.
+SQLBuild does not force a used project-wide declaration into a narrower directory.
 
-<Card title="Inspect consumers and resource moves" icon="compass" href="/concepts/declaration-scopes/explorer">
-  Use Scope Explorer to inspect placement facts and preview whether moving an authored resource
-  preserves its declaration visibility.
+## What SQLBuild checks
+
+Every declaration must be used by real compiled SQL. A name appearing only in a comment, quoted
+string, mock identity, or documentation does not count as use.
+
+For declarations already placed in `_.../` or `_local_.../` directories, SQLBuild checks that the
+location matches the files that use them. If not, the error shows:
+
+- Where the declaration is now
+- Which files use it
+- Which directory form is required
+- The destination directory
+
+These checks use the complete project rather than only the models selected by the current command.
+
+<Card title="Inspect a placement" icon="compass" href="/concepts/declaration-scopes/explorer">
+  Use Scope Explorer to see what a file can access or preview moving the file.
 </Card>

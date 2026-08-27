@@ -3,8 +3,8 @@ title: "Scope Explorer"
 description: "Inspect visibility, explain resolution, browse declarations, and preview moves offline."
 ---
 
-Scope Explorer exposes the compiler's declaration index through `sqb scope`. It is read-only and
-offline: it never connects to the warehouse, moves files, or edits configuration.
+Scope Explorer answers questions about declaration visibility through `sqb scope`. It is read-only
+and offline: it never connects to the warehouse, moves files, or edits configuration.
 
 Use this page for common workflows. See the [`sqb scope` CLI reference](/cli/scope) for every flag,
 filter, text section, and JSON field.
@@ -19,28 +19,28 @@ sqb scope test:orders__completed_only
 sqb scope macro:normalize_order_status
 ```
 
-The report separates concepts that are easy to conflate:
+The report separates what a file can use from what it actually uses:
 
 | Section | What it answers |
 |---------|-----------------|
-| Scope chain | Which exact-local, inherited, and global tiers apply? |
-| Available | What can this resource resolve through its lexical path? |
-| Used declarations | What did compilation actually consume? |
-| Relationship scope | Which expected models granted constants or enums? |
-| Nearby unavailable | Which close declarations are outside scope? This is opt-in. |
-| Placement | Is each narrow declaration at its closest valid location? |
+| Scope chain | Which exact-local, inherited, and project-wide directories apply? |
+| Available | Which declarations can this file use? |
+| Used declarations | Which declarations does it currently use? |
+| Expected models | Which enums and constants are available through expected model output? |
+| Nearby unavailable | Which nearby declarations are outside its scope? This is opt-in. |
+| Placement | Is each scoped declaration in the right directory? |
 
 ## Explain one declaration
 
-Ask why a declaration is visible, inaccessible, used, or granted:
+Ask why a declaration is available, unavailable, or used:
 
 ```bash
 sqb scope model:stg_orders --explain enum:customer_status
 sqb scope test:orders__completed_only --explain constant:order_status
 ```
 
-Explanation output retains the resolution route. Expected-model grants remain distinct from path
-visibility, and macro dependency routes retain the consuming macro.
+For a test, the explanation keeps declarations from the test's directory separate from enums and
+constants made available through an expected model.
 
 ## Browse nearby declarations
 
@@ -93,13 +93,13 @@ preview moving declaration files themselves.
 
 ## Automation
 
-Use `--json` for editor integrations and repository tooling. Scope JSON has a versioned schema,
-stable ordering, value-free declaration metadata, completeness facts, filters, pagination, and move
-preview results. Secret connection settings and declaration values are not included.
+Use `--json` for editor integrations and repository tooling. Output has a versioned schema, stable
+ordering, filters, pagination, and move-preview results. Constant values, credentials, and secret
+connection settings are not included.
 
 <CardGroup cols={2}>
-  <Card title="Visibility and Resolution" icon="eye" href="/concepts/declaration-scopes/visibility">
-    Review the compiler rules behind the report.
+  <Card title="How Visibility Works" icon="eye" href="/concepts/declaration-scopes/visibility">
+    Review the directory rules behind the report.
   </Card>
   <Card title="CLI Reference" icon="terminal" href="/cli/scope">
     See all selectors, filters, pagination options, output sections, and JSON behavior.

@@ -198,7 +198,10 @@ SELECT 1
 
 The `@mock_orders()` call expands at compile time to whatever SQL the Python macro function returns.
 
-Macros and directly visible enums and constants in authored test SQL resolve from that test file's path under `tests/unit/`. This includes inherited declarations from every matching ancestor and local declarations owned by the test's exact parent directory; sibling and descendant declarations are inaccessible. Public enums and constants may also be available through explicit expected-model grants. Model-private constants and enums are not exported to tests. See [Declaration Scopes](/concepts/declaration-scopes).
+Test SQL uses macros, enums, and constants available from the test file's directory under
+`tests/unit/`. Public enums and constants available to a model are also available when the test
+defines `__expected__model_name` output for that model. Model-private values are not available to
+tests. See [How Visibility Works](/concepts/declaration-scopes/visibility#tests-and-expected-models).
 
 ## Macro mocking
 
