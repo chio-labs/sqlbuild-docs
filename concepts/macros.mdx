@@ -1,38 +1,86 @@
 ---
-title: "Python Macros"
-description: "Reusable Python functions that generate SQL fragments at compile time."
+title: "Writing Macros"
+description: "Write Python functions that generate reusable SQL fragments at compile time."
 ---
 
-Macros are Python functions that generate SQL fragments at compile time. Instead of Jinja templates, you write real Python - testable, debuggable, and composable with standard tooling.
+Macros are Python functions that generate SQL during compilation. They provide reusable,
+parameterized SQL without introducing a separate template language.
 
-For the full picture of how macros fit into SQLBuild's interpolation system, see [Interpolation](/concepts/interpolation).
+## Create a macro
 
-## Defining macros
+Put project-wide macros in Python files under the top-level `macros/` directory:
 
-Create Python files under the top-level `macros/` directory for project-wide macros. Every public ordinary function defined by a macro module becomes a callable macro:
+```text
+my_project/
+├── macros/
+│   ├── currency.py
+│   └── test_helpers.py
+├── models/
+└── sqlbuild_project.toml
+```
+
+Every public function defined by a macro file becomes callable from SQL:
 
 ```python
 # macros/currency.py
-def cents_to_dollars(column):
-    """Convert a cents integer column to a dollars decimal."""
-    return f"ROUND(CAST({column} AS DOUBLE) / 100, 2)"
+def cents_to_dollars(expression: str) -> str:
+    """Convert a cents expression to dollars."""
+    return f"ROUND(CAST({expression} AS DOUBLE) / 100, 2)"
 ```
 
-Macros can accept any Python arguments (strings, numbers, lists, dicts, booleans) and must return a SQL string when called from SQL.
+## Call a macro from SQL
 
-Only functions owned by the module are exported. Imported callables and classes remain implementation dependencies and do not become macros. Module-owned constants, classes, type aliases, and helper functions must use underscore-private names:
+Use `@macro_name(...)` in a model query:
+
+```sql
+MODEL (
+  materialized table,
+  tags [marts],
+);
+
+SELECT
+  order_id,
+  @cents_to_dollars("amount_cents") AS amount_dollars
+FROM __ref("stg_orders")
+```
+
+During compilation, SQLBuild replaces the call with the function's returned SQL:
+
+```sql
+ROUND(CAST(amount_cents AS DOUBLE) / 100, 2)
+```
+
+A macro used directly in SQL must return a string.
+
+## Arguments
+
+Macro calls accept Python literal values:
+
+- Strings: `"value"` or `'value'`
+- Numbers: `42`, `3.14`, `-1`
+- Booleans: `True`, `False`
+- Lists: `[1, 2, 3]`
+- Dictionaries: `{"key": "value"}`
+- `None`
+- The result of another macro call
+
+Positional and keyword arguments are supported:
+
+```sql
+@mock_orders(count=5, status="completed")
+```
+
+Use quoted strings when passing SQL expressions such as column names. The macro decides how to
+place that text into its returned SQL.
+
+## Keep implementation details private
+
+Only public functions owned by the file are exported as macros. Prefix helpers, constants, classes,
+and type aliases with `_`:
 
 ```python
 # macros/orders.py
-from urllib.parse import quote
-
 _DEFAULT_STATUS = "completed"
-type _ColumnName = str
-
-
-class _ColumnFormatter:
-    def format(self, column: _ColumnName) -> str:
-        return quote(column)
 
 
 def _status_filter(status: str) -> str:
@@ -43,40 +91,18 @@ def completed_orders() -> str:
     return _status_filter(_DEFAULT_STATUS)
 ```
 
-Here, only `completed_orders` is exported as a macro. `quote`, `_ColumnFormatter`, and `_status_filter` are implementation details.
+Here, SQL may call `@completed_orders()`. `_status_filter` and `_DEFAULT_STATUS` remain ordinary
+Python implementation details.
 
-Macros may instead be inherited from `_macros/` directories or restricted to an exact directory with `_local_macros/`. See [Declaration Scopes](/concepts/declaration-scopes) for placement and lexical visibility. Public macro names remain globally unique even when their scopes do not overlap.
+Imported functions are not re-exported as new macros from the importing file.
 
-## Using macros in models
+## Use macros in tests
 
-Call macros in model SQL using the `@macro_name(args)` syntax:
-
-```sql
-MODEL (
-  materialized table,
-  tags [marts],
-);
-
-SELECT
-  CAST(o.ordered_at AS DATE) AS revenue_date,
-  COUNT(DISTINCT o.order_id) AS order_count,
-  SUM(p.amount_cents) AS total_revenue_cents,
-  @cents_to_dollars('SUM(p.amount_cents)') AS total_revenue_dollars
-FROM __ref("stg_orders") o
-INNER JOIN __ref("stg_payments") p ON o.order_id = p.order_id
-GROUP BY CAST(o.ordered_at AS DATE)
-```
-
-At compile time, `@cents_to_dollars('SUM(p.amount_cents)')` expands to `ROUND(CAST(SUM(p.amount_cents) AS DOUBLE) / 100, 2)`.
-
-## Using macros in tests
-
-Because unit tests are written in SQL, they support macro calls. This is useful for reusable mock data generators:
+Tests are SQL, so they can use macros as reusable fixture generators:
 
 ```python
 # macros/test_helpers.py
-def mock_orders(count=1):
-    """Generate mock order rows."""
+def mock_orders(count: int = 1) -> str:
     rows = [
         f"SELECT {i} AS id, {i * 100} AS customer_id, 'completed' AS status"
         for i in range(1, count + 1)
@@ -101,145 +127,46 @@ __expected__stg_orders AS (
 SELECT 1
 ```
 
-## Using macros in hooks
+## Use macros in hooks
 
-Macros are expanded inside `inline_sql(...)` entries and reusable `sql("name", ...)` hook files in `pre_hooks` and `post_hooks`:
+Macros work inside inline and named SQL hooks:
 
 ```python
 # macros/permissions.py
-def grant_target(target):
+def grant_target(target: str) -> str:
     return f"GRANT SELECT ON {target} TO analyst_role"
 ```
 
 ```sql
 MODEL (
-  materialized table,
   post_hooks [inline_sql('@grant_target(@@CTX:destination.qualified)')],
 );
 
 SELECT 1 AS id
 ```
 
-Hook SQL is validated at compile time, so invalid hook SQL is caught before execution. SQL hooks also support `@@CTX:` context variables, `@@name` project variables, and `@@ENV:NAME` environment variables directly without needing a macro wrapper.
+See [SQL Hooks](/concepts/models/hooks/sql) for hook lifecycle and context syntax.
 
-For shared parameterized SQL, put the statement under `hooks/sql/` and invoke it with `sql("name", args...)`. For hooks that need runtime control flow, providers, or skip decisions, use `python(...)` hooks instead. See [Hooks](/concepts/models/hooks) for the complete lifecycle hook syntax.
+## Where macros work
 
-## Macro context
+Macros are supported in:
 
-When a macro function accepts a `ctx` parameter as its first argument, SQLBuild passes a `MacroContext` object with adapter and target information:
+- Model query SQL
+- Inline and named SQL hooks
+- Unit tests and scenarios
+- Standalone audit SQL
+- SQL functions and supported inline source expressions
 
-```python
-# macros/datetime.py
-def timestamp_trunc(ctx, grain: str, expr: str) -> str:
-    if ctx.adapter_name == "bigquery":
-        return f"TIMESTAMP_TRUNC({expr}, {grain.upper()})"
-    return f"DATE_TRUNC('{grain}', {expr})"
-```
+Macros are not accepted in ordinary `MODEL()` configuration fields. SQL hook entries are the
+exception because their contents are SQL.
 
-The macro context provides:
+## Next steps
 
-| Field | Description |
-|-------|-------------|
-| `adapter_name` | The active adapter (e.g. `duckdb`, `snowflake`) |
-| `sql_analysis_enabled` | Whether SQL analysis is enabled |
-| `target_name` | The active target name, if any |
-| `vars` | Effective project variables as a dict (merged from project config, target, local config, and CLI `--vars`) |
-
-```python
-def schema_qualified(ctx, table: str) -> str:
-    schema = ctx.vars.get("schema_prefix", "public")
-    return f"{schema}.{table}"
-```
-
-## Macro arguments
-
-Macro arguments use Python literal syntax. Supported types:
-
-- **Strings:** `'value'` or `"value"`
-- **Numbers:** `42`, `3.14`, `-1`
-- **Booleans:** `True`, `False`
-- **Lists:** `[1, 2, 3]`
-- **Dicts:** `{'key': 'value'}`
-- **None:** `None`
-- **Nested macro calls:** `@other_macro('arg')`
-
-Keyword arguments are supported:
-
-```sql
-@mock_orders(count=5, status='completed')
-```
-
-### Nested macro calls in arguments
-
-Macros can be passed as arguments to other macros. The inner macro evaluates first and its result becomes an argument to the outer macro:
-
-```sql
-@format_column('revenue', @cents_to_dollars('SUM(amount_cents)'))
-```
-
-You can mix regular arguments with nested macro calls:
-
-```sql
-@wrap_with_alias(@cents_to_dollars('total_cents'), 'total_dollars')
-```
-
-Inner macros used as arguments don't have to return strings - they can return any Python object that the outer macro accepts.
-
-## Composing macros
-
-Macro output may contain further `@macro()` calls. SQLBuild expands those calls under the emitting macro's definition-path scope. Calls written as nested arguments resolve under the current SQL author's scope before the outer macro runs. Inaccessible dependencies and dependency cycles fail compilation.
-
-For implementation details used by one macro, call an underscore-private helper in the same file:
-
-```python
-# macros/reporting.py
-def _with_alias(expression, alias):
-    return f"{expression} AS {alias}"
-
-
-def revenue_column(expression, alias):
-    return _with_alias(expression, alias)
-```
-
-Macro modules cannot import other project macro modules. To compose macros defined in different files, keep the calls in authored SQL using the tracked `@macro_name(...)` syntax. Nested calls evaluate from the inside out, so each macro call remains visible to SQLBuild:
-
-```sql
-SELECT
-  @revenue_column(
-    @cents_to_dollars('total_cents'),
-    'total_dollars'
-  )
-FROM __ref("fact_orders")
-```
-
-In this example, `cents_to_dollars` and `revenue_column` can be defined in separate macro files. Do not import one from the other in Python.
-
-An emitting macro can also compose lexically in its returned SQL:
-
-```python
-# models/commerce/_macros/revenue.py
-def revenue_column(column):
-    return f"@cents_to_dollars('{column}') AS revenue_dollars"
-```
-
-Here `cents_to_dollars` must be visible from `models/commerce/_macros/revenue.py`. It is not borrowed from whichever model calls `revenue_column`. In particular, a project-wide macro under `macros/` cannot depend on an inherited or local macro.
-
-## Where macros are allowed
-
-- **Model query SQL** - the SELECT statement after the MODEL() header
-- **SQL hooks** - `inline_sql(...)` entries and named hook files invoked by `sql("name", ...)`
-- **Test SQL** - unit test CTE bodies
-- **Audit SQL** - singular audit queries
-
-Macros are **not allowed** in MODEL() config values (other than SQL hook entries). If a config field contains `@macro()`, SQLBuild raises a compile error.
-
-## Discovery rules
-
-- SQLBuild discovers `.py` files recursively under top-level `macros/` and scoped `_macros/` or `_local_macros/` directories below canonical authored roots
-- Only public ordinary functions defined by the macro module become macros
-- Imported callables and classes are not exported as macros
-- Module-owned constants, classes, type aliases, and helper functions must start with `_`
-- A macro module must not Python-import another project macro module
-- Public macro names must be unique across all macro files; scopes do not provide shadowing
-- Macros are loaded once at compile time, not per-model
-- Manifest macro nodes expose declaration scope, owning path, and tracked macro dependencies
+<CardGroup cols={2}>
+  <Card title="Composition and Context" icon="code-branch" href="/concepts/macros/composition-and-context">
+    Compose macros through Python imports and use adapter or target context.
+  </Card>
+  <Card title="Declarations and Scopes" icon="folder-tree" href="/concepts/declaration-scopes">
+    Keep macros near one part of a large project with `_macros/` and `_local_macros/`.
+  </Card>
+</CardGroup>

@@ -76,17 +76,32 @@
             ]
           },
           {
+            "group": "Enums and Constants",
+            "pages": [
+              "concepts/enums",
+              "concepts/constants",
+              "concepts/constants/collections-and-rendering",
+              "concepts/enums/model-contracts",
+              "concepts/model-private-values"
+            ]
+          },
+          {
+            "group": "Python Macros",
+            "pages": [
+              "concepts/macros",
+              "concepts/macros/composition-and-context"
+            ]
+          },
+          "concepts/interpolation",
+          {
             "group": "Declarations and Scopes",
             "pages": [
               "concepts/declaration-scopes",
               "concepts/declaration-scopes/visibility",
               "concepts/declaration-scopes/placement",
-              "concepts/enums-and-constants",
-              "concepts/macros",
               "concepts/declaration-scopes/explorer"
             ]
           },
-          "concepts/interpolation",
           "concepts/functions",
           "concepts/incremental",
           {
@@ -187,6 +202,12 @@
       }
     ]
   },
+  "redirects": [
+    {
+      "source": "/concepts/enums-and-constants",
+      "destination": "/concepts/enums"
+    }
+  ],
   "topbar": {
     "links": [
       {

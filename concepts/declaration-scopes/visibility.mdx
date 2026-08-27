@@ -1,108 +1,116 @@
 ---
-title: "Visibility and Resolution"
-description: "Understand authored-path visibility, expected-model grants, and lexical macro resolution."
+title: "How Visibility Works"
+description: "See which enums, constants, and macros are available to each SQL file."
 ---
 
-SQLBuild resolves declarations from the path where SQL is authored. Visibility is a compiler fact;
-filenames, test placement, and runtime execution order do not create implicit relationships.
+For most SQL, the rule is simple:
 
-## Authored resource roots
+> A file can use project-wide declarations, declarations inherited from its parent directories,
+> and declarations placed directly beside it.
 
-Inherited and exact-local declaration directories may appear below these canonical roots:
+## Start from the SQL file
 
-| Root | Authored SQL |
-|------|--------------|
-| `models/` | Model queries and inline model hooks |
-| `tests/unit/` | SQL unit tests |
-| `tests/scenarios/` | Scenario worlds and assertions |
-| `hooks/sql/` | Named SQL hooks |
-| `functions/sql/` | SQL UDFs and table functions |
-| `audits/` | Singular and generic audits |
-| `sources/` | Inline source expressions |
-
-Files may be organized recursively inside a declaration directory. That internal organization does
-not change the directory's owning path.
-
-## Which path resolves SQL
-
-<Tabs>
-  <Tab title="Models">
-    A model query and its inline SQL hooks resolve from the model file. Model-private constants and
-    enums are available only in that model's query and inline hooks.
-  </Tab>
-  <Tab title="Tests and scenarios">
-    Authored test or scenario SQL resolves from its file path. Expected-model relationships can add
-    public constants and enums through a separate compiler grant.
-  </Tab>
-  <Tab title="Hooks and functions">
-    A named hook resolves from its definition under `hooks/sql/`. A SQL function resolves from its
-    definition under `functions/sql/`, even when a model invokes it elsewhere.
-  </Tab>
-  <Tab title="Audits and sources">
-    Audit SQL resolves from its audit definition. An inline source expression resolves from the
-    source definition under `sources/`.
-  </Tab>
-</Tabs>
-
-Named hook arguments and `@@CTX` values still describe the invoking model. Only declaration
-resolution comes from the named hook's definition path.
-
-## Expected-model grants
-
-A test or scenario has two distinct visibility sources:
+SQLBuild starts from the file containing the SQL and walks up that file's directory tree.
 
 ```text
-tests/unit/commerce/test_orders.sql
-|-- path scope
-|   |-- macros visible from the test path
-|   |-- enums visible from the test path
-|   `-- constants visible from the test path
-|
-`-- __expected__orders relationship
-    |-- grants public enums visible to orders
-    |-- grants public constants visible to orders
-    |-- does not grant macros
-    `-- does not grant model-private declarations
+models/
+├── _constants/                 available throughout models/
+│   └── warehouse.sql
+└── commerce/
+    ├── _enums/                 available throughout commerce/
+    │   └── order_status.sql
+    ├── _local_constants/       available directly in commerce/ only
+    │   └── minimum_value.sql
+    ├── orders.sql
+    └── history/
+        └── archived_orders.sql
 ```
 
-Multiple expected models contribute a deterministic union with provenance retained for every
-granting model. Public names remain globally unique, so grants cannot shadow one another.
+From this tree:
 
-Only explicit expected-model relationships create grants. A matching filename, mirrored test path,
-mocked `__ref__`, or nearby model does not.
+| File | Can use |
+|------|---------|
+| `orders.sql` | `warehouse`, `order_status`, and `minimum_value` |
+| `history/archived_orders.sql` | `warehouse` and `order_status` |
 
-## Macro lexical resolution
+`minimum_value` is not available in `history/` because `_local_constants/` applies only to files
+directly beside it.
 
-Calls written directly in authored SQL resolve from that SQL's path, including nested argument calls:
+## Which file controls visibility?
+
+| SQL being compiled | SQLBuild starts from |
+|--------------------|----------------------|
+| Model query | The model file |
+| Inline SQL hook in a model | The model file |
+| Unit test or scenario SQL | The test or scenario file |
+| Named SQL hook | The hook file under `hooks/sql/` |
+| SQL function | The function file under `functions/sql/` |
+| Audit | The audit file |
+| Inline source expression | The source definition |
+
+This means a reusable named hook does not change meaning depending on which model calls it. The
+hook uses declarations available where the hook itself is stored.
+
+## Tests and expected models
+
+A test first sees declarations available from the test file's own directory. It may also use public
+enums and constants available to a model for which it defines expected output.
 
 ```sql
-@format_money(@net_amount("amount_cents"))
+TEST();
+
+WITH
+__expected__orders AS (
+  SELECT
+    1 AS order_id,
+    @enum("order_status").COMPLETED AS status
+)
+SELECT 1
 ```
 
-Both calls initially resolve from the path containing the expression. If `format_money` returns SQL
-containing another macro call, that emitted call resolves from `format_money`'s definition path:
+Because the test defines `__expected__orders`, it may use public enums and constants available to
+the `orders` model. This makes it possible for expected rows to use the same domain values as the
+model they check.
 
-```text
-models/commerce/orders.sql
-`-- calls commerce/_macros/format_money.py
-    `-- emitted @currency_symbol() resolves from commerce/_macros/
-        `-- not from orders.sql or whichever model called format_money
+This additional access does **not** include:
+
+- Macros available only to the model
+- Enums or constants declared privately inside the model's `MODEL()` header
+- Declarations from a model merely mentioned by filename or directory layout
+
+Only an explicit `__expected__model_name` relationship adds the model's public enums and constants.
+When a test checks several models, it can use the public enums and constants available to each of
+those models.
+
+## Macros importing macros
+
+A macro file may import another project macro file when the imported macro is available from the
+importing file's location. The same directory rules apply as they do to SQL.
+
+```python
+# models/commerce/_macros/orders.py
+from macros.currency import round_money
+
+
+def formatted_total(expression: str) -> str:
+    return round_money(expression)
 ```
 
-This keeps macro dependencies lexical and statically trackable. Project macro modules must compose
-through `@macro()` calls rather than importing one another in Python. SQLBuild rejects inaccessible
-emitted dependencies and dependency cycles. A project-wide macro cannot depend on an inherited or
-exact-local macro because its top-level definition path cannot see narrower declarations.
+A broadly available macro cannot import a macro from a narrower child or sibling directory. See
+[Composition and Context](/concepts/macros/composition-and-context) for complete examples.
 
-Generated manifest macro nodes expose declaration scope, owning path, and tracked macro dependencies.
+## Names do not shadow
 
-## Names and shadowing
+Public names must be unique within their feature:
 
-Every public name must be globally unique within its declaration kind. A narrower declaration
-cannot shadow a project-wide or ancestor declaration, even when their visible scopes do not overlap.
+- One public macro name cannot be defined twice.
+- One public enum name cannot be defined twice.
+- One public constant name cannot be defined twice.
 
-Macro, constant, and enum namespaces remain independent. These may coexist because each reference
-identifies its kind:
+Moving a declaration into a narrower directory changes where it is available; it does not create a
+second version that overrides another declaration.
+
+Macros, enums, and constants use separate namespaces, so these three references may coexist:
 
 ```sql
 @format_currency()
@@ -110,11 +118,6 @@ identifies its kind:
 @enum("format_currency").USD
 ```
 
-Model-private constants and enums are different. Their names begin with exactly one underscore and
-their identities include the owning model, such as `enum:model:stg_orders._state`. They may repeat
-across models because they never enter the public namespace. Names beginning with `__` are reserved
-for SQLBuild.
-
-<Card title="Next: Placement and Usage" icon="arrow-right" href="/concepts/declaration-scopes/placement">
-  See how compiler-recorded usage determines the closest valid declaration directory.
+<Card title="Next: Where to Put Declarations" icon="arrow-right" href="/concepts/declaration-scopes/placement">
+  Choose the simplest directory that matches where a declaration is used.
 </Card>

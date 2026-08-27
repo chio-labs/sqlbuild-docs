@@ -93,7 +93,7 @@ MODEL (
 
 This does not require, create, or reference a warehouse-native enum type. SQLBuild resolves string-valued enums to `VARCHAR` and integer-valued enums to `INTEGER`. Under `contract enforced`, it also generates an `accepted_values` audit for the declared members. Audit severity and timing follow normal audit configuration and materialization behavior. With the default error severity, it gates staged-table promotion and pre-DML delta paths; views and custom materializations may already have changed their relation when the audit runs.
 
-Enum member references such as `@enum("market_type").WIN` are a separate feature that render one validated SQL literal. See [Enums and Constants](/concepts/enums-and-constants#enum-typed-contracts) for the complete distinction and lowering behavior.
+Enum member references such as `@enum("market_type").WIN` are a separate feature that render one validated SQL literal. See [Enum Model Contracts](/concepts/enums/model-contracts) for the complete distinction and lowering behavior.
 
 ## Related policies
 
