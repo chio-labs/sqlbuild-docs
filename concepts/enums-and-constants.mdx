@@ -11,17 +11,17 @@ Project-wide declarations are available throughout the project. Put enum files a
 
 ```text
 my_project/
-|-- enums/
-|   |-- market/
-|   |   `-- market_type.sql
-|   `-- order_status.sql
-|-- constants/
-|   |-- market/
-|   |   `-- thresholds.sql
-|   `-- reporting_day.sql
-|-- models/
-|-- tests/
-`-- sqlbuild_project.toml
+├── enums/                      project-wide enum declarations
+│   ├── market/
+│   │   └── market_type.sql
+│   └── order_status.sql
+├── constants/                  project-wide constant declarations
+│   ├── market/
+│   │   └── thresholds.sql
+│   └── reporting_day.sql
+├── models/
+├── tests/
+└── sqlbuild_project.toml
 ```
 
 Folders below `enums/` and `constants/` are for organization; they do not change visibility.
