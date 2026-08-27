@@ -125,7 +125,9 @@ SQL functions can reference the same resources as models:
 
 These references are resolved at compile time and create DAG edges. If a referenced model changes, the function is redeployed.
 
-Macros, constants, and enums used in a SQL function resolve from the function definition's authored path. Put inherited declarations in `_macros/`, `_constants/`, or `_enums/` above that function, or exact-directory declarations in the corresponding `_local_...` directory. See [Declaration Scopes](/concepts/declaration-scopes).
+A SQL function uses macros, constants, and enums available from its file under `functions/sql/`.
+See [How Visibility Works](/concepts/declaration-scopes/visibility) to limit declarations to one
+function folder or to that folder and its children.
 
 ## Change propagation
 

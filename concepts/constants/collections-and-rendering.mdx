@@ -109,6 +109,9 @@ CONSTANT (
 SQLBuild does not rewrite array membership operations. Use the operators and functions provided by
 your adapter.
 
+Sets support the same `value_list` and `array` modes as lists. Scalar and object constants reject
+`render_as` because those rendering modes do not apply to them.
+
 | Adapter | Native array expression | Object/JSON expression |
 |---------|-------------------------|------------------------|
 | DuckDB | `['GB', 'FR', 'HK']` | `json('{"GB":"Great Britain"}')` |

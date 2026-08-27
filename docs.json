@@ -69,13 +69,6 @@
             ]
           },
           {
-            "group": "Kata",
-            "pages": [
-              "concepts/kata",
-              "concepts/kata/custom-rules"
-            ]
-          },
-          {
             "group": "Enums and Constants",
             "pages": [
               "concepts/enums",
@@ -93,15 +86,6 @@
             ]
           },
           "concepts/interpolation",
-          {
-            "group": "Declarations and Scopes",
-            "pages": [
-              "concepts/declaration-scopes",
-              "concepts/declaration-scopes/visibility",
-              "concepts/declaration-scopes/placement",
-              "concepts/declaration-scopes/explorer"
-            ]
-          },
           "concepts/functions",
           "concepts/incremental",
           {
@@ -120,6 +104,27 @@
           "concepts/selectors",
           "concepts/column-lineage",
           "concepts/diff"
+        ]
+      },
+      {
+        "group": "Advanced Concepts",
+        "pages": [
+          {
+            "group": "Declarations and Scopes",
+            "pages": [
+              "concepts/declaration-scopes",
+              "concepts/declaration-scopes/visibility",
+              "concepts/declaration-scopes/placement",
+              "concepts/declaration-scopes/explorer"
+            ]
+          },
+          {
+            "group": "Kata",
+            "pages": [
+              "concepts/kata",
+              "concepts/kata/custom-rules"
+            ]
+          }
         ]
       },
       {
@@ -202,12 +207,6 @@
       }
     ]
   },
-  "redirects": [
-    {
-      "source": "/concepts/enums-and-constants",
-      "destination": "/concepts/enums"
-    }
-  ],
   "topbar": {
     "links": [
       {

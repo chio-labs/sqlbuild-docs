@@ -83,7 +83,9 @@ Generic audit SQL uses `@name` for parameter placeholders. These are resolved by
 | `@'name'` | A quoted parameter passed from the audit declaration (e.g. `@'values'`) |
 | `@name` | An unquoted parameter passed from the audit declaration (e.g. `@expression`) |
 
-Macros, constants, and enums in both generic and singular audit SQL resolve from the audit definition's authored path under `audits/`, not from the path of a model or source that attaches the audit. See [Declaration Scopes](/concepts/declaration-scopes).
+Generic and singular audit SQL uses macros, constants, and enums available from the audit file under
+`audits/`, not from a model or source that uses the audit. See
+[How Visibility Works](/concepts/declaration-scopes/visibility).
 
 ### Attaching custom generic audits
 

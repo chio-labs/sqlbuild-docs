@@ -96,7 +96,11 @@ For sources with two-part identity, use double underscores: `__source__raw__orde
 
 Every scenario must have at least one fixture CTE and at least one `__expected__` or `__assert__` CTE.
 
-Macros and directly visible constants and enums in authored scenario SQL resolve from that scenario file's path under `tests/scenarios/`. Inherited ancestors compose and local declarations apply only to the exact parent directory. Each explicit `__expected__<model>` CTE additionally grants the public enums and constants visible to that expected model. Multiple expected models contribute a deterministic union with per-model provenance; they do not grant macros or model-private declarations. See [Declaration Scopes](/concepts/declaration-scopes).
+Scenario SQL uses macros, enums, and constants available from the scenario file's directory under
+`tests/scenarios/`. Public enums and constants available to a model are also available when the
+scenario defines `__expected__model_name` output for that model. Model-private values and macros
+available only to the model are not included. See
+[How Visibility Works](/concepts/declaration-scopes/visibility#tests-and-expected-models).
 
 ### SCENARIO() header
 

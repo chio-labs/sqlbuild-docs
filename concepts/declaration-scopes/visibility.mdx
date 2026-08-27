@@ -5,8 +5,8 @@ description: "See which enums, constants, and macros are available to each SQL f
 
 For most SQL, the rule is simple:
 
-> A file can use project-wide declarations, declarations inherited from its parent directories,
-> and declarations placed directly beside it.
+> A file can use project-wide declarations, declarations inherited from `_.../` directories above
+> it, and declarations in a `_local_.../` directory directly beside it.
 
 ## Start from the SQL file
 
@@ -35,6 +35,25 @@ From this tree:
 
 `minimum_value` is not available in `history/` because `_local_constants/` applies only to files
 directly beside it.
+
+## Supported resource trees
+
+Scoped declaration directories can be placed below these SQL resource roots:
+
+| Root | Contents |
+|------|----------|
+| `models/` | Models and inline model hooks |
+| `tests/unit/` | Unit tests |
+| `tests/scenarios/` | Scenarios |
+| `hooks/sql/` | Named SQL hooks |
+| `functions/sql/` | SQL functions |
+| `audits/` | Audits |
+| `sources/` | Inline source expressions |
+
+Each root is a separate tree. For example, `models/_constants/` does not flow into `tests/`. Put a
+declaration in the top-level `constants/`, `enums/`, or `macros/` directory when it must be available
+across different resource trees. A project-root `_constants/`, `_enums/`, or `_macros/` directory is
+invalid.
 
 ## Which file controls visibility?
 

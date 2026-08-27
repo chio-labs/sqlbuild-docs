@@ -6,9 +6,9 @@ description: "Limit enums, constants, and macros to the parts of a project that 
 Most projects can keep enums, constants, and macros in their ordinary top-level directories. Those
 declarations are available throughout the project.
 
-In a larger project, you can keep a declaration near the models, tests, or other SQL files that use
-it. SQLBuild uses the declaration directory's location to decide which files can access it. No TOML
-configuration is required.
+When an enum, constant, or macro should be available only within one folder or its child folders,
+you can keep it near the SQL that uses it. SQLBuild uses the declaration directory's location to
+decide which files can access it. No TOML configuration is required.
 
 | Scope | Declaration form | Visibility |
 |-------|------------------|------------|
