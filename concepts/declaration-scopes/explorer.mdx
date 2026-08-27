@@ -25,10 +25,27 @@ The report separates what a file can use from what it actually uses:
 |---------|-----------------|
 | Scope chain | Which exact-local, inherited, and project-wide directories apply? |
 | Available | Which declarations can this file use? |
-| Used declarations | Which declarations does it currently use? |
-| Expected models | Which enums and constants are available through expected model output? |
+| Used | Which declarations does it currently use? |
+| Relationship grants | Which enums and constants are available through expected model output? |
 | Nearby unavailable | Which nearby declarations are outside its scope? This is opt-in. |
-| Placement | Is each scoped declaration in the right directory? |
+| Explanation | What placement does one declaration require, and who consumes it? |
+
+For example, a model that directly uses `formatted_order_total` can reveal the macros called by
+that macro without executing warehouse SQL. The expanded `Used` section is:
+
+```console
+Used (3)
+  ├─ ● macro:add_tax  [macro; global; dependency; params 1]  macros/currency.py:1:1
+  ├─ ● macro:formatted_order_total  [macro; inherited; inherited_ancestor; params 1]  models/commerce/_macros/orders.py:5:1
+  └─ ● macro:round_money  [macro; global; dependency; params 1]  macros/currency.py:5:1
+```
+
+Run it with `sqb scope model:orders --used-only --dependency-depth 1`.
+
+SQLBuild derives these edges from actual Python calls, including nested calls and calls through
+private helpers. Use `--explain macro:formatted_order_total` to see its direct dependencies,
+consumers, required scope, and placement impact. The [CLI reference](/cli/scope#see-the-whole-scope-at-once)
+shows a complete report with the scope chain, available declarations, diagnostics, and completeness.
 
 ## Explain one declaration
 

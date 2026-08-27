@@ -81,11 +81,130 @@ The default text report keeps distinct facts in distinct sections:
 
 - **Available** contains declarations visible through the resource's own lexical path.
 - **Used** contains declarations consumed by the resource, including tracked declaration dependencies.
-- **Relationship scope** contains public enums and constants granted to a test or scenario through explicit expected-model relationships.
+- **Relationship grants** contains public enums and constants granted to a test or scenario through explicit expected-model relationships.
 - **Nearby unavailable** is opt-in and explains close declarations that are outside the target's scope.
 - **Scope chain** shows the exact local directory, every inherited ancestor, and the global tier.
 
-Each declaration includes its qualified identity, definition, scope and owning path, visibility reason, and safe type or signature metadata where useful. Placement information includes the narrowest required scope and path, current consumers, and promotion impact when those facts are complete.
+Ordinary text rows show each declaration's qualified identity, definition location, scope, visibility
+reason, and safe type or signature metadata where useful. `--explain` additionally shows its owning
+path, narrowest required placement, current consumers, dependencies, and the consumers affected by
+a placement mismatch. JSON includes the complete structured declaration report.
+
+### See the whole scope at once
+
+Suppose orders and returns models use an inherited macro, and that macro composes two project-wide
+macros:
+
+```text
+project/
+├── macros/
+│   └── currency.py                 add_tax, round_money
+└── models/
+    └── commerce/
+        ├── _macros/
+        │   └── orders.py           formatted_order_total
+        ├── orders.sql
+        └── returns/
+            └── returns.sql
+```
+
+```python
+# models/commerce/_macros/orders.py
+from macros.currency import add_tax, round_money
+
+
+def formatted_order_total(expression: str) -> str:
+    return round_money(add_tax(expression))
+```
+
+```sql
+-- models/commerce/orders.sql
+MODEL();
+
+SELECT @formatted_order_total("subtotal") AS total
+```
+
+`returns/returns.sql` calls the same macro, so the declaration must remain available throughout
+`models/commerce/` and its descendants.
+
+The default report puts actual usage next to the complete directory-derived scope. Unused globals
+stay collapsed, so the useful facts remain visible even in a large project:
+
+```console
+$ sqb scope model:orders
+Scope
+  Target: model:orders
+  Resource: model:orders
+  Path: models/commerce/orders.sql
+
+Used (1)
+  └─ ● macro:formatted_order_total  [macro; inherited; inherited_ancestor; params 1]  models/commerce/_macros/orders.py:5:1
+
+Scope chain
+  ├─ local models/commerce (1)
+  ├─ inherited models (0)
+  └─ global global (2)
+
+Available (1 of 3, 2 collapsed)
+  └─ ● macro:formatted_order_total  [macro; inherited; inherited_ancestor; params 1]  models/commerce/_macros/orders.py:5:1
+  … 2 globals collapsed; run sqb scope model:orders --globals all
+
+Relationship grants (0 of 0)
+  (none)
+
+Nearby unavailable (0 of 0)
+  (none)
+
+Diagnostics (0)
+  (none)
+Completeness: complete
+```
+
+This answers several questions without opening declaration files: what the model actually uses,
+where that declaration came from, which exact-local and inherited directories apply, how many
+project-wide declarations are available, and whether the result is complete.
+
+### Follow composed macro dependencies
+
+`Used` is direct by default. Add `--dependency-depth` to follow declarations used by those
+declarations. In this example, the model calls `formatted_order_total`, whose Python body calls
+`add_tax` and `round_money`:
+
+```console
+$ sqb scope model:orders --used-only --dependency-depth 1
+Scope
+  Target: model:orders
+  Resource: model:orders
+  Path: models/commerce/orders.sql
+
+Used (3)
+  ├─ ● macro:add_tax  [macro; global; dependency; params 1]  macros/currency.py:1:1
+  ├─ ● macro:formatted_order_total  [macro; inherited; inherited_ancestor; params 1]  models/commerce/_macros/orders.py:5:1
+  └─ ● macro:round_money  [macro; global; dependency; params 1]  macros/currency.py:5:1
+```
+
+The remaining report sections follow the `Used` section as usual. The dependency graph comes from
+actual Python calls, including nested calls and calls reached through private helpers. Merely
+importing a macro does not make it used. Increase the depth to follow longer chains.
+
+Explain the composed macro to inspect its direct graph and placement facts:
+
+```console
+$ sqb scope model:orders --explain macro:formatted_order_total
+Explanation
+  └─ ● macro:formatted_order_total  [macro; inherited; inherited_ancestor; params 1]  models/commerce/_macros/orders.py:5:1
+     Owner: (none)
+     Owning path: models/commerce
+     Consumers: model:orders, model:returns
+     Dependencies: macro:add_tax, macro:round_money
+     Grants: (none)
+     Required scope: inherited
+     Required path: models/commerce
+     Promotion impact: (none)
+```
+
+The complete command also prints the ordinary report sections above the `Explanation` section.
+Use `--json` when another tool needs the same graph and placement facts as structured data.
 
 Global declarations are an intentional project-wide API and can be numerous. The default `--globals summary` always retains globals used by the target but collapses the unused global inventory with exact counts. Use `--globals used` for only used globals or `--globals all` when a bounded full list is appropriate.
 
@@ -132,8 +251,8 @@ sqb scope model:stg_orders --explain enum:customer_status
 
 An explanation distinguishes a known but unavailable declaration from an unknown name. It reports
 where the declaration is defined, why it is or is not available, which files use it, expected-model
-access, required placement, and the impact of broadening its scope. It does not move or rewrite the
-declaration.
+access, required placement, and consumers affected by a placement mismatch. It does not move or
+rewrite the declaration.
 
 `--dependency-depth` is separate from `--nearby-depth`: it follows tracked declaration dependencies from the used section rather than filesystem proximity.
 
@@ -167,7 +286,7 @@ The destination must be a valid project-relative file path for that resource kin
 
 ## Folder Browsing
 
-Browse and list are separate so a project with 10,000 or more declarations remains safe to explore. `--browse` returns only direct child declaration folders. Each folder has exact recursive declaration, usage, kind, and nested-folder counts; no arbitrary alphabetical prefix of declarations is printed.
+Browse and list are separate so a project with 10,000 or more declarations remains safe to explore. `--browse` returns only direct child declaration folders. Each folder has exact recursive declaration, usage, and kind counts plus its direct child-folder count; no arbitrary alphabetical prefix of declarations is printed.
 
 Global roots appear in the browse namespace as `global/macros`, `global/constants`, and `global/enums`, regardless of how files are organized recursively beneath the top-level declaration roots.
 
@@ -187,7 +306,7 @@ sqb scope model:stg_orders --list global/macros/finance/payments
 
 ## Pagination
 
-Flat lists and report sections use qualified declaration identities as stable lexical cursors, not page numbers. Every paged section reports its total, returned count, completeness, truncation state, and `next_cursor`. Repeat the same command and filters with that identity as `--after`:
+Flat lists and report sections use qualified declaration identities as stable lexical cursors, not page numbers. In canonical JSON, every paged section reports its total, returned count, completeness, truncation state, and `next_cursor`. Repeat the same command and filters with that identity as `--after`:
 
 ```bash
 # First page
@@ -215,7 +334,9 @@ sqb scope model:stg_orders \
 
 ## Paths And JSON
 
-`--paths relative` shows normalized project-relative paths. `compact` shortens repeated path context in text output, while `none` omits display paths when identities are sufficient. Paths in stable machine output never expose an absolute workspace root.
+`--paths relative` shows normalized project-relative paths. `compact` shortens repeated path context
+in text output. `none` omits declaration definition locations and replaces structural and header
+paths with `(hidden)`. Paths in stable machine output never expose an absolute workspace root.
 
 `--json` emits the canonical schema rather than serializing the visual tree. The top-level `schema_version` is currently `1`. Reports include the target, scope chain, declaration sections, applied filters, section totals, collapsed and truncated flags, cursors, diagnostics, and aggregate and section-level completeness. Move previews and explanations appear when requested.
 
@@ -223,7 +344,9 @@ JSON is deterministically ordered, ASCII, newline-terminated, and byte-stable fo
 
 ## Partial Projects
 
-Scope inspection remains useful while a project is broken. SQLBuild retains valid facts and independently marks discovery, static visibility, runtime usage, expected-model relationships, placement, and promotion impact complete or incomplete. Text and JSON never present a partial section as complete.
+Scope inspection remains useful while a project is broken. SQLBuild retains valid facts and marks
+affected report sections complete or incomplete. Text and JSON never present a partial section as
+complete, and diagnostics identify faults that prevented the missing facts from being indexed.
 
 Diagnostics are stable and include project-relative source locations when available. A partial result, invalid target or cursor, or any error diagnostic produces a nonzero exit status after the available report is written. This lets an editor or agent consume path visibility while still treating incomplete analysis as a failed check.
 
