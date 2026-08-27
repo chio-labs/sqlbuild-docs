@@ -171,7 +171,9 @@ SELECT 1
 
 If the expected models form a chain (e.g. `stg_orders` feeds into `fact_orders` which feeds into `dim_customers`), SQLBuild resolves them in dependency order, using the output of earlier steps as input to later ones.
 
-Each explicit `__expected__<model>` CTE also grants the test authored SQL the public enums and constants visible to that model. A test with multiple expected models receives the deterministic union, with provenance retained for every granting model. Public names remain globally unique, so the union cannot shadow declarations.
+When a test defines `__expected__model_name` output, it may also use the public enums and constants
+available to that model. A test that checks several models may use the public enums and constants
+available to each of them. Public names are unique, so those values cannot conflict.
 
 Only explicit expected CTEs create grants. A matching test filename, `__ref__` mock, or nearby model path does not. Model-private declarations and macros are never granted through expected models.
 
