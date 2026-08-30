@@ -15,10 +15,11 @@ default_target = "dev"
 [settings]
 virtual_environments = true
 
-[connection]
+[connections.local]
 database = "warehouse.duckdb"
 
 [targets.dev]
+connection = "local"
 schema = "dev"
 
 [targets.dev.state]

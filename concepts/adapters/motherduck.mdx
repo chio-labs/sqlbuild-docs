@@ -9,10 +9,16 @@ MotherDuck uses DuckDB's built-in `md:` connection support. No extra installatio
 
 ```toml
 adapter = "motherduck"
+default_target = "dev"
 
-[connection]
+[connections.motherduck]
 database = "my_database"
 token = "your_motherduck_token"
+
+[targets.dev]
+connection = "motherduck"
+database = "my_database"
+schema = "dev"
 ```
 
 | Field | Description |
@@ -25,32 +31,31 @@ token = "your_motherduck_token"
 MotherDuck requires an access token. Generate one from the MotherDuck UI and pass it via the connection config or an environment variable:
 
 ```toml
-[connection]
+[connections.motherduck]
 database = "my_database"
 token = "${ENV:MOTHERDUCK_TOKEN}"
 ```
 
-## Per-target connections
+## Shared connections across targets
 
 Use targets to separate production and development databases on MotherDuck:
 
 ```toml
 adapter = "motherduck"
 
-[connection]
+[connections.motherduck]
 token = "${ENV:MOTHERDUCK_TOKEN}"
+database = "my_database"
 
 [targets.prod]
+connection = "motherduck"
+database = "prod_db"
 schema = "prod"
 
-[targets.prod.connection]
-database = "prod_db"
-
 [targets.dev]
-schema = "dev"
-
-[targets.dev.connection]
+connection = "motherduck"
 database = "dev_db"
+schema = "dev"
 ```
 
 ## Local development with DuckDB
@@ -60,8 +65,12 @@ Use `sqlbuild_local.toml` to override the adapter for local development against 
 ```toml
 adapter = "duckdb"
 
-[connection]
+[connections.local]
 database = "local_dev.duckdb"
+
+[targets.dev]
+connection = "local"
+schema = "dev"
 ```
 
 This lets you develop and test locally with zero MotherDuck compute cost, then deploy to MotherDuck in production. SQLBuild's [scenario replay](/concepts/scenarios) also runs locally in DuckDB regardless of the production adapter.

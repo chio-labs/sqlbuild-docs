@@ -48,4 +48,24 @@ my-project/
 
 Empty directories contain `.gitkeep` files so the scaffold can be committed. Add reusable SQL lifecycle hooks to `hooks/sql/` and decorated Python lifecycle hooks to `hooks/python/`; see [Hooks](/concepts/models/hooks).
 
-The generated project uses DuckDB, creates `dev` and `prod` targets, and defaults models to table materialization. The project name is derived from the current directory name, with hyphens converted to underscores.
+The generated project uses DuckDB, creates a named `local` connection shared by `dev` and
+`prod`, and defaults models to table materialization. Its configuration follows this shape:
+
+```toml
+adapter = "duckdb"
+default_target = "dev"
+
+[connections.local]
+database = "my_project.duckdb"
+
+[targets.dev]
+connection = "local"
+schema = "dev"
+
+[targets.prod]
+connection = "local"
+schema = "prod"
+```
+
+The project name is derived from the current directory name, with hyphens converted to
+underscores.

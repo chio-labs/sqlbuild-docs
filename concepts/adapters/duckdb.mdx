@@ -9,9 +9,14 @@ DuckDB is included as a core dependency. No extra installation needed.
 
 ```toml
 adapter = "duckdb"
+default_target = "dev"
 
-[connection]
+[connections.local]
 database = "my_project.duckdb"
+
+[targets.dev]
+connection = "local"
+schema = "dev"
 ```
 
 | Field | Description |
@@ -24,21 +29,21 @@ database = "my_project.duckdb"
 ## Extensions and settings
 
 ```toml
-[connection]
+[connections.local]
 database = "my_project.duckdb"
 extensions = ["httpfs", "parquet"]
 
-[connection.settings]
+[connections.local.settings]
 memory_limit = "4GB"
 ```
 
 ## Attaching additional databases
 
 ```toml
-[connection]
+[connections.local]
 database = "my_project.duckdb"
 
-[[connection.attach]]
+[[connections.local.attach]]
 path = "external_data.duckdb"
 alias = "external"
 read_only = true

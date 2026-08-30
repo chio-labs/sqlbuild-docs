@@ -39,7 +39,7 @@ name = "waffle_shop"
 adapter = "duckdb"
 default_target = "dev"
 
-[connection]
+[connections.local]
 database = "waffle_shop_control.duckdb"
 
 [settings]
@@ -52,9 +52,11 @@ materialized = "table"
 collection_rendering = "value_list"
 
 [targets.prod]
+connection = "local"
 schema = "prod"
 
 [targets.dev]
+connection = "local"
 schema = "dev"
 
 [path_defaults."models/staging"]
@@ -69,61 +71,89 @@ materialized = "view"
 | `adapter` | Database adapter: `duckdb`, `motherduck`, `snowflake`, `bigquery`, `databricks`, `postgres`, or `sqlserver`. See [Adapters](/concepts/adapters). |
 | `default_target` | Name of the target to build against when none is selected (see [Targets](#targets)). |
 
-### Connection
+### Named connections
 
-The `connection` block is passed directly to the adapter. For DuckDB:
+Define reusable connections under `[connections.<name>]`, then reference one by name from
+each target. Connections own endpoint, authentication, and compute settings. Targets own the
+authoritative `database`, `schema`, variables, and operational policy.
 
 ```toml
-[connection]
+[connections.local]
 database = "my_project.duckdb"
-```
-
-Targets can override the connection:
-
-```toml
-[targets.prod]
-schema = "prod"
-
-[targets.prod.connection]
-database = "prod.duckdb"
 
 [targets.dev]
+connection = "local"
 schema = "dev"
-
-[targets.dev.connection]
-database = "dev.duckdb"
 ```
+
+Multiple targets can reuse one connection while keeping separate namespaces and policies:
+
+```toml
+[connections.warehouse]
+account = "my_org-my_account"
+user = "${ENV:SNOWFLAKE_USER}"
+password = "${ENV:SNOWFLAKE_PASSWORD}"
+warehouse = "TRANSFORM_WH"
+
+[targets.prod]
+connection = "warehouse"
+database = "ANALYTICS"
+schema = "PROD"
+
+[targets.dev]
+connection = "warehouse"
+database = "ANALYTICS"
+schema = "DEV_ALICE"
+```
+
+A `database` or `schema` present in a named connection is connection/session metadata only;
+it does not satisfy the mandatory namespace strategy for a named target. Put the target's
+authoritative database and schema on `[targets.<name>]`. SQLBuild validates connection
+references while loading configuration, without opening a warehouse connection, and reports
+an unknown `targets.<name>.connection` name as an offline configuration error.
+
+For migration only, SQLBuild still maps legacy `[connection]` to an implicit connection and
+legacy `[targets.<name>.connection]` blocks to target-specific implicit connections. These
+forms are compatibility syntax, not the canonical format for new or updated projects.
 
 ## Targets
 
-A target is a named build context - the schema, database, or connection you build against (for example `dev` and `prod`). Targets let you build to different places from the same project. Each target can override:
+A target is a named build context - the database and schema you build into, plus execution policy (for example `dev` and `prod`). Each target references a named connection and can configure:
 
 | Field | Description |
 |-------|-------------|
-| `schema` | Schema for all models in this target |
+| `schema` | Schema for all models in this target; required for named targets |
 | `loader_schema` | Default write schema for managed source loaders; falls back to `schema` |
 | `database` | Database for all models in this target |
-| `connection` | Override the base connection config |
+| `connection` | Name from `[connections.<name>]` used for endpoint, authentication, and compute |
 | `vars` | Target-specific project variables |
 | `defer_sources_to` | Target name to read managed source data from (see [Loaders](/concepts/python-nodes/loaders#source-deferral)) |
 | `clone` | Clone policy (see below) |
 
 ```toml
+[connections.warehouse]
+account = "my_org-my_account"
+warehouse = "TRANSFORM_WH"
+
 [targets.prod]
+connection = "warehouse"
+database = "analytics"
 schema = "analytics_prod"
 loader_schema = "raw_prod"
 defer_sources_to = "prod"
 
 [targets.dev]
+connection = "warehouse"
+database = "analytics"
 schema = "analytics_dev"
 loader_schema = "raw_dev"
 defer_sources_to = "prod"
 
 [targets.staging]
+connection = "warehouse"
+database = "analytics"
 schema = "staging"
 
-[targets.staging.connection]
-database = "staging.duckdb"
 ```
 
 Managed loader writes use the active target's `loader_schema`, falling back to its model
@@ -152,8 +182,13 @@ their normal target once in the optional local file:
 target = "dev"
 
 [targets.dev]
+connection = "warehouse"
 schema = "dev_alice"
 loader_schema = "raw_alice"
+
+[connections.warehouse]
+user = "alice"
+password = "${ENV:SNOWFLAKE_PASSWORD}"
 ```
 
 Commands then use `dev` automatically. An explicit command such as `sqb build --target prod`
@@ -386,12 +421,14 @@ Configuration for AI agent skill file installation:
 
 ```toml
 [skills]
-targets = ["opencode", "claude"]
+targets = ["agents", "claude"]
+auto_update = false
 ```
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `targets` | all targets | Which agent targets to install skill files for: `opencode`, `claude`, `agents` |
+| `targets` | `["agents", "claude"]` | Agent targets to install. OpenCode consumes `.agents`; use `opencode` only as an explicit override. |
+| `auto_update` | `false` | Refresh stale SQLBuild-owned generated files from the installed package during normal commands; custom collisions are never overwritten. |
 
 See [skills CLI reference](/cli/skills) for usage details.
 
@@ -407,7 +444,7 @@ target = "dev"
 schema = "dev_alice"
 loader_schema = "raw_alice"
 
-[targets.dev.connection]
+[connections.local]
 database = "my_local.duckdb"
 
 [settings]
@@ -422,14 +459,16 @@ debug_mode = "true"
 |-------|-------------|
 | `target` | Override which target is active for this developer |
 | `adapter` | Override the database adapter (e.g. use DuckDB locally while prod uses Snowflake) |
-| `connection` | Override connection config (merged on top of project + target connection) |
+| `connections` | Override named connection fields; entries merge by connection name |
 | `settings` | Override global settings (only explicitly set fields take effect) |
 | `vars` | Developer-specific variable overrides (merged on top of project + target vars) |
 
-Target blocks support the same local overrides, including `schema`, `loader_schema`,
-`connection`, `vars`, source deferral, and clone policy fields. Unspecified values
-continue to come from `sqlbuild_project.toml`.
+Project and local configuration merge named connections by name and merge their explicitly
+configured fields. Target blocks merge the same way and may override the connection reference,
+`database`, `schema`, `loader_schema`, variables, source deferral, and policy fields. Unspecified
+values continue to come from `sqlbuild_project.toml`; a local reference to an unknown merged
+connection still fails offline during configuration loading.
 
 This replaces the common dbt pattern of switching profiles or setting environment variables
-to change targets. Each developer sets their target, connection, and preferences once in
+to change targets. Each developer sets their target, named connection, and preferences once in
 `sqlbuild_local.toml` and it persists across sessions.

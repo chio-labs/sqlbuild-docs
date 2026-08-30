@@ -7,6 +7,12 @@ In virtual mode, `sqb clone` hydrates physical version relations from a source w
 
 This is useful for seeding a new target from an existing one, or restoring physical versions that were cleaned up by the janitor.
 
+As in direct mode, `--from` selects an origin namespace and clone-origin policy, not a
+connection. `--to` (or the active target) supplies the only physical connection. The origin
+physical namespace must be readable through that destination connection; SQLBuild never opens
+the origin target connection or transfers data across accounts, servers, or files using a
+second connection.
+
 ## How it works
 
 Virtual clone looks up expected physical version relations in the source warehouse by their naming convention (`<schema>__sqb_physical.<model>__v_<hash>`) and copies them into the target warehouse. It then registers the copied relations in the target state store.

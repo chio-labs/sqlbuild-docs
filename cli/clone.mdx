@@ -12,6 +12,13 @@ No `manifest.json` generation or artifact management is required. Clone works di
 When `--to` is omitted, the destination is the active target selected by `--target`,
 `sqlbuild_local.toml`, or `default_target`, in that order.
 
+`--from` selects only the origin namespace and its clone-origin policy. `--to`, or the active
+target when it is omitted, selects the sole physical connection used by the operation. The
+origin namespace must therefore be visible and readable through the destination connection.
+SQLBuild never resolves or opens the origin target's connection, including for direct,
+deferred, and virtual clone. Clone cannot perform a cross-account, cross-server, or cross-file
+transfer by opening a second connection.
+
 ## Usage
 
 ```bash
@@ -75,4 +82,7 @@ allow_as_clone_origin = true
 allow_as_clone_destination = true
 ```
 
-The origin target must already contain the built relations being cloned. The configured warehouse credentials must be able to read those relations and create relations in the destination. Managed physical sources may bootstrap a destination that has not been built. See [Project Configuration](/concepts/project-configuration) for details.
+The origin target must already contain the built relations being cloned. The destination
+connection's credentials must be able to read the origin namespace and create relations in the
+destination. Managed physical sources may bootstrap a destination that has not been built. See
+[Project Configuration](/concepts/project-configuration) for details.

@@ -15,13 +15,19 @@ uv pip install 'sqlbuild[sqlserver]'
 
 ```toml
 adapter = "sqlserver"
+default_target = "dev"
 
-[connection]
+[connections.sqlserver]
 host = "localhost"
 port = 1433
 user = "sa"
 password = "my_password"
 database = "my_database"
+
+[targets.dev]
+connection = "sqlserver"
+database = "my_database"
+schema = "analytics_dev"
 ```
 
 | Field | Description |
@@ -32,7 +38,7 @@ database = "my_database"
 | `password` | Database password |
 | `database` | Database name (default: `master`). Also accepts `dbname` as an alias. |
 
-All fields in `connection` are passed to `pymssql.connect()`. See the [pymssql documentation](https://pymssql.readthedocs.io/en/stable/ref/pymssql.html) for all available options.
+Connection fields are passed to `pymssql.connect()`. See the [pymssql documentation](https://pymssql.readthedocs.io/en/stable/ref/pymssql.html) for all available options. The target remains authoritative for database and schema qualification.
 
 SQL Server supports schema-only, full-row, and bounded `sqb diff` comparisons.
 
@@ -48,26 +54,24 @@ SQL Server has no supported first-class native array expression. Any list or set
 
 See [Collections and Rendering](/concepts/constants/collections-and-rendering#native-array-rendering) for declarations, rendering precedence, and the cross-adapter matrix.
 
-## Per-target connections
+## Shared connections across targets
 
 ```toml
 adapter = "sqlserver"
 
-[connection]
+[connections.sqlserver]
 host = "localhost"
 user = "sa"
 password = "${ENV:MSSQL_PASSWORD}"
-
-[targets.prod]
-schema = "prod"
-
-[targets.prod.connection]
-host = "prod-sql.example.com"
 database = "analytics"
 
-[targets.dev]
-schema = "dev"
+[targets.prod]
+connection = "sqlserver"
+database = "analytics"
+schema = "prod"
 
-[targets.dev.connection]
-database = "analytics_dev"
+[targets.dev]
+connection = "sqlserver"
+database = "analytics"
+schema = "dev"
 ```
