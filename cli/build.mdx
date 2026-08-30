@@ -91,7 +91,11 @@ Use `--defer-to` to resolve unselected model references against another target. 
 sqb build --select fact_orders --defer-to prod
 ```
 
-No `manifest.json` is required. Deferred references resolve directly against the live target.
+No `manifest.json` is required. `--defer-to` selects only the namespace used for unselected
+references. SQLBuild resolves those relations through the active target's sole physical
+connection and never opens the deferred target's connection. The deferred namespace must be
+visible and readable through the active connection; deferral is not a cross-account,
+cross-server, or cross-file transfer mechanism.
 
 ## Failure behavior
 

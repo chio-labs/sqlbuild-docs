@@ -15,12 +15,16 @@ uv pip install 'sqlbuild[databricks]'
 
 ```toml
 adapter = "databricks"
+default_target = "dev"
 
-[connection]
+[connections.workspace]
 server_hostname = "my-workspace.cloud.databricks.com"
 http_path = "/sql/1.0/warehouses/abc123"
 token = "dapi_my_access_token"
-catalog = "my_catalog"
+
+[targets.dev]
+connection = "workspace"
+database = "my_catalog"
 schema = "my_schema"
 ```
 
@@ -29,9 +33,10 @@ schema = "my_schema"
 | `server_hostname` | Databricks workspace hostname (required) |
 | `http_path` | SQL warehouse or cluster HTTP path (required) |
 | `token` | Personal access token (required) |
-| `catalog` | Unity Catalog name (required) |
-| `schema` | Default schema (optional) |
+
+The target's `database` selects the Unity Catalog catalog, and its `schema` selects the schema.
 
 ## Session initialization
 
-On connect, SQLBuild runs `USE CATALOG` and `USE SCHEMA` statements to set the session context.
+On connect, SQLBuild runs `USE CATALOG` and `USE SCHEMA` statements from the active target to set
+the authoritative session namespace.

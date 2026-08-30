@@ -13,6 +13,10 @@ sqb diff <FROM>:<TO> <mode> [flags]
 
 The first argument is a positional `FROM:TO` range. Exactly one mode is required: `--full`, `--schema-only`, or `--bounded <duration>`.
 
+In direct mode, `FROM` and `TO` are configured target names. Each target supplies its named
+connection and authoritative database/schema namespace; invalid connection references are
+reported as offline configuration errors.
+
 Full and bounded row comparisons require the model to define `unique_key`. Bounded mode uses the model's cursor and falls back to a full row comparison when no cursor is configured.
 
 ## Flags

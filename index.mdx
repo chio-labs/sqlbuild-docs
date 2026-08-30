@@ -202,7 +202,7 @@ SQL models never depend on Python nodes - the only path from Python into SQL is 
   <img src="/sqlbuild_diff_hq.png" alt="SQLBuild diff output showing schema comparison, row-level differences, and changed column values between prod and dev targets" />
 </Frame>
 - **Zero-copy cloning:** Branch targets instantly with `sqb clone` without duplicating data.
-- **Deferred references:** Compile and plan against a production target with `--defer-to` while building in dev.
+- **Deferred references:** Resolve a production namespace with `--defer-to` through the active target's connection while building in dev.
 - **No manifest required:** Clone, diff, and defer work directly against live targets. No `manifest.json` generation, no artifact management, no stale state.
 
 ### Extensibility

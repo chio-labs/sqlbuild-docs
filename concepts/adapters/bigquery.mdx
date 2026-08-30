@@ -15,10 +15,16 @@ uv pip install 'sqlbuild[bigquery]'
 
 ```toml
 adapter = "bigquery"
+default_target = "dev"
 
-[connection]
+[connections.gcp]
 project = "my-gcp-project"
 location = "europe-west2"
+
+[targets.dev]
+connection = "gcp"
+database = "my-gcp-project"
+schema = "analytics_dev"
 ```
 
 | Field | Description |
@@ -36,7 +42,7 @@ BigQuery supports two authentication methods:
 **Service account file:**
 
 ```toml
-[connection]
+[connections.gcp]
 project = "my-gcp-project"
 credentials_path = "/path/to/service-account.json"
 ```

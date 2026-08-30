@@ -15,13 +15,19 @@ uv pip install 'sqlbuild[postgres]'
 
 ```toml
 adapter = "postgres"
+default_target = "dev"
 
-[connection]
+[connections.postgres]
 host = "localhost"
 port = 5432
 user = "my_user"
 password = "my_password"
 dbname = "my_database"
+
+[targets.dev]
+connection = "postgres"
+database = "my_database"
+schema = "analytics_dev"
 ```
 
 | Field | Description |
@@ -32,28 +38,26 @@ dbname = "my_database"
 | `password` | Database password |
 | `dbname` | Database name |
 
-All fields in `connection` are passed to `psycopg.connect()`. See the [psycopg documentation](https://www.psycopg.org/psycopg3/docs/api/connections.html) for all available options.
+Connection fields are passed to `psycopg.connect()`. See the [psycopg documentation](https://www.psycopg.org/psycopg3/docs/api/connections.html) for all available options. The target remains authoritative for database and schema qualification.
 
-## Per-target connections
+## Shared connections across targets
 
 ```toml
 adapter = "postgres"
 
-[connection]
+[connections.postgres]
 host = "localhost"
 user = "my_user"
 password = "${ENV:PG_PASSWORD}"
-
-[targets.prod]
-schema = "prod"
-
-[targets.prod.connection]
-host = "prod-db.example.com"
 dbname = "analytics"
 
-[targets.dev]
-schema = "dev"
+[targets.prod]
+connection = "postgres"
+database = "analytics"
+schema = "prod"
 
-[targets.dev.connection]
-dbname = "analytics_dev"
+[targets.dev]
+connection = "postgres"
+database = "analytics"
+schema = "dev"
 ```

@@ -43,16 +43,20 @@ profiles_dir = "/Users/you/.dbt"
 target_path = "../analytics/target"
 target = "dev"
 
-[targets.dev]
-schema = "analytics"
-
-[targets.dev.connection]
+[connections.dbt_dev]
 source = "dbt_profile"
 profile = "analytics"
 target = "dev"
+
+[targets.dev]
+connection = "dbt_dev"
+database = "ANALYTICS"
+schema = "analytics"
 ```
 
-`source = "dbt_profile"` tells SQLBuild to connect using your dbt profile, so it talks to the same warehouse dbt does.
+`source = "dbt_profile"` on the named connection tells SQLBuild to connect using your dbt
+profile, so it talks to the same warehouse dbt does. The target references that connection and
+remains authoritative for its database and schema.
 
 `sqb dbt build --select path:models/marts` compiles the project, resolves the selection, runs the selected dbt models, then runs any SQLBuild models you have added against the dbt outputs.
 
