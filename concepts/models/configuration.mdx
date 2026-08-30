@@ -58,7 +58,7 @@ Table promotion mode is a project setting rather than a `MODEL()` field. Staged 
 | `lookback` | Backward replay extension |
 | `append_cursor_inclusive` | Include (`true`, default) or exclude (`false`) the current append-cursor boundary |
 | `merge_exclude_columns` | Columns left unchanged by matched-row merge updates |
-| `allow_full_refresh` | Allow or deny explicit full refresh for this incremental model |
+| `full_refresh` | Optional model execution override: `false` always runs incrementally, `true` always full-refreshes, and omission follows the command |
 | `on_schema_change` | `append_new_columns`, `sync_all_columns`, `ignore`, or `fail` |
 | `replay_on_change` | `forward`, `full`, or `bounded-<duration>` |
 

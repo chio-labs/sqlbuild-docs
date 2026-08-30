@@ -76,6 +76,33 @@ GROUP BY customer_id
 
 `merge` always requires `unique_key`. The cursor controls which upstream rows are scanned; the unique key determines how they're matched against the target.
 
+## Full-refresh overrides
+
+Incremental models can override command-level full-refresh behavior with `full_refresh`:
+
+| Model setting | Normal command | Command with `--full-refresh` |
+|---------------|----------------|-------------------------------|
+| omitted | incremental | full refresh |
+| `full_refresh false` | incremental | incremental |
+| `full_refresh true` | full refresh | full refresh |
+
+Use `full_refresh false` for models that must retain their normal cursor or microbatch execution even when a broader job requests full refresh:
+
+```sql
+MODEL (
+  materialized incremental,
+  incremental_strategy delete_insert,
+  full_refresh false,
+  cursor event_date,
+  cursor_type timestamp,
+  cursor_grain day,
+);
+```
+
+The override is evaluated per model, so one selection can contain incrementally executed opt-outs and full-refreshed models. It controls execution mode rather than acting as a safety rejection: an opted-out model does not abort the rest of the build.
+
+This does not skip initial loading. If the destination relation does not exist, an incremental or microbatch model still builds the history required by its cursor policy. Cloning an existing destination before the build can provide a current watermark and avoid a first-run historical replay.
+
 ## Cursors
 
 Cursors define the incremental replay boundary. SQLBuild queries `MAX(cursor)` from the target table and `MIN/MAX` from upstream inputs to compute the replay window automatically. Observed maxima are inclusive warehouse values; SQLBuild advances them once to produce an effective exclusive end bound.

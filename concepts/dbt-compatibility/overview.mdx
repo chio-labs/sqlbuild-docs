@@ -84,7 +84,7 @@ Declared flags are routed to the right place automatically:
 | ---- | --------- | ----- |
 | `--select` / `--exclude` | dbt | dbt resolves selection (see [Selection](/concepts/dbt-compatibility/selection)). |
 | `--vars` | dbt **and** SQLBuild | The same vars feed dbt's compile and SQLBuild's own variable resolution, so both sides see identical values. |
-| `--full-refresh` | dbt **and** SQLBuild | Forces a full rebuild of selected models on both sides. |
+| `--full-refresh` | dbt **and** SQLBuild | Requests a full rebuild on both sides. dbt and native SQLBuild models independently apply their model-level `full_refresh` setting, including `false` opt-outs. |
 | `--threads` | dbt (`--threads`) and SQLBuild (`--concurrency`) | |
 | `--target` / `--project-dir` / `--profiles-dir` / `--profile` / `--target-path` | dbt | Standard dbt locators. |
 
