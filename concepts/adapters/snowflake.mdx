@@ -15,48 +15,51 @@ uv pip install 'sqlbuild[snowflake]'
 
 ```toml
 adapter = "snowflake"
+default_target = "dev"
 
-[connection]
+[connections.warehouse]
 account = "my_org-my_account"
 user = "my_user"
 password = "my_password"
 role = "TRANSFORM_ROLE"
 warehouse = "TRANSFORM_WH"
+
+[targets.dev]
+connection = "warehouse"
 database = "ANALYTICS"
 schema = "RAW"
 ```
 
-All fields in `connection` are passed directly to `snowflake.connector.connect()`. See the [Snowflake Connector documentation](https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect) for all available options, including key-pair authentication, OAuth, and SSO.
+Connection fields are passed directly to `snowflake.connector.connect()`. See the [Snowflake Connector documentation](https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect) for all available options, including key-pair authentication, OAuth, and SSO. Put the authoritative database and schema on the target.
 
 ## Session initialization
 
-On connect, SQLBuild runs `USE ROLE`, `USE WAREHOUSE`, `USE DATABASE`, and `USE SCHEMA` statements based on the connection config. These ensure the session context is set correctly regardless of the user's default settings.
+On connect, SQLBuild applies the connection's role and warehouse, then applies the active
+target's authoritative database and schema. These ensure the session context is set correctly
+regardless of the user's default settings.
 
-## Per-target connections
+## Shared connections across targets
 
-Use targets to connect to different Snowflake databases or warehouses:
+Use multiple targets to reuse one Snowflake connection while selecting different authoritative
+databases and schemas:
 
 ```toml
 adapter = "snowflake"
 
-[connection]
+[connections.warehouse]
 account = "my_org-my_account"
 user = "my_user"
 password = "my_password"
+role = "TRANSFORM_ROLE"
+warehouse = "TRANSFORM_WH"
 
 [targets.prod]
+connection = "warehouse"
+database = "PROD_DB"
 schema = "prod"
 
-[targets.prod.connection]
-role = "PROD_ROLE"
-warehouse = "PROD_WH"
-database = "PROD_DB"
-
 [targets.dev]
-schema = "dev"
-
-[targets.dev.connection]
-role = "DEV_ROLE"
-warehouse = "DEV_WH"
+connection = "warehouse"
 database = "DEV_DB"
+schema = "dev"
 ```
