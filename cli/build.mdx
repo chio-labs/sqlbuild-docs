@@ -23,7 +23,7 @@ sqb --project-dir <path> build [flags]
 | `--no-audits` | Skip audits |
 | `--no-python` | Skip read-side Python tasks and assets (loader-side Python still runs for selected sources) |
 | `--no-sql-validation` | Skip compile-time SQL syntax validation |
-| `--full-refresh` | Drop and rebuild all selected models from scratch |
+| `--full-refresh` | Drop and rebuild selected models unless a model sets `full_refresh false`; `full_refresh true` forces a model even without this flag |
 | `--defer-to` | Resolve unselected model references against another target |
 | `--defer-sources-to` | Read managed source data from another target |
 | `--fail-fast` | Stop on first failure and skip remaining nodes |
