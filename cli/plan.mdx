@@ -22,7 +22,7 @@ sqb --project-dir <path> plan [flags]
 | `--no-python` | Exclude read-side Python tasks and assets from the plan |
 | `--defer-to` | Resolve unselected model references against another target |
 | `--json` | Output the plan as JSON |
-| `--full-refresh` | Plan a full rebuild of all selected models |
+| `--full-refresh` | Plan a full rebuild for selected models unless a model sets `full_refresh false`; `full_refresh true` forces a model without this flag |
 | `--start-cursor-ts` | Override start cursor for timestamp incremental models (ISO format) |
 | `--end-cursor-ts` | Override end cursor for timestamp incremental models (ISO format) |
 | `--start-cursor-int` | Override start cursor for integer incremental models |
