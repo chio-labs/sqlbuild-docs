@@ -13,8 +13,8 @@ decide which files can access it. No TOML configuration is required.
 | Scope | Declaration form | Visibility |
 |-------|------------------|------------|
 | Project-wide | `macros/`, `constants/`, `enums/` | Every supported SQL surface |
-| Inherited | `_macros/`, `_constants/`, `_enums/` | Owning path and every descendant |
-| Exact-local | `_local_macros/`, `_local_constants/`, `_local_enums/` | Direct children of one owning path |
+| Descendant-public | Nested `macros/`, `constants/`, `enums/` | Owning path and every descendant |
+| Exact-owner private | Nested `_macros/`, `_constants/`, `_enums/` | Direct children of one owning path |
 | Model-private | Underscore-prefixed constants and enums in `MODEL()` | One model and its inline SQL hooks |
 
 ## Example
@@ -23,24 +23,25 @@ The annotation beside each directory shows where its contents are available:
 
 ```text
 models/
-├── _constants/                 inherited throughout models/
+├── constants/                 published throughout models/
 │   └── warehouse.sql
 └── commerce/
-    ├── _macros/                inherited throughout commerce/
+    ├── macros/                published throughout commerce/
     │   └── currency.py
-    ├── _local_enums/           exact commerce/ directory only
+    ├── _enums/                exact commerce/ directory only
     │   └── grain.sql
     ├── orders.sql              sees warehouse, currency, and grain
     ├── finance/
-    │   ├── _macros/            inherited throughout finance/
+    │   ├── macros/            published throughout finance/
     │   │   └── tax.py
     │   └── revenue.sql         sees warehouse, currency, and tax
     └── fulfillment/
         └── shipments.sql       sees warehouse and currency
 ```
 
-An inherited directory applies at its location and below it. An exact-local directory applies only
-to SQL files directly beside it.
+A nested public role applies at its location and below it. An underscored private role applies only
+to SQL files directly beside it. The same unprefixed role name is project-wide only when it is at
+the project root.
 
 | Resource | Visible from the example tree | Not visible |
 |----------|-------------------------------|-------------|
@@ -55,13 +56,13 @@ Declarations do not flow upward or sideways into sibling directories.
 | Where the value is needed | Choose | Placement |
 |----------------|--------|-----------|
 | One model only | Model-private | In that model's `MODEL()` header |
-| One exact directory | Exact-local | Beside the consumers |
-| Multiple directories in one resource tree | Inherited | At their lowest common ancestor |
+| One exact directory | Exact-owner private | Beside the consumers in an underscored role |
+| Multiple directories in one resource tree | Descendant-public | At their lowest common ancestor |
 | Different resource trees, such as models and tests | Project-wide | Top-level declaration root |
 
-SQLBuild does not ask you to narrow a project-wide declaration merely because its current users are
-close together. If a declaration is already scoped, SQLBuild checks that it is placed close enough
-to the files that use it.
+SQLBuild computes the lowest common owner of every declaration's runtime consumers. A project-wide
+declaration is valid only when no narrower supported owner contains all consumers. This keeps the
+top-level roles as a genuine project API instead of a neutral dumping ground.
 
 ## Explore the feature
 
@@ -70,7 +71,7 @@ to the files that use it.
     See which declarations a model, test, hook, or function can use.
   </Card>
   <Card title="Where to Put Declarations" icon="location-dot" href="/concepts/declaration-scopes/placement">
-    Choose between project-wide, inherited, exact-local, and model-private placement.
+    Choose between project-wide, descendant-public, exact-owner-private, and model-private placement.
   </Card>
   <Card title="Scope Explorer" icon="compass" href="/concepts/declaration-scopes/explorer">
     Ask SQLBuild what a file can use and preview how moving it would change that answer.

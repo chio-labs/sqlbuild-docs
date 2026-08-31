@@ -5,8 +5,8 @@ description: "See which enums, constants, and macros are available to each SQL f
 
 For most SQL, the rule is simple:
 
-> A file can use project-wide declarations, declarations inherited from `_.../` directories above
-> it, and declarations in a `_local_.../` directory directly beside it.
+> A file can use project-wide declarations, declarations published from unprefixed role directories
+> above it, and declarations in an underscored role directory directly beside it.
 
 ## Start from the SQL file
 
@@ -14,12 +14,12 @@ SQLBuild starts from the file containing the SQL and walks up that file's direct
 
 ```text
 models/
-├── _constants/                 available throughout models/
+├── constants/                 available throughout models/
 │   └── warehouse.sql
 └── commerce/
-    ├── _enums/                 available throughout commerce/
+    ├── enums/                 available throughout commerce/
     │   └── order_status.sql
-    ├── _local_constants/       available directly in commerce/ only
+    ├── _constants/       available directly in commerce/ only
     │   └── minimum_value.sql
     ├── orders.sql
     └── history/
@@ -33,7 +33,7 @@ From this tree:
 | `orders.sql` | `warehouse`, `order_status`, and `minimum_value` |
 | `history/archived_orders.sql` | `warehouse` and `order_status` |
 
-`minimum_value` is not available in `history/` because `_local_constants/` applies only to files
+`minimum_value` is not available in `history/` because `_constants/` applies only to files
 directly beside it.
 
 ## Supported resource trees
@@ -50,10 +50,10 @@ Scoped declaration directories can be placed below these SQL resource roots:
 | `audits/` | Audits |
 | `sources/` | Inline source expressions |
 
-Each root is a separate tree. For example, `models/_constants/` does not flow into `tests/`. Put a
+Each root is a separate tree. For example, `models/constants/` does not flow into `tests/`. Put a
 declaration in the top-level `constants/`, `enums/`, or `macros/` directory when it must be available
-across different resource trees. A project-root `_constants/`, `_enums/`, or `_macros/` directory is
-invalid.
+across different resource trees. Project-root `_constants/`, `_enums/`, and `_macros/` directories
+are invalid because there is no narrower project owner for them to be private to.
 
 ## Which file controls visibility?
 
@@ -107,7 +107,7 @@ A macro file may import another project macro file when the imported macro is av
 importing file's location. The same directory rules apply as they do to SQL.
 
 ```python
-# models/commerce/_macros/orders.py
+# models/commerce/macros/orders.py
 from macros.currency import round_money
 
 
