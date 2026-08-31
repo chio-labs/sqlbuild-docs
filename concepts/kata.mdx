@@ -89,6 +89,59 @@ All current built-ins form the standard policy and are enabled by matching prefi
 | `SQBKR201` | Model source suffixes and source dependency names use approved, current tokens |
 | `SQBKR301` | Referenced model identifiers follow Kata model-name grammar |
 | `SQBKR401` | Models declare `contract enforced` |
+| `SQBKR500` | Every model resolves to one configured domain root and level |
+| `SQBKR501` | Every model owner is a leaf or a branch, never both |
+| `SQBKR502` | Ownership paths stay within `max_subdomain_depth` |
+| `SQBKR503` | Compressed underscore-token prefixes do not hide implicit owners |
+
+### Owner layout
+
+Kata treats warehouse levels as an axis beneath a genuine domain root. Levels are configurable and
+may contain more than one path component:
+
+```toml
+[kata.layout]
+levels = ["staging", "intermediate/clean", "intermediate/enriched", "mart"]
+domain_roots = ["market/betfair", "model/horsenet/ratings"]
+```
+
+`domain_roots` is optional. Without it, Kata infers the complete domain root as every path component
+between `models/` and the configured level. If more than one configured level can interpret a path,
+`SQBKR500` reports every candidate instead of guessing. Add explicit roots for those ambiguous
+trees. Level paths and explicit domain roots must be normalized, unique, and non-overlapping.
+
+The standard owner shapes are:
+
+```text
+models/<domain>/<level>/<model>.sql
+models/<domain>/<level>/<subdomain>/<model>.sql
+```
+
+At every ownership node, direct models make the node a leaf and child owners make it a branch. A
+directory may not contain both. Different branches may terminate at different depths; Kata does not
+require empty ceremonial folders merely to make paths the same length.
+
+`max_subdomain_depth` defaults to one and counts only owners after the configured level. Domain-root
+components, composite-level components, declaration roles, and declaration-role buckets do not
+count. Projects can raise the non-negative threshold explicitly:
+
+```toml
+[kata.thresholds]
+max_subdomain_depth = 2
+```
+
+Kata detects ownership hidden in flattened underscore names with a compressed token trie. Unary
+token chains remain compound terms, so `barrier_trial/` and `barrier_trial_analysis/` identify
+`barrier_trial` rather than `barrier`. Real branch points remain explicit: Salesforce annotation
+export, annotation validation, and events identify an outer `salesforce` owner and an inner
+`annotation` concern. Detection starts with two siblings by default:
+
+```toml
+[kata.thresholds]
+min_shared_owner_prefix_directories = 2
+```
+
+Set this threshold to zero to disable the prefix-family check.
 
 ### Joins
 
@@ -116,11 +169,39 @@ These checks use declared contract columns, not inferred output columns.
 | `SQBKH002` | Non-canonical numeric decisions use named constants |
 | `SQBKH101` | Identical enum domains are consolidated |
 | `SQBKH201` | Public enum and constant files live under domain folders |
+| `SQBKH301` | Declaration role containers are flat or fully grouped |
+| `SQBKH302` | Declaration role buckets stay within their configured depth |
+| `SQBKH303` | Flat roles and individual buckets stay within file-count caps |
+| `SQBKH304` | Buckets use specific concern names rather than generic role names |
+| `SQBKH305` | Shared filename prefixes become navigation buckets |
 
 `SQBKH001` requires direct comparisons to `@enum("<enum>").<MEMBER>`. Normalize controlled values
 upstream rather than wrapping either comparison operand. A direct source-side value may be
 normalized in the comparison because the project does not control source casing; the enum member
 must still remain unwrapped.
+
+The declaration-container rules apply to public and private `macros`, `constants`, and `enums`
+roles. A container is either flat or every file is grouped into one level of concern buckets:
+
+```text
+_macros/                       _macros/
+├── normalise_name.py          ├── normalisation/
+└── resolve_match.py           │   └── names.py
+                               └── resolution/
+                                   └── matches.py
+```
+
+Buckets are navigation only. They never change the declaration owner or compiler visibility.
+Generic buckets such as `utils`, `common`, `shared`, and `misc` fault. Defaults are:
+
+```toml
+[kata.thresholds]
+max_role_container_depth = 1
+max_macro_container_files = 10
+max_constant_container_files = 10
+max_enum_container_files = 10
+min_shared_container_prefix_files = 2
+```
 
 ### Tests and coverage
 
