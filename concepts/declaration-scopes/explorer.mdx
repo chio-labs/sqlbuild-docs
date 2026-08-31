@@ -19,14 +19,14 @@ project/
 │   └── currency.py                      add_tax, round_money
 ├── models/
 │   ├── commerce/
-│   │   ├── _constants/limits.yml        minimum_order_value
-│   │   ├── _enums/status.yml            order_status
-│   │   ├── _macros/orders.py            formatted_order_total
+│   │   ├── constants/limits.yml        minimum_order_value
+│   │   ├── enums/status.yml            order_status
+│   │   ├── macros/orders.py            formatted_order_total
 │   │   ├── orders.sql
 │   │   └── returns/returns.sql
 │   └── finance/
-│       ├── _enums/status.yml            finance_status
-│       ├── _macros/margin.py            calculate_margin
+│       ├── enums/status.yml            finance_status
+│       ├── macros/margin.py            calculate_margin
 │       ├── finance_summary.sql
 │       └── reports/margin_report.sql
 └── tests/
@@ -61,8 +61,8 @@ Scope
   Path: models/commerce/orders.sql
 
 Used (2)
-  ├─ ● constant:minimum_order_value  [constant; inherited; inherited_ancestor; type integer]  models/commerce/_constants/limits.yml:1:1
-  └─ ● macro:formatted_order_total  [macro; inherited; inherited_ancestor; params 1]  models/commerce/_macros/orders.py:4:1
+  ├─ ● constant:minimum_order_value  [constant; descendant-public; inherited_ancestor; type integer]  models/commerce/constants/limits.yml:1:1
+  └─ ● macro:formatted_order_total  [macro; descendant-public; inherited_ancestor; params 1]  models/commerce/macros/orders.py:4:1
 
 Scope chain
   ├─ local models/commerce (3)
@@ -70,9 +70,9 @@ Scope chain
   └─ global global (2)
 
 Available (3 of 5, 2 collapsed)
-  ├─ ● constant:minimum_order_value  [constant; inherited; inherited_ancestor; type integer]  models/commerce/_constants/limits.yml:1:1
-  ├─ ○ enum:order_status  [enum; inherited; inherited_ancestor; members 4; type VARCHAR]  models/commerce/_enums/status.yml:1:1
-  └─ ● macro:formatted_order_total  [macro; inherited; inherited_ancestor; params 1]  models/commerce/_macros/orders.py:4:1
+  ├─ ● constant:minimum_order_value  [constant; descendant-public; inherited_ancestor; type integer]  models/commerce/constants/limits.yml:1:1
+  ├─ ○ enum:order_status  [enum; descendant-public; inherited_ancestor; members 4; type VARCHAR]  models/commerce/enums/status.yml:1:1
+  └─ ● macro:formatted_order_total  [macro; descendant-public; inherited_ancestor; params 1]  models/commerce/macros/orders.py:4:1
   … 2 globals collapsed; run sqb scope model:orders --globals all
 
 Diagnostics (0)
@@ -94,9 +94,9 @@ declarations. The expanded `Used` section is:
 ```console
 $ sqb scope model:orders --used-only --dependency-depth 1
 Used (4)
-  ├─ ● constant:minimum_order_value  [constant; inherited; inherited_ancestor; type integer]  models/commerce/_constants/limits.yml:1:1
+  ├─ ● constant:minimum_order_value  [constant; descendant-public; inherited_ancestor; type integer]  models/commerce/constants/limits.yml:1:1
   ├─ ● macro:add_tax  [macro; global; dependency; params 1]  macros/currency.py:1:1
-  ├─ ● macro:formatted_order_total  [macro; inherited; inherited_ancestor; params 1]  models/commerce/_macros/orders.py:4:1
+  ├─ ● macro:formatted_order_total  [macro; descendant-public; inherited_ancestor; params 1]  models/commerce/macros/orders.py:4:1
   └─ ● macro:round_money  [macro; global; dependency; params 1]  macros/currency.py:5:1
 ```
 
@@ -110,13 +110,13 @@ ordinary report appears first; its `Explanation` section is:
 ```console
 $ sqb scope model:orders --explain macro:formatted_order_total
 Explanation
-  └─ ● macro:formatted_order_total  [macro; inherited; inherited_ancestor; params 1]  models/commerce/_macros/orders.py:4:1
+  └─ ● macro:formatted_order_total  [macro; descendant-public; inherited_ancestor; params 1]  models/commerce/macros/orders.py:4:1
      Owner: (none)
      Owning path: models/commerce
      Consumers: model:orders, model:returns
      Dependencies: macro:add_tax, macro:round_money
      Grants: (none)
-     Required scope: inherited
+     Required scope: descendant-public
      Required path: models/commerce
      Promotion impact: (none)
 ```
@@ -128,7 +128,7 @@ explanation would then show that inherited placement is broader than necessary:
 
 ```console
 Explanation
-  └─ ● macro:formatted_order_total  [macro; inherited; inherited_ancestor; params 1]  models/commerce/_macros/orders.py:4:1
+  └─ ● macro:formatted_order_total  [macro; descendant-public; inherited_ancestor; params 1]  models/commerce/macros/orders.py:4:1
      Owner: (none)
      Owning path: models/commerce
      Consumers: model:orders
@@ -139,7 +139,7 @@ Explanation
      Promotion impact: model:orders
 
 Diagnostics (1)
-  ERROR S008 models/commerce/_macros/orders.py: Declaration 'macro:formatted_order_total' is currently inherited at 'models/commerce' (models/commerce/_macros/orders.py); required local at 'models/commerce'. Consumers: model:orders. Move it to 'models/commerce/_local_macros/'
+  ERROR S008 models/commerce/macros/orders.py: Declaration 'macro:formatted_order_total' is currently descendant-public at 'models/commerce' (models/commerce/macros/orders.py); required exact-owner-private at 'models/commerce'. Consumers: model:orders. Move it to 'models/commerce/_macros/'
 Completeness: complete
 ```
 
@@ -153,8 +153,8 @@ cannot use it. The relevant section is:
 ```console
 $ sqb scope model:orders --include-nearby
 Nearby unavailable (2 of 2)
-  ├─ ○ enum:finance_status  [enum; inherited; sibling_scope; members 3; type VARCHAR]  models/finance/_enums/status.yml:1:1
-  └─ ○ macro:calculate_margin  [macro; inherited; sibling_scope; params 2]  models/finance/_macros/margin.py:4:1
+  ├─ ○ enum:finance_status  [enum; descendant-public; sibling_scope; members 3; type VARCHAR]  models/finance/enums/status.yml:1:1
+  └─ ○ macro:calculate_margin  [macro; descendant-public; sibling_scope; params 2]  models/finance/macros/margin.py:4:1
 ```
 
 The declarations are known, but `sibling_scope` means a model in `commerce/` cannot use declarations
@@ -164,13 +164,13 @@ report, the command adds:
 ```console
 $ sqb scope model:orders --explain macro:calculate_margin
 Explanation
-  └─ ○ macro:calculate_margin  [macro; inherited; sibling_scope; params 2]  models/finance/_macros/margin.py:4:1
+  └─ ○ macro:calculate_margin  [macro; descendant-public; sibling_scope; params 2]  models/finance/macros/margin.py:4:1
      Owner: (none)
      Owning path: models/finance
      Consumers: model:finance_summary, model:margin_report
      Dependencies: (none)
      Grants: (none)
-     Required scope: inherited
+     Required scope: descendant-public
      Required path: models/finance
      Promotion impact: (none)
 ```
@@ -187,10 +187,10 @@ path. The relevant report sections are:
 ```console
 $ sqb scope test:orders__completed_only --used-only
 Used (1)
-  └─ ● enum:order_status  [enum; inherited; expected_model through model:orders; members 4; type VARCHAR]  models/commerce/_enums/status.yml:1:1
+  └─ ● enum:order_status  [enum; descendant-public; expected_model through model:orders; members 4; type VARCHAR]  models/commerce/enums/status.yml:1:1
 
 Relationship grants (1 of 1)
-  └─ ● enum:order_status  [enum; inherited; expected_model through model:orders; members 4; type VARCHAR]  models/commerce/_enums/status.yml:1:1
+  └─ ● enum:order_status  [enum; descendant-public; expected_model through model:orders; members 4; type VARCHAR]  models/commerce/enums/status.yml:1:1
 ```
 
 The `expected_model through model:orders` reason identifies exactly where the additional access came
@@ -212,12 +212,12 @@ Move preview
     ├─ ○ macro:add_tax  [macro; global; global; params 1]  macros/currency.py:1:1
     └─ ○ macro:round_money  [macro; global; global; params 1]  macros/currency.py:5:1
   Gained (2)
-    ├─ ○ enum:finance_status  [enum; inherited; inherited_ancestor; members 3; type VARCHAR]  models/finance/_enums/status.yml:1:1
-    └─ ○ macro:calculate_margin  [macro; inherited; inherited_ancestor; params 2]  models/finance/_macros/margin.py:4:1
+    ├─ ○ enum:finance_status  [enum; descendant-public; inherited_ancestor; members 3; type VARCHAR]  models/finance/enums/status.yml:1:1
+    └─ ○ macro:calculate_margin  [macro; descendant-public; inherited_ancestor; params 2]  models/finance/macros/margin.py:4:1
   Lost (3)
-    ├─ ● constant:minimum_order_value  [constant; inherited; inherited_ancestor; type integer]  models/commerce/_constants/limits.yml:1:1
-    ├─ ○ enum:order_status  [enum; inherited; inherited_ancestor; members 4; type VARCHAR]  models/commerce/_enums/status.yml:1:1
-    └─ ● macro:formatted_order_total  [macro; inherited; inherited_ancestor; params 1]  models/commerce/_macros/orders.py:4:1
+    ├─ ● constant:minimum_order_value  [constant; descendant-public; inherited_ancestor; type integer]  models/commerce/constants/limits.yml:1:1
+    ├─ ○ enum:order_status  [enum; descendant-public; inherited_ancestor; members 4; type VARCHAR]  models/commerce/enums/status.yml:1:1
+    └─ ● macro:formatted_order_total  [macro; descendant-public; inherited_ancestor; params 1]  models/commerce/macros/orders.py:4:1
   Private retained (0)
     (none)
   Relationship retained (0)
@@ -252,9 +252,9 @@ Scope chain
   └─ global global (2)
 
 Available (3 of 5, 2 collapsed)
-  ├─ ○ constant:minimum_order_value  [constant; inherited; inherited_ancestor; type integer]  models/commerce/_constants/limits.yml:1:1
-  ├─ ○ enum:order_status  [enum; inherited; inherited_ancestor; members 4; type VARCHAR]  models/commerce/_enums/status.yml:1:1
-  └─ ○ macro:formatted_order_total  [macro; inherited; inherited_ancestor; params 1]  models/commerce/_macros/orders.py:4:1
+  ├─ ○ constant:minimum_order_value  [constant; descendant-public; inherited_ancestor; type integer]  models/commerce/constants/limits.yml:1:1
+  ├─ ○ enum:order_status  [enum; descendant-public; inherited_ancestor; members 4; type VARCHAR]  models/commerce/enums/status.yml:1:1
+  └─ ○ macro:formatted_order_total  [macro; descendant-public; inherited_ancestor; params 1]  models/commerce/macros/orders.py:4:1
   … 2 globals collapsed; run sqb scope --at models/commerce/returns/new_return.sql --globals all
 
 Diagnostics (1)

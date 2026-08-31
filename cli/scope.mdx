@@ -101,7 +101,7 @@ project/
 │   └── currency.py                 add_tax, round_money
 └── models/
     └── commerce/
-        ├── _macros/
+        ├── macros/
         │   └── orders.py           formatted_order_total
         ├── orders.sql
         └── returns/
@@ -109,7 +109,7 @@ project/
 ```
 
 ```python
-# models/commerce/_macros/orders.py
+# models/commerce/macros/orders.py
 from macros.currency import add_tax, round_money
 
 
@@ -138,7 +138,7 @@ Scope
   Path: models/commerce/orders.sql
 
 Used (1)
-  └─ ● macro:formatted_order_total  [macro; inherited; inherited_ancestor; params 1]  models/commerce/_macros/orders.py:5:1
+  └─ ● macro:formatted_order_total  [macro; descendant-public; inherited_ancestor; params 1]  models/commerce/macros/orders.py:5:1
 
 Scope chain
   ├─ local models/commerce (1)
@@ -146,7 +146,7 @@ Scope chain
   └─ global global (2)
 
 Available (1 of 3, 2 collapsed)
-  └─ ● macro:formatted_order_total  [macro; inherited; inherited_ancestor; params 1]  models/commerce/_macros/orders.py:5:1
+  └─ ● macro:formatted_order_total  [macro; descendant-public; inherited_ancestor; params 1]  models/commerce/macros/orders.py:5:1
   … 2 globals collapsed; run sqb scope model:orders --globals all
 
 Relationship grants (0 of 0)
@@ -161,7 +161,7 @@ Completeness: complete
 ```
 
 This answers several questions without opening declaration files: what the model actually uses,
-where that declaration came from, which exact-local and inherited directories apply, how many
+where that declaration came from, which exact-owner-private and inherited directories apply, how many
 project-wide declarations are available, and whether the result is complete.
 
 ### Follow composed macro dependencies
@@ -179,7 +179,7 @@ Scope
 
 Used (3)
   ├─ ● macro:add_tax  [macro; global; dependency; params 1]  macros/currency.py:1:1
-  ├─ ● macro:formatted_order_total  [macro; inherited; inherited_ancestor; params 1]  models/commerce/_macros/orders.py:5:1
+  ├─ ● macro:formatted_order_total  [macro; descendant-public; inherited_ancestor; params 1]  models/commerce/macros/orders.py:5:1
   └─ ● macro:round_money  [macro; global; dependency; params 1]  macros/currency.py:5:1
 ```
 
@@ -192,13 +192,13 @@ Explain the composed macro to inspect its direct graph and placement facts:
 ```console
 $ sqb scope model:orders --explain macro:formatted_order_total
 Explanation
-  └─ ● macro:formatted_order_total  [macro; inherited; inherited_ancestor; params 1]  models/commerce/_macros/orders.py:5:1
+  └─ ● macro:formatted_order_total  [macro; descendant-public; inherited_ancestor; params 1]  models/commerce/macros/orders.py:5:1
      Owner: (none)
      Owning path: models/commerce
      Consumers: model:orders, model:returns
      Dependencies: macro:add_tax, macro:round_money
      Grants: (none)
-     Required scope: inherited
+     Required scope: descendant-public
      Required path: models/commerce
      Promotion impact: (none)
 ```

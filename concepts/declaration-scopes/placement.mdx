@@ -1,6 +1,6 @@
 ---
 title: "Where to Put Declarations"
-description: "Choose project-wide, inherited, exact-local, or model-private placement."
+description: "Choose project-wide, descendant-public, exact-owner-private, or model-private placement."
 ---
 
 Start with the ordinary project-wide directories unless you have a reason to limit access:
@@ -19,8 +19,8 @@ folders.
 | Where it is needed | Location |
 |--------------------|----------|
 | One model only | Inside that model's `MODEL()` header, for enums and constants |
-| SQL files directly in one directory | `_local_macros/`, `_local_enums/`, or `_local_constants/` |
-| A directory and its descendants | `_macros/`, `_enums/`, or `_constants/` |
+| SQL files directly in one directory | `_macros/`, `_enums/`, or `_constants/` |
+| A directory and its descendants | `macros/`, `enums/`, or `constants/` |
 | Different trees, such as models and tests | Top-level `macros/`, `enums/`, or `constants/` |
 
 ## One directory
@@ -30,13 +30,13 @@ These two models use the same constant and both sit directly in `commerce/`:
 ```text
 models/
 └── commerce/
-    ├── _local_constants/
+    ├── _constants/
     │   └── minimum_value.sql
     ├── orders.sql
     └── customers.sql
 ```
 
-Use `_local_constants/` because no descendant directory needs the value.
+Use `_constants/` because no descendant directory needs the value.
 
 ## One directory tree
 
@@ -45,7 +45,7 @@ These models use the same constant across two child directories:
 ```text
 models/
 └── commerce/
-    ├── _constants/
+    ├── constants/
     │   └── reporting_day.sql
     ├── finance/
     │   └── revenue.sql
@@ -53,7 +53,7 @@ models/
         └── shipments.sql
 ```
 
-Use `_constants/` in `commerce/` so both child directories inherit it.
+Use `constants/` in `commerce/` so both child directories inherit it.
 
 ## Different resource trees
 
@@ -69,16 +69,17 @@ my_project/
     └── scenarios/order_lifecycle.sql
 ```
 
-Top-level placement is also valid when you deliberately want a stable, easy-to-discover project API.
-SQLBuild does not force a used project-wide declaration into a narrower directory.
+Top-level placement is valid when consumers genuinely cross ownership or resource-tree boundaries.
+SQLBuild applies the same lowest-common-owner analysis to globals, so a declaration used only under
+one narrower owner must move into that owner's public or private role.
 
 ## What SQLBuild checks
 
 Every declaration must be used by real compiled SQL. A name appearing only in a comment, quoted
 string, mock identity, or documentation does not count as use.
 
-For declarations already placed in `_.../` or `_local_.../` directories, SQLBuild checks that the
-location matches the files that use them. If not, the error shows:
+For every declaration, including project-wide declarations, SQLBuild checks that the location
+matches the lowest common owner of the files that use it. If not, the error shows:
 
 - Where the declaration is now
 - Which files use it

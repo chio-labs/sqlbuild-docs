@@ -37,7 +37,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | SQL architecture policy | Opt-in Kata rules over compiled models with coded faults, remediations, suppressions, and custom rules | Project conventions through packages and external tooling | Built-in audits and external linting |
 | SQL transpilation | For local E2E replay into DuckDB | No | For cross-dialect model execution |
 | Python macros | `@macro()` syntax | No (Jinja only) | SQLMesh macro syntax |
-| Compiler-enforced declaration scopes | Global, inherited, local, and model-private tiers with offline `sqb scope` inspection | No lexical declaration scopes | No lexical declaration scopes |
+| Compiler-enforced declaration scopes | Project, descendant-public, exact-owner-private, and model-private tiers with offline `sqb scope` inspection | No lexical declaration scopes | No lexical declaration scopes |
 | Jinja support | No (Python macros instead) | Yes (core templating) | Yes |
 
 ### Incremental
