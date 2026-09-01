@@ -5,12 +5,13 @@ description: "See which enums, constants, and macros are available to each SQL f
 
 For most SQL, the rule is simple:
 
-> A file can use project-wide declarations, declarations published from unprefixed role directories
-> above it, and declarations in an underscored role directory directly beside it.
+> A file can use declarations available to the whole project, declarations in unprefixed role
+> folders beside or above it, and declarations in an underscored role folder directly beside it.
 
 ## Start from the SQL file
 
-SQLBuild starts from the file containing the SQL and walks up that file's directory tree.
+SQLBuild starts from the file containing the SQL and walks up that file's directory tree. The folder
+directly containing the file is its **owner folder**.
 
 ```text
 models/
@@ -50,10 +51,11 @@ Scoped declaration directories can be placed below these SQL resource roots:
 | `audits/` | Audits |
 | `sources/` | Inline source expressions |
 
-Each root is a separate tree. For example, `models/constants/` does not flow into `tests/`. Put a
-declaration in the top-level `constants/`, `enums/`, or `macros/` directory when it must be available
-across different resource trees. Project-root `_constants/`, `_enums/`, and `_macros/` directories
-are invalid because there is no narrower project owner for them to be private to.
+Each root is a separate tree. For example, `models/constants/` does not make declarations available
+under `tests/`. Put a declaration in the top-level `constants/`, `enums/`, or `macros/` directory
+when it must be available across different resource trees. Project-root `_constants/`, `_enums/`,
+and `_macros/` directories are invalid because there is no owner folder at the project root for
+them to be private to.
 
 ## Which file controls visibility?
 
@@ -70,10 +72,10 @@ are invalid because there is no narrower project owner for them to be private to
 This means a reusable named hook does not change meaning depending on which model calls it. The
 hook uses declarations available where the hook itself is stored.
 
-## Tests and expected models
+## Tests and expected output
 
-A test first sees declarations available from the test file's own directory. It may also use public
-enums and constants available to a model for which it defines expected output.
+A test first sees declarations available from its own folder tree. It may also use public enums and
+constants available to a model for which it defines expected output.
 
 ```sql
 TEST();
@@ -87,9 +89,9 @@ __expected__orders AS (
 SELECT 1
 ```
 
-Because the test defines `__expected__orders`, it may use public enums and constants available to
-the `orders` model. This makes it possible for expected rows to use the same domain values as the
-model they check.
+Because the test defines `__expected__orders`, that expected-output section may use public enums and
+constants available to `orders`. Scope Explorer describes this as **available through expected
+output for model `orders`**. This is an additional relationship, not another visibility level.
 
 This additional access does **not** include:
 
@@ -97,9 +99,9 @@ This additional access does **not** include:
 - Enums or constants declared privately inside the model's `MODEL()` header
 - Declarations from a model merely mentioned by filename or directory layout
 
-Only an explicit `__expected__model_name` relationship adds the model's public enums and constants.
-When a test checks several models, it can use the public enums and constants available to each of
-those models.
+Only an explicit `__expected__model_name` section adds the model's public enums and constants. When
+a test checks several models, each expected-output section can use the public enums and constants
+available to that model.
 
 ## Macros importing macros
 

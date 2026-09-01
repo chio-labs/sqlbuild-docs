@@ -1,6 +1,6 @@
 ---
 title: "Where to Put Declarations"
-description: "Choose project-wide, descendant-public, exact-owner-private, or model-private placement."
+description: "Choose the narrowest folder that contains every real use."
 ---
 
 Start with the ordinary project-wide directories unless you have a reason to limit access:
@@ -11,8 +11,8 @@ enums/
 constants/
 ```
 
-Use scoped directories when a declaration should be available only within one folder or its child
-folders.
+Move a declaration closer to its users when it should be available only in one folder or one folder
+tree.
 
 ## Choose a location
 
@@ -53,7 +53,7 @@ models/
         └── shipments.sql
 ```
 
-Use `constants/` in `commerce/` so both child directories inherit it.
+Use `constants/` in `commerce/` so both child directories can use it.
 
 ## Different resource trees
 
@@ -69,17 +69,17 @@ my_project/
     └── scenarios/order_lifecycle.sql
 ```
 
-Top-level placement is valid when consumers genuinely cross ownership or resource-tree boundaries.
-SQLBuild applies the same lowest-common-owner analysis to globals, so a declaration used only under
-one narrower owner must move into that owner's public or private role.
+Top-level placement is valid when consumers genuinely cross resource trees or otherwise have no
+shared owner folder. SQLBuild applies the same nearest-shared-folder analysis to project-wide
+declarations, so a declaration used only under one narrower folder must move closer to those users.
 
 ## What SQLBuild checks
 
 Every declaration must be used by real compiled SQL. A name appearing only in a comment, quoted
 string, mock identity, or documentation does not count as use.
 
-For every declaration, including project-wide declarations, SQLBuild checks that the location
-matches the lowest common owner of the files that use it. If not, the error shows:
+For every declaration, including project-wide declarations, SQLBuild finds the nearest shared owner
+folder of the files that use it. If the declaration is in a broader location, the error shows:
 
 - Where the declaration is now
 - Which files use it
