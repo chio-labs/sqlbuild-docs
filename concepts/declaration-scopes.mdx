@@ -10,12 +10,15 @@ When an enum, constant, or macro should be available only within one folder or i
 you can keep it near the SQL that uses it. SQLBuild uses the declaration directory's location to
 decide which files can access it. No TOML configuration is required.
 
-| Scope | Declaration form | Visibility |
-|-------|------------------|------------|
-| Project-wide | `macros/`, `constants/`, `enums/` | Every supported SQL surface |
-| Descendant-public | Nested `macros/`, `constants/`, `enums/` | Owning path and every descendant |
-| Exact-owner private | Nested `_macros/`, `_constants/`, `_enums/` | Direct children of one owning path |
-| Model-private | Underscore-prefixed constants and enums in `MODEL()` | One model and its inline SQL hooks |
+| Where the declaration lives | Who can use it |
+|-------------------------------------|--------------------|
+| Top-level `macros/`, `constants/`, or `enums/` | The whole project |
+| Nested `macros/`, `constants/`, or `enums/` | Files in that folder and folders below it |
+| Nested `_macros/`, `_constants/`, or `_enums/` | Files directly in that folder only |
+| An underscored constant or enum inside `MODEL()` | That model and its inline SQL hooks only |
+
+Macro declarations are Python files (`.py`). Constant and enum declarations are SQL files
+(`.sql`).
 
 ## Example
 
@@ -39,26 +42,46 @@ models/
         └── shipments.sql       sees warehouse and currency
 ```
 
-A nested public role applies at its location and below it. An underscored private role applies only
-to SQL files directly beside it. The same unprefixed role name is project-wide only when it is at
-the project root.
+A nested unprefixed role applies to its folder and everything below it. An underscored role applies
+only to files directly beside it. The same unprefixed role name applies to the whole project only
+when it is at the project root.
 
 | Resource | Visible from the example tree | Not visible |
 |----------|-------------------------------|-------------|
-| `orders.sql` | Warehouse constant, commerce macro, commerce-local enum | Finance macro |
-| `finance/revenue.sql` | Warehouse constant, commerce macro, finance macro | Commerce-local enum |
-| `fulfillment/shipments.sql` | Warehouse constant, commerce macro | Commerce-local enum, finance macro |
+| `orders.sql` | Warehouse constant, commerce macro, commerce-folder-only enum | Finance macro |
+| `finance/revenue.sql` | Warehouse constant, commerce macro, finance macro | Commerce-folder-only enum |
+| `fulfillment/shipments.sql` | Warehouse constant, commerce macro | Commerce-folder-only enum, finance macro |
 
 Declarations do not flow upward or sideways into sibling directories.
 
-## Choose a scope
+## Terms used in text output
 
-| Where the value is needed | Choose | Placement |
-|----------------|--------|-----------|
-| One model only | Model-private | In that model's `MODEL()` header |
-| One exact directory | Exact-owner private | Beside the consumers in an underscored role |
-| Multiple directories in one resource tree | Descendant-public | At their lowest common ancestor |
-| Different resource trees, such as models and tests | Project-wide | Top-level declaration root |
+The CLI's text output uses short labels for the same four rules:
+
+| Canonical label | Plain-language meaning |
+|-----------------|------------------------|
+| `project` | Available throughout the project |
+| `descendant-public` | Available in this folder and folders below it |
+| `exact-owner-private` | Available directly in this folder only |
+| `model-private` | Available to one model only |
+
+Here, an **owner folder** is simply the folder directly containing a model, test, hook, function, or
+other authored resource. The [Scope Explorer](/concepts/declaration-scopes/explorer) shows the owner
+folder, its parents, and project-wide declarations separately.
+
+JSON keeps the underlying enum values for integrations. Its `scope` field uses `global`,
+`inherited`, `local`, or `private`, while derived `visibility` values use underscores, such as
+`descendant_public` and `exact_owner_private`. Consumers should use the fields documented in the
+versioned JSON schema rather than parsing text labels.
+
+## Choose a location
+
+| Where the value is needed | Placement |
+|---------------------------|-----------|
+| One model only | In that model's `MODEL()` header |
+| Files directly in one folder | In an underscored role beside those files |
+| Files across one folder tree | In an unprefixed role at their nearest shared parent folder |
+| Different resource trees, such as models and tests | In a top-level declaration role |
 
 SQLBuild computes the lowest common owner of every declaration's runtime consumers. A project-wide
 declaration is valid only when no narrower supported owner contains all consumers. This keeps the
@@ -71,7 +94,7 @@ top-level roles as a genuine project API instead of a neutral dumping ground.
     See which declarations a model, test, hook, or function can use.
   </Card>
   <Card title="Where to Put Declarations" icon="location-dot" href="/concepts/declaration-scopes/placement">
-    Choose between project-wide, descendant-public, exact-owner-private, and model-private placement.
+    Choose the narrowest folder that contains every real use.
   </Card>
   <Card title="Scope Explorer" icon="compass" href="/concepts/declaration-scopes/explorer">
     Ask SQLBuild what a file can use and preview how moving it would change that answer.
