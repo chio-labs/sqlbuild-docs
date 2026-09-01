@@ -74,8 +74,8 @@ hook uses declarations available where the hook itself is stored.
 
 ## Tests and expected output
 
-A test first sees declarations available from its own folder tree. It may also use public enums and
-constants available to a model for which it defines expected output.
+A test first sees declarations available from its own folder tree. It may also use file-based enums
+and constants available to a model for which it defines expected output.
 
 ```sql
 TEST();
@@ -89,9 +89,10 @@ __expected__orders AS (
 SELECT 1
 ```
 
-Because the test defines `__expected__orders`, that expected-output section may use public enums and
-constants available to `orders`. Scope Explorer describes this as **available through expected
-output for model `orders`**. This is an additional relationship, not another visibility level.
+Because the test defines `__expected__orders`, the test may use file-based enums and constants
+available to `orders`, including declarations in exact-folder `_enums/` and `_constants/` roles.
+Scope Explorer describes this as **available through expected output for model `orders`**. This is
+an additional relationship, not another visibility level.
 
 This additional access does **not** include:
 
@@ -99,9 +100,9 @@ This additional access does **not** include:
 - Enums or constants declared privately inside the model's `MODEL()` header
 - Declarations from a model merely mentioned by filename or directory layout
 
-Only an explicit `__expected__model_name` section adds the model's public enums and constants. When
-a test checks several models, each expected-output section can use the public enums and constants
-available to that model.
+Only an explicit `__expected__model_name` section adds the model's eligible file-based enums and
+constants. When a test checks several models, SQLBuild combines the declarations available through
+all expected models and makes that deterministic union available while compiling the entire test.
 
 ## Macros importing macros
 

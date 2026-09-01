@@ -54,9 +54,9 @@ when it is at the project root.
 
 Declarations do not flow upward or sideways into sibling directories.
 
-## Terms used by inspection tools
+## Terms used in text output
 
-The CLI and JSON API use short canonical labels for the same four rules:
+The CLI's text output uses short labels for the same four rules:
 
 | Canonical label | Plain-language meaning |
 |-----------------|------------------------|
@@ -68,6 +68,11 @@ The CLI and JSON API use short canonical labels for the same four rules:
 Here, an **owner folder** is simply the folder directly containing a model, test, hook, function, or
 other authored resource. The [Scope Explorer](/concepts/declaration-scopes/explorer) shows the owner
 folder, its parents, and project-wide declarations separately.
+
+JSON keeps the underlying enum values for integrations. Its `scope` field uses `global`,
+`inherited`, `local`, or `private`, while derived `visibility` values use underscores, such as
+`descendant_public` and `exact_owner_private`. Consumers should use the fields documented in the
+versioned JSON schema rather than parsing text labels.
 
 ## Choose a location
 

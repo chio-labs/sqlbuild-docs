@@ -50,8 +50,8 @@ both finance declarations. This gives every scoped declaration a real consumer a
 ## See available and used declarations
 
 Start with a model, test, scenario, hook, function, audit, source, or authored resource path to
-inspect its directory-derived scope. A declaration identity instead opens its explanation. These
-main sections from a resource report put actual usage beside the complete directory-derived scope:
+inspect its directory-derived scope. A declaration identity instead opens its explanation. This
+excerpt of the main report sections puts actual usage beside the complete directory-derived scope:
 
 ```console
 $ sqb scope model:orders
@@ -195,9 +195,10 @@ shows whether the declaration is placed more broadly than its real consumers req
 
 ## See declarations available through expected output
 
-Tests and scenarios can use public enums and constants available to a model when they define that
-model's expected output. That access remains separate from declarations visible through the test's
-own folder tree. The relevant report sections are:
+Tests and scenarios can use file-based enums and constants available to a model when they define
+that model's expected output. This includes eligible exact-folder declarations, but not declarations
+inside `MODEL()`. The access applies to the whole test or scenario and remains separate from
+declarations visible through its own folder tree. The relevant report sections are:
 
 ```console
 $ sqb scope test:orders__completed_only --used-only
@@ -209,8 +210,9 @@ Relationship grants (1 of 1)
 ```
 
 The compact reason `expected_model through model:orders` means **available through expected output
-for model `orders`**. This relationship grants public enums and constants, not macros or
-model-private declarations.
+for model `orders`**. With multiple expected models, SQLBuild combines their eligible file-based
+enums and constants into one deterministic set for the test or scenario. These relationships do
+not grant macros or declarations defined inside a model's `MODEL()` header.
 
 ## Preview a resource move
 
@@ -271,6 +273,12 @@ Available (3 of 5, 2 collapsed)
   ├─ ○ enum:order_status  [enum; descendant-public; inherited_ancestor; members 4; type VARCHAR; role models/commerce/enums]  models/commerce/enums/status.sql:1:1
   └─ ○ macro:formatted_order_total  [macro; descendant-public; inherited_ancestor; params 1; role models/commerce/macros]  models/commerce/macros/orders.py:4:1
   … 2 globals collapsed; run sqb scope --at models/commerce/returns/new_return.sql --globals all
+
+Relationship grants (0 of 0)
+  (none)
+
+Nearby unavailable (0 of 0)
+  (none)
 
 Diagnostics (1)
   ERROR S013 models/commerce/returns/new_return.sql: Runtime usage and relationship facts are unavailable for a prospective path

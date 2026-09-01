@@ -83,7 +83,7 @@ The default text report keeps distinct facts in distinct sections:
 
 - **Available** contains declarations visible through the resource's own lexical path.
 - **Used** contains declarations consumed by the resource, including tracked declaration dependencies.
-- **Relationship grants** contains public enums and constants made available through expected-output sections in a test or scenario.
+- **Relationship grants** contains eligible file-based enums and constants made available through expected-output sections in a test or scenario.
 - **Nearby unavailable** is opt-in and explains close declarations that are outside the target's scope.
 - **Scope chain** starts with the resource's owner folder, then shows parent folders and the project
   declaration roles. Its compact labels identify the access rule checked at each path.
@@ -232,12 +232,15 @@ sqb scope model:stg_orders --used-only
 ## Expected-output access
 
 Tests and scenarios have two independent ways to reach declarations. Their own folder paths provide
-ordinary visibility. Each explicit `__expected__<model>` section can also use the public enums and
-constants available to that model.
+ordinary visibility. Each explicit `__expected__<model>` section adds the eligible file-based enums
+and constants available to that model. This includes exact-folder `_enums/` and `_constants/`
+declarations, despite their private visibility label.
 
 `sqb scope` reports this additional access separately under **Relationship grants** and names the
-model that provides it. It never includes macros or model-private declarations. A test filename,
-mirrored path, or mock does not provide this access by itself.
+model that provides it. With multiple expected models, SQLBuild makes the deterministic union of
+their eligible declarations available while compiling the whole test or scenario. It never includes
+macros or declarations defined inside a model's `MODEL()` header. A test filename, mirrored path,
+or mock does not provide this access by itself.
 
 ```bash
 sqb scope test:orders__completed_only
