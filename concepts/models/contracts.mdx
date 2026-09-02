@@ -3,12 +3,22 @@ title: "Contracts"
 description: "Validate required or exact model output schemas."
 ---
 
-A model's declared columns describe expected output metadata. The `contract` policy determines whether SQLBuild treats that declaration as an open shape or a complete exact shape.
+A model's declared columns provide output metadata, type enforcement, and column audit attachment. The project `column_contract_mode` and model `contract` policy determine whether those declarations also define a statically validated output shape.
 
-| Value | Behavior |
-|-------|----------|
-| `none` | Statically check declared columns when SQLBuild can infer the output; allow undeclared output columns. This is the default. |
+| Model declaration | Behavior |
+|-------------------|----------|
+| Unspecified | Follow `settings.column_contract_mode`: `implicit` validates declared columns as an open shape; `explicit` treats them as metadata and audit attachment only. |
+| `none` | Do not activate declared-shape or nullability contract validation for this model. Explicit type enforcement remains active. |
 | `enforced` | Treat declared columns as the complete authoritative output shape and enable runtime exact-schema checks on supported materializations. |
+
+The project default is `column_contract_mode = "implicit"`, which preserves SQLBuild's original behavior. Projects that use column declarations primarily for metadata and audits, including migrations from dbt, can opt into explicit contracts:
+
+```toml
+[settings]
+column_contract_mode = "explicit"
+```
+
+Under explicit mode, a model must declare `contract enforced` to activate shape validation. A model-level `contract enforced` or `contract none` always overrides the project mode.
 
 ```sql
 MODEL (
@@ -27,14 +37,16 @@ MODEL (
 
 ### Compile time
 
-When SQL analysis can infer the model's output, both contract policies check declared columns against that inference:
+When declared-shape validation is active and SQL analysis can infer the model's output:
 
 - A missing declared column fails.
 - A proven type mismatch fails when type enforcement or an exact contract is active.
 - A declared non-null column fails when its expression is proven nullable.
 - Additional inferred columns fail only for `contract enforced`.
 
-If SQLBuild cannot infer the output shape, these static shape checks cannot run. `contract none` does not add a later runtime requirement. An enforced contract additionally requires a non-empty column declaration.
+If SQLBuild cannot infer the output shape, these static shape checks cannot run. An enforced contract additionally requires a non-empty column declaration and adds runtime requirements on supported materializations.
+
+Type enforcement remains independent. Typed columns continue to receive static type checks and supported runtime casts under explicit mode and `contract none`.
 
 Configuration fields that reference output columns, including `unique_key`, `cursor`, `updated_at`, and `check_columns`, are checked against an enforced declaration.
 
@@ -76,7 +88,7 @@ MODEL (
 );
 ```
 
-With `contract enforced`, this requires exactly the resolved `order` columns plus `ingestion_batch_id`. With `contract none`, SQLBuild checks those columns when static inference is available and permits further output. See [Schemas](/concepts/models/schemas).
+With `contract enforced`, this requires exactly the resolved `order` columns plus `ingestion_batch_id`. With `contract none`, the resolved columns remain metadata, audit attachment points, and inputs to explicit type enforcement without activating shape validation. See [Schemas](/concepts/models/schemas).
 
 ## Enum columns
 
@@ -97,6 +109,6 @@ Enum member references such as `@enum("market_type").WIN` are a separate feature
 
 ## Related policies
 
-The core default is `contract none`. A repository can enable [`SQBKR401`](/concepts/kata#layers-and-model-grammar) to require enforced contracts through Kata architecture policy.
+The project default is implicit open-shape validation for models that omit `contract`. A repository can select explicit opt-in contracts with `settings.column_contract_mode = "explicit"` or enable [`SQBKR401`](/concepts/kata#layers-and-model-grammar) to require enforced contracts through Kata architecture policy.
 
 Contracts also constrain schema-change behavior. For example, `snapshot_schema_change append_new_columns` is incompatible with `contract enforced` because an unannounced appended column would violate the exact declaration.
