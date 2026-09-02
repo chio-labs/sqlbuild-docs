@@ -283,6 +283,7 @@ Global feature toggles:
 sql_analysis = true
 query_change_tracking = true
 sql_validation = true
+column_contract_mode = "implicit"
 concurrency = 1
 auto_load_sources = true
 table_promotion_mode = "staged"
@@ -297,6 +298,7 @@ default_audit_run_scope = "final"
 | `virtual_environments` | `false` | Enable [virtual environments](/concepts/virtual-environments) (versioned model outputs, promotion, rollback, state management). When `false`, the project runs in direct mode. |
 | `query_change_tracking` | `true` | Track query fingerprints for change detection |
 | `sql_validation` | `true` | Validate SQL syntax during compilation |
+| `column_contract_mode` | `implicit` | Controls whether column declarations on models without a `contract` declaration activate static shape/nullability validation. `implicit` preserves that validation; `explicit` treats columns as metadata and audit attachment unless the model declares `contract enforced`. Model-level `contract enforced` and `contract none` override this setting. Explicit type enforcement remains independent. See [Contracts](/concepts/models/contracts). |
 | `concurrency` | `1` | Maximum parallel model execution (currently serial only) |
 | `auto_load_sources` | `true` | Automatically run source loaders before building dependent models during `sqb build`. See [Loaders](/concepts/python-nodes/loaders). |
 | `table_promotion_mode` | adapter default | `staged` (CTAS to staging, audit, then promote) or `immediate` (CTAS directly to target, then audit) |

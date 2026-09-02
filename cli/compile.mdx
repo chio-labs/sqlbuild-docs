@@ -37,7 +37,7 @@ sqb --project-dir <path> compile [flags]
 When SQL analysis is enabled (default), compile performs static analysis on your models without connecting to the warehouse:
 
 - **Column inference**: Infers output columns from each model's SQL, including through CTEs, subqueries, and JOINs
-- **Column contract validation**: If a model declares columns in its `MODEL()` header, compile checks that every declared column exists in the query output. If a column declares a type and `type_enforcement` is enabled, compile also verifies the inferred type matches the declared type
+- **Column contract validation**: Under the default `settings.column_contract_mode = "implicit"`, a model with declared columns and no model-level `contract` declaration checks that every declared column exists in the statically inferred query output. `explicit` mode requires `contract enforced` to activate shape checks. Explicit type enforcement remains independent and verifies inferred types when possible
 - **Column lineage**: Traces which source columns flow into each output column, including transform classification. See [Column Lineage](/concepts/column-lineage) for details
 
 <Note>
@@ -51,13 +51,15 @@ automatically by `compile`.
 When a contract violation is found, compile reports it with source-annotated diagnostics:
 
 ```
-error[K001]: required column 'total_cents' missing from model output
+error[K001]: declared column 'total_cents' was not found in statically inferred output for model 'fact_orders'
   model: fact_orders
-  --> models/marts/fact_orders.sql:5:3
-  5 | SELECT order_id, customer_id
-    |        ^^^^^^^^
-  = help: add total_cents to the SELECT list or remove it from MODEL(columns)
+  --> models/marts/fact_orders.sql:6:5
+  6 |     total_cents (),
+    |     ^^^^^^^^^^^
+  = help: add total_cents to the SELECT list or correct/remove MODEL(columns (...)); MODEL(columns (...)) is validated using static SQL analysis because settings.column_contract_mode is "implicit" (the default). If this project intentionally uses columns only for metadata and audits, set [settings] column_contract_mode = "explicit"; models with contract enforced remain validated
 ```
+
+The configuration guidance is an intentional project-policy choice, not a general error suppression. Fix the query or declaration when the model is intended to have a column contract. Diagnostics for `contract enforced` models do not recommend changing the project mode because explicit model contracts remain authoritative.
 
 Diagnostic codes:
 
