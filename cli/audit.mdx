@@ -41,10 +41,14 @@ and exclusively uses one warehouse connection, so higher concurrency can increas
 and cost. Results and final JSON remain in plan order even when queries finish in a different
 order.
 
-If execution is interrupted or a query raises an infrastructure error, SQLBuild stops scheduling
-new audits, drains queries that have already started, and then closes every worker connection.
-Generic adapters cannot guarantee immediate cancellation of a query already running in the
-warehouse.
+If an audit query raises a runtime, adapter, or framework error, SQLBuild records that failure and
+continues running the remaining independent audits. After all selected audits have been attempted,
+it reports every query failure in plan order and exits nonzero. Failed queries do not produce
+fabricated audit results.
+
+Interruption and cancellation are different: SQLBuild stops scheduling new audits, drains queries
+that have already started, and then closes every worker connection. Generic adapters cannot
+guarantee immediate cancellation of a query already running in the warehouse.
 
 ## Examples
 
