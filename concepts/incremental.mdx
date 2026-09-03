@@ -215,6 +215,51 @@ Without microbatch mode, the entire replay range is processed in one pass.
 
 `batch_size` controls the window size for each batch. For timestamp cursors, use duration strings like `1d`, `6h`, `1mo`. For integer cursors, use an integer value.
 
+### Watermark batch limits
+
+Watermark microbatch models can declare what to do when their resolved range contains more batches than an ordinary run should process:
+
+```sql
+MODEL (
+  materialized incremental,
+  incremental_strategy delete_insert,
+  incremental_mode microbatch,
+  microbatch_strategy watermark,
+  cursor_watermark_mode all,
+  cursor event_date,
+  cursor_type timestamp,
+  cursor_grain day,
+  batch_size 1d,
+  microbatch_limit (
+    max_batches 7,
+    action cap_from_end,
+  ),
+);
+```
+
+| Action | Behavior when the range exceeds `max_batches` |
+|--------|------------------------------------------------|
+| `error` | Fail before hooks or model mutation |
+| `warn` | Emit a prominent warning and execute the full range |
+| `cap_from_start` | Execute the earliest N aligned batches and defer later work |
+| `cap_from_end` | Execute the latest N aligned batches ending at the resolved watermark and defer older work |
+
+A cap changes only the work selected for that invocation. Deferred batches are not recorded as complete. `cap_from_end` is useful for feeds where keeping the latest projection current is more important than catching up oldest-first; `cap_from_start` is the oldest-first catch-up policy.
+
+The project can also set an outer safety policy:
+
+```toml
+[microbatches.limits]
+max_batches = 100
+action = "error" # or "warn"
+```
+
+Project limits support only `error` and `warn`; they never silently cap work. When a model has a nested `microbatch_limit`, the project policy checks the full resolved range first and the model policy then applies.
+
+`--max-microbatches N` is an invocation-wide, hard `error` ceiling and an explicit one-run authorization. It takes precedence over project and model limits, applies to models without a declared limit, and never inherits `cap_from_start` or `cap_from_end`. For example, passing a value large enough for an intentional backfill authorizes the full range instead of retaining the model's ordinary-run cap.
+
+The legacy scalar `max_microbatches` model field remains supported as a fail/warn guard. New models should use the nested form when the action is part of the model's execution policy.
+
 ### Mixed-grain chains
 
 When a downstream microbatch model reads from an upstream model with a coarser time grain, SQLBuild aligns the replay to the coarsest participating grain (the model's own grain and its cursor-input grains). This happens on every run that resolves cursor bounds from upstream models, not only when something changes. It is independent of the `replay_on_change` cascade behavior described below.
