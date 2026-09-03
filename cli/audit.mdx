@@ -21,6 +21,30 @@ sqb --project-dir <path> audit [flags]
 | `--defer-to` | Resolve model references against another target |
 | `--select`, `-s` | Select audits attached to specific models |
 | `--exclude` | Exclude audits attached to specific models |
+| `--concurrency` | Maximum number of audits to run concurrently (default: `1`) |
+
+## Concurrency
+
+Standalone audits run serially by default. Use `--concurrency` to opt into parallel warehouse
+queries:
+
+```bash
+sqb audit --concurrency 8
+```
+
+SQLBuild resolves the limit in this order: an explicit `--concurrency` value, the
+`SQLBUILD_CONCURRENCY` environment variable, the effective project `settings.concurrency`, then
+the product default of `1`. Values must be at least `1`.
+
+The physical worker count is bounded by the number of selected audits. Each active worker opens
+and exclusively uses one warehouse connection, so higher concurrency can increase warehouse load
+and cost. Results and final JSON remain in plan order even when queries finish in a different
+order.
+
+If execution is interrupted or a query raises an infrastructure error, SQLBuild stops scheduling
+new audits, drains queries that have already started, and then closes every worker connection.
+Generic adapters cannot guarantee immediate cancellation of a query already running in the
+warehouse.
 
 ## Examples
 
@@ -30,4 +54,7 @@ sqb audit
 
 # Run audits for marts only
 sqb audit --select path:models/marts
+
+# Run up to 8 audit queries concurrently
+sqb audit --concurrency 8
 ```
