@@ -94,7 +94,7 @@ MODEL (
   materialized table,
   audits [
     expression_is_true (
-      name "revenue is non-negative",
+      name "revenue_is_non_negative",
       expression "total_revenue_cents >= 0",
     ),
   ],
@@ -103,12 +103,15 @@ MODEL (
 
 ## Singular audits
 
-Singular audits are standalone SQL files under `audits/` (outside the `generic/` directory) that reference models directly. They're useful for one-off checks that don't fit a reusable template.
+Singular audits are standalone SQL files. Their canonical home is `audits/singular/`, and they
+reference models directly. They're useful for one-off checks that don't fit a reusable template.
+For backward compatibility, singular audits directly under `audits/` or another non-`generic`
+child directory continue to compile.
 
 ```sql
--- audits/orders_have_payments.sql
+-- audits/singular/orders_have_payments.sql
 AUDIT (
-  name "completed orders have payments",
+  name "completed_orders_have_payments",
   severity error
 );
 
@@ -135,7 +138,7 @@ sources:
           - unique
     audits:
       - expression_is_true:
-          name: no future orders
+          name: no_future_orders
           expression: "ordered_at <= CURRENT_TIMESTAMP"
 ```
 
@@ -181,7 +184,7 @@ MODEL (
   ),
   audits [
     expression_is_true (
-      name "orders placed is non-negative",
+      name "orders_placed_is_non_negative",
       expression "orders_placed >= 0",
       run_scope delta_and_final,
     ),
