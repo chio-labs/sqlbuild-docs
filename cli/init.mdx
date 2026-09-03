@@ -44,9 +44,14 @@ my-project/
     python/
   macros/
   audits/
+    generic/
+    singular/
 ```
 
-Empty directories contain `.gitkeep` files so the scaffold can be committed. Add reusable SQL lifecycle hooks to `hooks/sql/` and decorated Python lifecycle hooks to `hooks/python/`; see [Hooks](/concepts/models/hooks).
+Empty directories contain `.gitkeep` files so the scaffold can be committed. Reusable attached
+audit definitions belong in `audits/generic/`; standalone audits belong in `audits/singular/`.
+Add reusable SQL lifecycle hooks to `hooks/sql/` and decorated Python lifecycle hooks to
+`hooks/python/`; see [Hooks](/concepts/models/hooks).
 
 The generated project uses DuckDB, creates a named `local` connection shared by `dev` and
 `prod`, and defaults models to table materialization. Its configuration follows this shape:

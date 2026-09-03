@@ -102,6 +102,16 @@ Context variables provide access to the current model's destination relation, ac
 post_hooks [inline_sql('GRANT SELECT ON @@CTX:destination.qualified TO analyst_role')],
 ```
 
+Context components can appear directly beside qualification dots. SQLBuild resolves the longest
+available context key before treating the dot as SQL punctuation:
+
+```sql
+CREATE FUNCTION @@CTX:destination.database.@@CTX:destination.schema.reconstruct_book()
+RETURNS INTEGER
+LANGUAGE SQL
+AS 'SELECT 1'
+```
+
 **In TOML/YAML config values** (`${CTX:...}` syntax):
 
 ```toml

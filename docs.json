@@ -34,6 +34,7 @@
         "group": "Concepts",
         "pages": [
           "concepts/project-configuration",
+          "concepts/resource-identities",
           {
             "group": "Adapters",
             "pages": [
