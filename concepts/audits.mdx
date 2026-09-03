@@ -210,3 +210,9 @@ sqb audit
 ```
 
 This runs all audits without rebuilding any models.
+
+Standalone audits run serially unless concurrency is configured explicitly, through
+`SQLBUILD_CONCURRENCY`, or in project settings. For example, `sqb audit --concurrency 8` runs up
+to eight selected audits at once, using one warehouse connection per active worker. Increase this
+limit deliberately because parallel queries can increase warehouse load and cost. See
+[`sqb audit`](/cli/audit) for precedence, ordering, and cancellation details.
