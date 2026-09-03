@@ -233,7 +233,7 @@ or repeat compiler diagnostics for malformed tests.
 | `SQBKT001` | Unit tests and scenarios use their compiler-owned canonical roots |
 | `SQBKT002` | Unit and scenario filenames identify their subject and behavior |
 | `SQBKT003` | Unit tests mirror resolved model, macro, UDF, or table-function ownership |
-| `SQBKT004` | Every `TEST` block has an explicit target-aware `subject: expected behavior` name |
+| `SQBKT004` | Every `TEST` block has an explicit target-aware `subject__expected_behavior` name |
 | `SQBKT101` | Scenario descriptions identify a concrete business behavior rather than generic case numbering |
 
 Select the family independently when adopting these conventions:
@@ -247,19 +247,20 @@ Every unit-test block, including the only block in a file, has an explicit name:
 
 ```sql
 TEST (
-  name "stg_orders: excludes cancelled orders",
+  name "stg_orders__excludes_cancelled_orders",
 );
 ```
 
-The first colon separates a nonempty subject from nonempty behavior. Later colons are ordinary
-behavior prose. Single-model subjects match the resolved expected model, direct-mode subjects match
-the tested macro, UDF, or table function, and multi-model subjects name the common domain or an
-explicit pipeline. Generic values such as `test`, `works`, `basic`, and `case 1` are rejected without
-maintaining a verb allowlist.
+The double underscore immediately following the resolved subject separates it from nonempty
+behavior. This keeps identities such as `race__mart_v_entry` valid as complete subjects.
+Single-model subjects match the resolved expected model, direct-mode subjects match the tested
+macro, UDF, or table function, and multi-model subjects name the common domain or an explicit
+pipeline. Single underscores separate words within either part. Generic values such as `test`,
+`works`, `basic`, and `case_1` are rejected without maintaining a verb allowlist.
 
 Unit filenames use either `test_<subject>.sql` or `test_<subject>__<behavior>.sql`. When a behavior
-suffix is present, it corresponds to the normalized behavior text; concise prefixes such as
-`excludes_cancelled` for `excludes cancelled orders` are valid. Scenario filenames omit the
+suffix is present, it corresponds to the behavior portion; concise prefixes such as
+`excludes_cancelled` for `excludes_cancelled_orders` are valid. Scenario filenames omit the
 redundant prefix and use `<subject>__<behavior>.sql`:
 
 ```text
