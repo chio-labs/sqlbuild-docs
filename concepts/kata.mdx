@@ -132,7 +132,7 @@ max_subdomain_depth = 2
 
 Kata detects ownership hidden in flattened underscore names with a compressed token trie. Unary
 token chains remain compound terms, so `order_status/` and `order_status_history/` identify
-`order_status` rather than `barrier`. Real branch points remain explicit: Partner annotation
+`order_status` rather than `order`. Real branch points remain explicit: partner annotation
 export, annotation validation, and events identify an outer `partner` owner and an inner
 `annotation` concern. Detection starts with two siblings by default:
 
@@ -294,12 +294,12 @@ Naming and layer rules can use a closed project vocabulary:
 ```toml
 [kata]
 domains = ["commerce", "support"]
-approved_source_tokens = ["partner", "stripe"]
+approved_source_tokens = ["web", "partner"]
 cte_name_whitelist = ["finalized_rows"]
 cte_name_denylist = ["scratch_result"]
 
 [kata.retired_source_tokens]
-old_crm = "partner"
+legacy_feed = "partner"
 ```
 
 Valid Kata layers are `stg`, `stg_v`, `int_clean`, `int_v`, `int_enriched`, `mart`, and
