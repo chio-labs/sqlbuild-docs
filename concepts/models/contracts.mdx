@@ -107,11 +107,53 @@ This does not require, create, or reference a warehouse-native enum type. SQLBui
 
 Enum member references such as `@enum("fulfillment_method").DELIVERY` are a separate feature that render one validated SQL literal. See [Enum Model Contracts](/concepts/enums/model-contracts) for the complete distinction and lowering behavior.
 
+## Adopting an existing schema
+
+Ordinary `sqb compile` validates authored contracts offline. To compare declarations with existing
+warehouse relations, use the explicitly online, read-only contract commands:
+
+```bash
+sqb contract diff --from prod --select tag:commerce
+sqb contract generate --from prod --select tag:commerce
+```
+
+The target named by `--from` supplies the database and schema namespace to inspect. SQLBuild uses
+the active project connection and never resolves a second set of origin credentials.
+
+### Preview and write
+
+`contract diff` returns exit code `1` when declarations and physical relations disagree.
+`contract generate` prints proposed declaration changes without changing files:
+
+```bash
+# Fill missing types and append physical columns missing from code
+sqb contract generate --from prod --select tag:commerce --write
+
+# Replace conflicting types/names and remove declarations absent physically
+sqb contract generate --from prod --select tag:commerce --write --overwrite
+```
+
+Contract commands never mutate warehouse relations, lifecycle state, or fingerprints.
+
+### Safety rules
+
+- Additive generation preserves existing types on conflict, repository-only columns, comments,
+  descriptions, audits, nullability, enums, tags, freshness, and loader configuration.
+- `--overwrite` is an explicit repository replacement policy, not a warehouse write.
+- Generation does not add `contract enforced`; activation remains an authored decision.
+- A shared `SCHEMA()` is not changed from one model's evidence. Ownership conflicts are reported.
+- Writes are atomic and SQLBuild recompiles the project, restoring prior contents if validation
+  fails.
+- Sources are first-class selectable resources, for example `--select source:raw_orders`.
+
+Enforced upstream contracts are authoritative compile-time interfaces. When input evidence is
+complete, missing or ambiguous columns fail in projections, joins, filters, grouping, windows, and
+ordering. Partial or opaque schemas remain open; SQLBuild does not turn missing metadata into a
+false error. Use `sqb lineage <model> --include-uses --format json` to inspect direct
+non-projection uses such as `join_on`, `where`, `group_by`, and `window_order_by`.
+
 ## Related policies
 
 The project default is implicit open-shape validation for models that omit `contract`. A repository can select explicit opt-in contracts with `settings.column_contract_mode = "explicit"` or enable [`SQBKR401`](/concepts/kata#layers-and-model-grammar) to require enforced contracts through Kata architecture policy.
 
 Contracts also constrain schema-change behavior. For example, `snapshot_schema_change append_new_columns` is incompatible with `contract enforced` because an unannounced appended column would violate the exact declaration.
-
-For an existing warehouse schema, use [Contract Adoption](/concepts/contract-adoption) to compare or
-generate repository declarations explicitly. Ordinary compilation remains offline.

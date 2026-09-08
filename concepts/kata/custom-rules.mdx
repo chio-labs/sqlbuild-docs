@@ -17,14 +17,14 @@ from sqlbuild.kata import KataFault, RuleContext, kata
 
 
 @kata(
-    code="XSQBKP001",
-    family="prices",
-    slug="typed-currency",
-    message="price models must declare a currency column",
-    remediation="Declare currency in the MODEL columns contract.",
+    code="XSQBKO001",
+    family="orders",
+    slug="customer-identity",
+    message="order models must declare a customer_id column",
+    remediation="Declare customer_id in the MODEL columns contract.",
 )
-def typed_currency(*, model, ctx: RuleContext) -> list[KataFault]:
-    if any(column.name == "currency" for column in ctx.declared_columns):
+def customer_identity(*, model, ctx: RuleContext) -> list[KataFault]:
+    if any(column.name == "customer_id" for column in ctx.declared_columns):
         return []
     return [ctx.path_fault()]
 ```
@@ -43,7 +43,7 @@ Load repository-owned files or dotted modules from `sqlbuild_project.toml`:
 
 ```toml
 [kata]
-select = ["XSQBKP001"]
+select = ["XSQBKO001"]
 rule_paths = ["kata/rules"]
 rule_modules = ["project_kata.rules"]
 ```
@@ -66,16 +66,16 @@ from sqlbuild.kata import KataFault, RuleContext, RuleOption, kata
 
 REQUIRED_DOMAIN = RuleOption.string(
     name="required_domain",
-    default="market",
-    description="Domain that owns price models",
+    default="commerce",
+    description="Domain that owns order models",
 )
 
 
 @kata(
-    code="XSQBKP002",
-    family="prices",
+    code="XSQBKO002",
+    family="orders",
     slug="required-domain",
-    message="price models must belong to the configured domain",
+    message="order models must belong to the configured domain",
     remediation="Move or rename this model for the configured domain.",
     options=(REQUIRED_DOMAIN,),
 )
@@ -90,8 +90,8 @@ Configure options under the exact rule code. Unknown rules, option names, or inv
 configuration:
 
 ```toml
-[kata.rule_options.XSQBKP002]
-required_domain = "finance"
+[kata.rule_options.XSQBKO002]
+required_domain = "commerce"
 ```
 
 ## Test every rule
@@ -102,20 +102,20 @@ structured fault evaluation:
 ```python
 from sqlbuild.kata import RuleCase, evaluate_rule
 
-from kata.rules.prices import typed_currency
+from kata.rules.orders import customer_identity
 
 
-def test_missing_currency_faults() -> None:
+def test_missing_customer_identity_faults() -> None:
     result = evaluate_rule(
-        rule=typed_currency,
+        rule=customer_identity,
         test_case=RuleCase(
-            description="missing currency faults",
+            description="missing customer identity faults",
             source=(
                 "MODEL (materialized table);\n\n"
-                "WITH final AS (SELECT 1 AS price)\n"
-                "SELECT price FROM final\n"
+                "WITH final AS (SELECT 1 AS order_id)\n"
+                "SELECT order_id FROM final\n"
             ),
-            path="models/mart/commerce__mart__prices.sql",
+            path="models/mart/commerce__mart__orders.sql",
             expected_fault_count=1,
         ),
     )

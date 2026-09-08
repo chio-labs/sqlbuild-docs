@@ -12,13 +12,13 @@ MODEL (
     _state [OPEN, CLOSED],
   ),
   constants (
-    _min_items 7,
-    _supported_countries ["GB", "FR", "HK"],
+    _min_items 2,
+    _supported_countries ["GB", "FR", "DE"],
   ),
 );
 
 SELECT *
-FROM items
+FROM order_batches
 WHERE state = @enum("_state").OPEN
   AND item_count > @const("_min_items")
   AND country_code IN @const("_supported_countries")

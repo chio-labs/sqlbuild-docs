@@ -15,7 +15,7 @@ recursively, and one file may contain more than one declaration.
 ```text
 my_project/
 ├── constants/
-│   ├── market/
+│   ├── commerce/
 │   │   └── thresholds.sql
 │   └── reporting_day.sql
 ├── models/
@@ -23,7 +23,7 @@ my_project/
 ```
 
 ```sql
--- constants/market/thresholds.sql
+-- constants/commerce/thresholds.sql
 CONSTANT (name min_items, value 7);
 CONSTANT (name fallback_source, value "web");
 CONSTANT (name enabled, value true);
@@ -40,7 +40,7 @@ Reference a constant with `@const("name")`:
 
 ```sql
 SELECT *
-FROM prices
+FROM order_batches
 WHERE item_count >= @const("min_items")
   AND source = @const("fallback_source")
 ```

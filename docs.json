@@ -100,7 +100,6 @@
           },
           "concepts/snapshots",
           "concepts/audits",
-          "concepts/contract-adoption",
           "concepts/sql-linting",
           "concepts/testing",
           "concepts/scenarios",

@@ -38,7 +38,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | Focused compilation | Full graph integrity with deep analysis limited to selection and required upstream closure | Selected compilation | Selected planning |
 | Column-level lineage | Compile-time, fast and rich modes | dbt Core: post-hoc via docs; dbt Fusion engine: compile-time | Compile-time |
 | Column contract validation | Compile-time inference plus runtime enforcement with `contract enforced` | YAML schema contracts at runtime | Schema contracts via plan |
-| Existing-schema contract adoption | Online read-only diff and safe repository generation | Codegen/packages | External schema tooling |
+| Existing-schema contracts | Online read-only diff and safe repository generation | Codegen/packages | External schema tooling |
 | Native lint/fix/format | Dialect-aware coded diagnostics, reasoned suppressions, safe fixes, and canonical formatting | External tools | Built-in formatter plus external linting |
 | SQL architecture policy | Opt-in Kata rules over compiled models with coded faults, remediations, suppressions, and custom rules | Project conventions through packages and external tooling | Built-in audits and external linting |
 | SQL transpilation | For local E2E replay into DuckDB | No | For cross-dialect model execution |

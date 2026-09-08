@@ -14,7 +14,7 @@ subdirectories can organize a large enum library without changing where the enum
 ```text
 my_project/
 ├── enums/
-│   ├── market/
+│   ├── fulfillment/
 │   │   └── fulfillment_method.sql
 │   └── order_status.sql
 ├── models/
@@ -22,7 +22,7 @@ my_project/
 ```
 
 ```sql
--- enums/market/fulfillment_method.sql
+-- enums/fulfillment/fulfillment_method.sql
 ENUM (
   name fulfillment_method,
   members [DELIVERY, PICKUP, SHIPPING],
@@ -57,7 +57,7 @@ Reference one member with `@enum("name").MEMBER`:
 
 ```sql
 SELECT *
-FROM prices
+FROM orders
 WHERE fulfillment_method = @enum("fulfillment_method").DELIVERY
   AND source = @enum("source").WEB
 ```
