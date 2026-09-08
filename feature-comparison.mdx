@@ -18,6 +18,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | Local E2E replay | Capture from warehouse, replay in DuckDB | No | No |
 | Macro / UDF / table function tests | `TEST(mode macro)`, `TEST(mode udf)`, or `TEST(mode table_fn)` | No | No |
 | Zero-row assertions | `__assert__` CTEs in tests and scenarios | No | No |
+| Failure diagnostics | Bounded, redacted unexpected and missing row samples in text and JSON | Adapter/tool dependent | Row diffs |
 
 ### Audits
 
@@ -26,14 +27,19 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | Built-in audits | not_null, unique, accepted_values, relationships | not_null, unique, accepted_values, relationships | Extensive (statistical, string pattern, etc.) |
 | Blocking audits | Block promotion from staging table | Tests run after materialization | Audits gate plan application; run-time audits execute after the interval is materialized |
 | Delta/interval-scoped audits | Per-microbatch audit cycle before DML | No | Audit query filtered to processed intervals for time-range models |
+| Measurement audits | Thresholds, minimum samples, bounded evidence, and immutable result history | Package/custom test patterns | Custom audits |
+| Audit factories | Typed Python factories generate equivalent reviewed audit instances | Macros/packages | Python audit definitions |
 
 ### Compilation
 
 | Feature | SQLBuild | dbt | SQLMesh |
 |---------|----------|-----|---------|
-| SQL validation | Offline, compile-time (Polyglot) | dbt Core: none; dbt Fusion engine: compile-time (proprietary; built on Apache-2.0 dbt Core v2) | Compile-time (SQLGlot) |
+| SQL analysis | Offline syntax, binding, type inference, semantic validation, and lineage (Polyglot) | dbt Core: none; dbt Fusion engine: compile-time (proprietary; built on Apache-2.0 dbt Core v2) | Compile-time (SQLGlot) |
+| Focused compilation | Full graph integrity with deep analysis limited to selection and required upstream closure | Selected compilation | Selected planning |
 | Column-level lineage | Compile-time, fast and rich modes | dbt Core: post-hoc via docs; dbt Fusion engine: compile-time | Compile-time |
 | Column contract validation | Compile-time inference plus runtime enforcement with `contract enforced` | YAML schema contracts at runtime | Schema contracts via plan |
+| Existing-schema contract adoption | Online read-only diff and safe repository generation | Codegen/packages | External schema tooling |
+| Native lint/fix/format | Dialect-aware coded diagnostics, reasoned suppressions, safe fixes, and canonical formatting | External tools | Built-in formatter plus external linting |
 | SQL architecture policy | Opt-in Kata rules over compiled models with coded faults, remediations, suppressions, and custom rules | Project conventions through packages and external tooling | Built-in audits and external linting |
 | SQL transpilation | For local E2E replay into DuckDB | No | For cross-dialect model execution |
 | Python macros | `@macro()` syntax | No (Jinja only) | SQLMesh macro syntax |
@@ -45,8 +51,8 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | Feature | SQLBuild | dbt | SQLMesh |
 |---------|----------|-----|---------|
 | Incremental strategies | append, delete_insert, merge, SCD Type 2 | append, delete_insert, merge, snapshots | delete_insert (time-range), merge (unique-key), SCD Type 2, partition |
-| Microbatch execution | Configurable batch sizes with per-batch audits | Microbatch (recent addition) | Batch size support |
-| Stateful interval tracking | Cursor-based, no external interval state | No | Tracks which intervals have run (in state store) |
+| Microbatch execution | Watermark and rolling-window strategies, per-batch audits, limits, and opt-in concurrency | Microbatch | Batch size support |
+| Interval progress | Sequential runs derive progress from target/input cursors; concurrent runs coordinate with append-only facts | No | Tracks intervals in a state store |
 | SCD Type 2 models | Timestamp and check strategies, historical input, hard deletes | Snapshots (timestamp and check strategies) | `SCD_TYPE_2` model kind (timestamp and check strategies) |
 
 ### Planning and change detection
@@ -110,6 +116,7 @@ SQLBuild, dbt, and SQLMesh are all SQL pipeline frameworks. They share common gr
 | State requirements | Stateless by default | manifest.json + target/ | Requires state store (local database or PostgreSQL for production) |
 | Playground | `sqb playground` | Clone example repo | Example project |
 | AI agent skills | General guidance with `sqb skills`; policy-derived guidance with `sqb kata skills` | No | No |
+| Execution observability | Immutable schema-versioned lifecycle facts, invocation-local ordering, orchestration context, and typed project sinks | Events/artifacts plus external observability | Plans, state, and external observability |
 
 ## Where each tool fits
 

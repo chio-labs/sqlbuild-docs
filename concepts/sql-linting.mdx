@@ -1,0 +1,50 @@
+---
+title: "SQL Linting and Formatting"
+description: "Native SQL diagnostics, safe fixes, and canonical formatting."
+---
+
+SQLBuild owns SQL lint and formatting behavior. It uses the active adapter dialect and understands
+SQLBuild model headers, so no Sqruff or SQLFluff installation is required.
+
+| Command | Purpose | Changes files by default? |
+|---------|---------|---------------------------|
+| `sqb lint` | Report correctness and selected convention diagnostics | No |
+| `sqb fix` | Apply only fixes SQLBuild can prove safe | Yes |
+| `sqb format` | Write SQLBuild's canonical presentation | Yes |
+
+Use `sqb fix --check` or `sqb format --check` in CI. Add `--diff` to preview changes without writing
+them. All three commands accept normal `--select`, `--select-file`, and `--exclude` scopes.
+
+## Rule policy
+
+Core rules run by default. Optional rules are enabled in project configuration by exact code or
+prefix:
+
+```toml
+[lint]
+select = ["SQBL", "SQBL024"]
+```
+
+Lint codes use the `SQBL` prefix. Formatting owns presentation choices such as capitalization,
+indentation, spacing, commas, and canonical SQL spelling; these are not inflated into lint warnings.
+Kata remains separate and evaluates repository architecture and naming policy over compiled models.
+
+## Suppressions
+
+Suppress a local diagnostic only with a reason:
+
+```sql
+-- sqb: ignore SQBL004 because this fixture intentionally samples one row
+SELECT value FROM items LIMIT 1
+```
+
+Unused or malformed suppressions produce `SQBL000`. Mandatory compiler and model-header faults
+cannot be suppressed. Prefer fixing the SQL or narrowing optional policy before adding a suppression.
+
+## Safe fixes
+
+`sqb fix` changes only findings with a deterministic equivalent rewrite. Diagnostics that require
+schema knowledge or author intent remain reported and are never guessed. Review the diff before
+committing, especially when enabling additional optional rules.
+
+See [`sqb lint`](/cli/lint), [`sqb fix`](/cli/fix), and [`sqb format`](/cli/format).

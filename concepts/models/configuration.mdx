@@ -1,6 +1,6 @@
 ---
 title: "Configuration"
-description: "MODEL() header fields and SQL-validation controls."
+description: "MODEL() header fields and SQL-analysis controls."
 ---
 
 ## Common fields
@@ -22,17 +22,20 @@ description: "MODEL() header fields and SQL-validation controls."
 | `post_hooks` | Ordered `inline_sql(...)`, `sql("name", ...)`, or `python("name", ...)` hooks after materialization |
 | `enabled` | Set to `false` to disable the model |
 | `contract` | `none` for an open statically checked declaration, or `enforced` for an exact declaration |
-| `sql_validation` | Per-model SQL-validation override |
+| `sql_analysis` | Per-model SQL-analysis override |
 
-## SQL validation
+## SQL analysis
 
-SQL validation has two hard gates and one effective setting:
+SQL analysis has project, invocation, and model gates:
 
 1. `settings.sql_analysis` must be enabled.
-2. `--no-sql-validation` must not be present.
-3. `MODEL (sql_validation true|false)` overrides `settings.sql_validation` for that model. If omitted, the project setting is used.
+2. `--no-sql-analysis` must not be present.
+3. `MODEL (sql_analysis false)` can disable analysis for that model. If omitted, the project setting
+   is used.
 
-The model override can re-enable validation when the project-level `settings.sql_validation` value is false, but it cannot bypass disabled SQL analysis or the CLI kill switch.
+A model cannot re-enable analysis when either broader gate disables it. The older `sql_validation`
+and `--no-sql-validation` spellings remain compatibility aliases; use `sql_analysis` for new
+configuration.
 
 ## Table fields
 
@@ -54,7 +57,11 @@ Table promotion mode is a project setting rather than a `MODEL()` field. Staged 
 | `cursor_inputs` | Upstream names mapped to cursor columns |
 | `unique_key` | Merge or delete/insert matching columns |
 | `incremental_mode` | Set to `microbatch` for batched execution |
+| `microbatch_strategy` | Required in microbatch mode: `watermark` or `rolling_window` |
+| `cursor_watermark_mode` | Watermark strategy policy: `all` or `any` |
 | `batch_size` | Timestamp duration string such as `1d` or `1h`; use a numeric string such as `"1000"` for an integer cursor |
+| `batch_concurrency` | Concurrent batch workers; values above `1` require `delete_insert` and the project concurrency gate |
+| `microbatch_limit` | Nested `max_batches` and `action` policy for watermark execution |
 | `lookback` | Backward replay extension |
 | `append_cursor_inclusive` | Include (`true`, default) or exclude (`false`) the current append-cursor boundary |
 | `merge_exclude_columns` | Columns left unchanged by matched-row merge updates |

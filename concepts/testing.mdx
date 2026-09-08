@@ -43,6 +43,12 @@ The test:
 3. Compares the output against `__expected__stg_orders`
 4. Passes if row counts match and there are zero mismatched rows
 
+When an expected-output comparison fails, SQLBuild reports the unexpected and missing row counts
+and best-effort samples from each direction. Samples are deliberately bounded to three rows, 12
+columns, and 120 characters per value, and pass through diagnostic redaction. They are also present
+as structured `unexpected_samples` and `missing_samples` in JSON output. Sampling failure never
+replaces the known test failure.
+
 The trailing `SELECT 1` is required as a ceremonial closing statement.
 
 ## CTE conventions
