@@ -5,7 +5,7 @@ description: "Compile models into resolved SQL, validate contracts, and write ta
 
 # sqb compile
 
-Compiles all discovered models, seeds, audits, and tests. Resolves references, expands macros, validates SQL, checks column contracts, computes column lineage, and writes compiled artifacts to `target/`. The compile command is fully offline - it does not connect to the warehouse.
+Discovers the complete project, resolves references, expands macros, validates SQL, checks column contracts, computes column lineage, and writes compiled artifacts to `target/`. The compile command is fully offline—it does not connect to the warehouse.
 
 ## Usage
 
@@ -17,11 +17,15 @@ sqb --project-dir <path> compile [flags]
 
 | Flag | Description |
 |------|-------------|
-| `--no-sql-validation` | Skip compile-time SQL syntax validation |
+| `--no-sql-analysis` | Disable SQL syntax, binding, type inference, and semantic validation (`--no-sql-validation` remains an alias) |
+| `--no-cache` | Bypass the reusable compile-analysis cache for this invocation |
 | `--defer-to` | Resolve unselected model references against another target |
 | `--json` | Output the full compile report as JSON |
 | `--manifest` | Generate `target/manifest.json` with project metadata |
 | `--lineage-mode` | Column lineage mode: `fast` (default), `rich` (slower, more detail), or `none` |
+| `--select`, `-s` | Analyze and report selected resources |
+| `--select-file` | Read selectors from a file, one selector per line |
+| `--exclude` | Remove resources from the selected scope |
 
 ## What compile does
 
@@ -31,6 +35,26 @@ sqb --project-dir <path> compile [flags]
 4. **Column lineage** - analyzes column-level dependencies across models (fast mode by default)
 5. **Contract validation** - checks declared column contracts against inferred query output
 6. **Artifact write** - writes compiled SQL to `target/compiled/`
+
+## Focused compilation
+
+Use normal selectors to limit expensive analysis and reporting while retaining complete project
+discovery and reference integrity:
+
+```bash
+sqb compile --select fact_orders daily_revenue
+sqb compile --select-file selected-models.txt
+sqb compile --exclude deprecated_model
+```
+
+SQLBuild deeply analyzes the selected resources and the upstream closure needed to understand them.
+The text report contains only the selected scope. Project totals remain available in JSON, together
+with selected model, seed, and function counts.
+
+<Note>
+Manifest and DAG outputs remain full-project artifacts. Focused compilation changes analysis and
+reporting scope; it does not produce a partial project graph.
+</Note>
 
 ## Static analysis
 
@@ -141,6 +165,9 @@ sqb compile --lineage-mode none
 # Generate manifest
 sqb compile --manifest
 
-# Skip SQL validation
-sqb compile --no-sql-validation
+# Compile only selected models
+sqb compile --select fact_orders daily_revenue
+
+# Disable SQL analysis
+sqb compile --no-sql-analysis
 ```

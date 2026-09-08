@@ -100,6 +100,8 @@
           },
           "concepts/snapshots",
           "concepts/audits",
+          "concepts/contract-adoption",
+          "concepts/sql-linting",
           "concepts/testing",
           "concepts/scenarios",
           "concepts/selectors",
@@ -110,6 +112,13 @@
       {
         "group": "Advanced Concepts",
         "pages": [
+          {
+            "group": "Observability",
+            "pages": [
+              "concepts/observability",
+              "concepts/observability/sinks"
+            ]
+          },
           {
             "group": "Declarations and Scopes",
             "pages": [
@@ -180,6 +189,10 @@
           "cli/playground",
           "cli/skills",
           "cli/compile",
+          "cli/lint",
+          "cli/fix",
+          "cli/format",
+          "cli/contract",
           "cli/scope",
           "cli/kata",
           "cli/plan",

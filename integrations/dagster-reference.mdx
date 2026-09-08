@@ -158,10 +158,12 @@ Customise how SQLBuild DAG nodes map to Dagster asset metadata. Subclass and ove
 
 | Method | Arguments | Returns | Default behavior |
 |--------|-----------|---------|------------------|
-| `get_asset_key` | `node` | `AssetKey` | `AssetKey(node["asset_key"])` |
-| `get_group_name` | `node` | `str \| None` | Node kind (e.g. `"model"`, `"source"`) |
+| `get_asset_key` | `node` | `AssetKey` | Authored source `meta.dagster.asset_key`, otherwise `AssetKey(node["asset_key"])` |
+| `is_asset_node` | `node` | `bool` | Include the node as a Dagster asset |
+| `is_asset_check` | `check` | `bool` | Include the check in the multi-asset definition |
+| `get_group_name` | `node` | `str \| None` | Authored group, project name, then `sqlbuild` |
 | `get_tags` | `node` | `dict[str, str]` | `sqlbuild/kind` tag plus any model tags |
-| `get_metadata` | `node` | `dict[str, Any]` | `sqlbuild_id`, `sqlbuild_name`, `sqlbuild_kind`, path, target, description, columns |
+| `get_metadata` | `node` | `dict[str, Any]` | SQLBuild identity/selector plus available path, target, SQL, columns, lineage, group, language, materialization, loader, and authored metadata |
 | `get_description` | `node` | `str \| None` | Node description if present |
 | `get_check_name` | `check` | `str` | `"{kind}__{name}"` with optional column/target suffix |
 | `get_check_metadata` | `check` | `dict[str, Any]` | Check ID, kind, name, and selector |
@@ -199,6 +201,20 @@ Python node asset keys use a two-part key with the node kind as prefix:
 | Task | `("task", "prepare_orders")` |
 | Asset | `("asset", "orders_export")` |
 | Loader | `("loader", "raw_orders")` |
+
+A source can provide a stable Dagster-native key without replacing the translator:
+
+```yaml
+sources:
+  - name: raw__orders
+    meta:
+      dagster:
+        asset_key: [warehouse, raw, orders]
+```
+
+Override `is_asset_node` or `is_asset_check` when one SQLBuild project intentionally exposes only a
+subset through a particular Dagster definition. Filtering changes Dagster ownership; it does not
+remove the resource from SQLBuild's compiled graph.
 
 ### Check structure
 

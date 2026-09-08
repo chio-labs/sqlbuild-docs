@@ -3,7 +3,11 @@ title: "Incremental Models"
 description: "Cursor-based incremental strategies, microbatch execution, and backfill policies."
 ---
 
-Incremental models process only new or changed data instead of rebuilding the entire table. SQLBuild works out where to resume from the current target and input relations, so there is no separate checkpoint store. A retry recomputes its interval from current warehouse state rather than reusing the exact interval of a failed attempt.
+Incremental models process only new or changed data instead of rebuilding the entire table. In the
+default sequential path, SQLBuild works out where to resume from the current target and input
+relations with no separate checkpoint store. A retry recomputes its interval from current warehouse
+state rather than reusing the exact interval of a failed attempt. Opt-in concurrent microbatching
+adds immutable coordination facts as described below.
 
 ## Strategies
 
@@ -192,7 +196,15 @@ With `lookback 3d`, the replay window starts 3 days before the normal cursor pos
 
 ## Microbatch execution
 
-For large incremental ranges, microbatch mode splits the replay window into configurable batches. Each batch is processed serially with its own audit cycle: create delta, run delta audits, apply DML, clean up.
+For large incremental ranges, microbatch mode splits the replay window into configurable batches.
+Choose an explicit strategy:
+
+| Strategy | Window source |
+|----------|---------------|
+| `watermark` | Declared input availability; supports timestamp and integer cursors |
+| `rolling_window` | A timestamp window relative to the current run rather than input maxima |
+
+Each batch has its own audit cycle: create delta, run delta audits, apply DML, and clean up.
 
 ```sql
 MODEL (
@@ -201,10 +213,12 @@ MODEL (
   cursor activity_hour,
   cursor_type timestamp,
   cursor_grain hour,
-  cursor_inputs (
-    fact_orders ordered_at,
-  ),
   incremental_mode microbatch,
+  microbatch_strategy watermark,
+  cursor_watermark_mode all,
+  cursor_inputs (
+    fact_orders (column ordered_at, roles [filter, watermark]),
+  ),
   batch_size 1d,
 );
 ```
@@ -214,6 +228,36 @@ Without microbatch mode, the entire replay range is processed in one pass.
 ### Batch size
 
 `batch_size` controls the window size for each batch. For timestamp cursors, use duration strings like `1d`, `6h`, `1mo`. For integer cursors, use an integer value.
+
+For watermark models, each `cursor_inputs` entry declares whether the input filters model SQL,
+contributes an availability watermark, or does both. `cursor_watermark_mode all` uses the
+conservative common watermark; `any` permits progress from any watermark input. A filter-only input
+does not claim that its intervals are available.
+
+### Concurrent batches
+
+Sequential execution is the default and does not read or write `_sqlbuild_microbatches`. To opt into
+concurrent `delete_insert` batches, enable the project gate and choose a model limit:
+
+```toml
+[settings]
+microbatch_concurrency = true
+```
+
+```sql
+MODEL (
+  materialized incremental,
+  incremental_strategy delete_insert,
+  incremental_mode microbatch,
+  microbatch_strategy watermark,
+  batch_concurrency 4,
+  -- cursor configuration omitted
+);
+```
+
+Concurrent execution uses immutable requirement and completion facts to coordinate dependencies and
+reconcile retries. It does not update one mutable status row through planned/running/complete
+states. Increase concurrency deliberately because every active batch can consume warehouse work.
 
 ### Watermark batch limits
 
@@ -229,6 +273,9 @@ MODEL (
   cursor event_date,
   cursor_type timestamp,
   cursor_grain day,
+  cursor_inputs (
+    raw_events (column event_date, roles [filter, watermark]),
+  ),
   batch_size 1d,
   microbatch_limit (
     max_batches 7,
@@ -245,6 +292,10 @@ MODEL (
 | `cap_from_end` | Execute the latest N aligned batches ending at the resolved watermark and defer older work |
 
 A cap changes only the work selected for that invocation. Deferred batches are not recorded as complete. `cap_from_end` is useful for feeds where keeping the latest projection current is more important than catching up oldest-first; `cap_from_start` is the oldest-first catch-up policy.
+
+Downstream watermark models consume durable completion facts from capped upstream models. A target
+table's physical minimum/maximum does not prove that deferred or intervening intervals were built;
+if completion evidence is unavailable, SQLBuild fails closed rather than inventing availability.
 
 The project can also set an outer safety policy:
 
