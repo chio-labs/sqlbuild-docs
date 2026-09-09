@@ -86,17 +86,17 @@ cd waffle-shop
 # Agent skill files are already installed
 ```
 
-## Kata policy skills
+## Project Rules skills
 
-`sqb skills` installs general SQLBuild framework guidance. `sqb kata skills` generates
-project-specific guidance from the active Kata rules, options, thresholds, naming vocabulary, and
-scoped deviations:
+`sqb skills` installs general SQLBuild framework guidance. `sqb rules skills` generates
+project-specific guidance from the active Rules, options, thresholds, naming vocabulary, and scoped
+deviations:
 
 ```bash
-sqb kata skills
-sqb kata skills --check
+sqb rules skills
+sqb rules skills --check
 ```
 
-Use `--check` in CI to detect missing or stale policy guidance without rewriting files. Kata uses
-the separate `sqlbuild-kata` skill path and refuses to overwrite divergent or unowned content. See
-[Kata SQL Architecture Checks](/concepts/kata) and the [Kata CLI reference](/cli/kata).
+Use `--check` in CI to detect missing or stale Rules guidance without rewriting files. Rules use
+the separate `sqlbuild-rules` skill path and refuse to overwrite divergent or unowned content. See
+[Compiler-integrated Rules](/concepts/rules) and the [Rules CLI reference](/cli/rules).

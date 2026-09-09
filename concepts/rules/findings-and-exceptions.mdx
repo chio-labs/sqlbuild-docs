@@ -1,0 +1,52 @@
+---
+title: "Findings and exceptions"
+description: "Understand Rule diagnostics and record intentional exceptions safely."
+---
+
+A Rule finding identifies an exact code, project-relative path, line, column, message, and
+remediation. Error findings make compilation fail and prevent artifact completion.
+
+## Exact exceptions
+
+Use an exact exception for one known finding. Exceptions require a reason and are stale-checked:
+
+```toml
+[[rules.rule_exceptions]]
+rule = "SQBRSQL004"
+path = "models/examples/sample_orders.sql"
+reason = "This example intentionally demonstrates one sampled row."
+```
+
+An exception refers to one exact Rule code and path. If the finding disappears, SQLBuild reports
+the stale exception so obsolete configuration does not accumulate silently.
+
+## Path-scoped ignores
+
+Use a path ignore when a documented project area intentionally follows a different convention:
+
+```toml
+[[rules.rule_ignores]]
+rules = ["SQBRSQL"]
+paths = ["models/examples/**"]
+reason = "Examples retain intentionally minimal SQL."
+```
+
+Path ignores accept exact codes and family prefixes. Keep their scope narrow and explain why the
+project differs from the selected requirement.
+
+## Mandatory correctness
+
+Mandatory compiler correctness is not configurable and cannot be suppressed. A project must first
+compile into a trustworthy representation before any selected Rule can run.
+
+## Machine-readable findings
+
+Use JSON when another tool consumes findings:
+
+```bash
+sqb compile --json
+sqb rules --json run SQBRSQL
+```
+
+Machine-readable output remains on stdout. Lifecycle progress and terminal status are written to
+stderr.

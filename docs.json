@@ -100,7 +100,15 @@
           },
           "concepts/snapshots",
           "concepts/audits",
-          "concepts/sql-linting",
+          {
+            "group": "Rules",
+            "root": "concepts/rules",
+            "pages": [
+              "concepts/rules/configuration-and-selection",
+              "concepts/rules/findings-and-exceptions",
+              "concepts/rules/execution-and-caching"
+            ]
+          },
           "concepts/testing",
           "concepts/scenarios",
           "concepts/selectors",
@@ -128,10 +136,11 @@
             ]
           },
           {
-            "group": "Kata",
+            "group": "Custom Rules",
+            "root": "concepts/rules/custom-rules",
             "pages": [
-              "concepts/kata",
-              "concepts/kata/custom-rules"
+              "concepts/rules/custom-rules/rule-context",
+              "concepts/rules/custom-rules/testing-and-determinism"
             ]
           }
         ]
@@ -188,12 +197,10 @@
           "cli/playground",
           "cli/skills",
           "cli/compile",
-          "cli/lint",
-          "cli/fix",
           "cli/format",
           "cli/contract",
           "cli/scope",
-          "cli/kata",
+          "cli/rules",
           "cli/plan",
           "cli/build",
           "cli/load",

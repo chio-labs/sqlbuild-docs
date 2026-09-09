@@ -26,5 +26,5 @@ sqb format --check
 sqb format --diff --select tag:marts
 ```
 
-Formatting owns presentation. Use [`sqb lint`](/cli/lint) for diagnostics and [`sqb fix`](/cli/fix)
-for safe semantic cleanups.
+Formatting owns presentation and source rewriting. Compiler-integrated diagnostics belong to
+configured [Rules](/concepts/rules), which never mutate source.

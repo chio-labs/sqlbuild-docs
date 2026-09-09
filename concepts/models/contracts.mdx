@@ -154,6 +154,6 @@ non-projection uses such as `join_on`, `where`, `group_by`, and `window_order_by
 
 ## Related policies
 
-The project default is implicit open-shape validation for models that omit `contract`. A repository can select explicit opt-in contracts with `settings.column_contract_mode = "explicit"` or enable [`SQBKR401`](/concepts/kata#layers-and-model-grammar) to require enforced contracts through Kata architecture policy.
+The project default is implicit open-shape validation for models that omit `contract`. A repository can select explicit opt-in contracts with `settings.column_contract_mode = "explicit"` or configure a custom [Rule](/concepts/rules/custom-rules) that requires enforced contracts for selected model families.
 
 Contracts also constrain schema-change behavior. For example, `snapshot_schema_change append_new_columns` is incompatible with `contract enforced` because an unannounced appended column would violate the exact declaration.
