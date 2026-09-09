@@ -1,0 +1,108 @@
+---
+title: "Compiler-integrated Rules"
+description: "Turn repeatable SQL and project review decisions into compiler-enforced findings."
+---
+
+Rules are configurable, deterministic checks over compiler-owned SQL, models, dependencies,
+contracts, tests, audits, declarations, and project paths. They run during ordinary compilation,
+before artifacts are completed or warehouse planning begins.
+
+SQLBuild evaluates checks in this order:
+
+1. mandatory compiler correctness
+2. selected native built-in Rules
+3. selected custom Python Rules
+4. artifact completion
+
+Rules report findings and never rewrite source. [`sqb format`](/cli/format) remains the separate,
+source-rewriting command.
+
+## Configure Rules
+
+```toml
+[rules]
+select = ["SQBRSQL", "SQBRGRAPH", "XSQBRARCH"]
+ignore = ["SQBRSQL004"]
+```
+
+An empty `select` disables configurable Rules. Exact codes select one rule; family prefixes select
+matching rules. Built-in codes use `SQBR<FAMILY><three digits>`, such as `SQBRSQL004`,
+`SQBRMODEL101`, and `SQBRGRAPH101`. Custom codes use
+`XSQBR<optional uppercase family><three digits>`, such as `XSQBRARCH001`. A family is always the
+code with its final three digits removed.
+
+## Enforcement
+
+`sqb compile` is authoritative. Build and execution commands use the same compiler path and reject
+configured findings before opening a warehouse connection. Use a focused command while developing
+or adopting a rule:
+
+```bash
+sqb rules list
+sqb rules show SQBRSQL004
+sqb rules run SQBRSQL
+sqb rules run XSQBRARCH --select customer_orders
+```
+
+Native built-ins run before custom Rules. JSON output stays on stdout; lifecycle progress is written
+to stderr.
+
+## Findings and suppressions
+
+A finding has a code, project-relative path, line, column, message, and remediation. Exact
+exceptions are stale-checked and require a reason:
+
+```toml
+[[rules.rule_exceptions]]
+rule = "SQBRSQL004"
+path = "models/examples/sample_orders.sql"
+reason = "This example intentionally demonstrates one sampled row."
+```
+
+Broader path-scoped ignores also require a reason:
+
+```toml
+[[rules.rule_ignores]]
+rules = ["SQBRSQL"]
+paths = ["models/examples/**"]
+reason = "Examples retain intentionally minimal SQL."
+```
+
+Mandatory compiler correctness cannot be suppressed.
+
+## Typed compiler facts
+
+Custom Rules receive stable, typed views through `RuleContext`:
+
+- `ctx.sql`: authored and expanded SQL, common SQL structures, and lazy Polyglot AST access
+- `ctx.graph`: compiler-resolved dependencies and dependents
+- `ctx.columns` and `ctx.contracts`: declared, inferred, contract, and grain facts
+- `ctx.tests` and `ctx.audits`: checks associated with a model
+- `ctx.declarations`: public and model-scoped enum and constant facts
+- `ctx.project`: deterministic project resources and tree observations
+
+See [Custom Rules](/concepts/rules/custom-rules) for authoring and testing.
+
+## Caching and determinism
+
+Rules cache under `target/rules-cache`. Cache identity includes rule implementation and imported
+helpers, options, invocation subject, accessed compiler-fact families, tracked project observations,
+dialect, and compatibility versions. Negative project-tree observations are dependencies too: if a
+rule observes that a glob has no matches, adding a matching file invalidates that rule.
+
+Custom Rules run in a bounded Python subprocess. Environment, time, randomness, network,
+subprocess, and direct filesystem access are rejected. Read supported project text through
+`ctx.project.tree`.
+
+## Agent guidance
+
+Generate project-specific guidance from the configured Rules:
+
+```bash
+sqb rules skills
+sqb rules skills --check
+```
+
+SQLBuild manages `.agents/skills/sqlbuild-rules/SKILL.md`,
+`.claude/skills/sqlbuild-rules/SKILL.md`, and `.opencode/skills/sqlbuild-rules/SKILL.md` without
+overwriting divergent or unowned content.

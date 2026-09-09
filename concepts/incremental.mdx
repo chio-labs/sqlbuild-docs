@@ -305,7 +305,7 @@ max_batches = 100
 action = "error" # or "warn"
 ```
 
-Project limits support only `error` and `warn`; they never silently cap work. When a model has a nested `microbatch_limit`, the project policy checks the full resolved range first and the model policy then applies.
+Project limits support only `error` and `warn`; they never silently cap work. When a model has a nested `microbatch_limit`, the project limit checks the full resolved range first and the model policy then applies.
 
 `--max-microbatches N` is an invocation-wide, hard `error` ceiling and an explicit one-run authorization. It takes precedence over project and model limits, applies to models without a declared limit, and never inherits `cap_from_start` or `cap_from_end`. For example, passing a value large enough for an intentional backfill authorizes the full range instead of retaining the model's ordinary-run cap.
 

@@ -100,7 +100,7 @@
           },
           "concepts/snapshots",
           "concepts/audits",
-          "concepts/sql-linting",
+          "concepts/rules",
           "concepts/testing",
           "concepts/scenarios",
           "concepts/selectors",
@@ -127,13 +127,7 @@
               "concepts/declaration-scopes/explorer"
             ]
           },
-          {
-            "group": "Kata",
-            "pages": [
-              "concepts/kata",
-              "concepts/kata/custom-rules"
-            ]
-          }
+          "concepts/rules/custom-rules"
         ]
       },
       {
@@ -188,12 +182,10 @@
           "cli/playground",
           "cli/skills",
           "cli/compile",
-          "cli/lint",
-          "cli/fix",
           "cli/format",
           "cli/contract",
           "cli/scope",
-          "cli/kata",
+          "cli/rules",
           "cli/plan",
           "cli/build",
           "cli/load",

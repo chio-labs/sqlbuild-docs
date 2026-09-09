@@ -310,21 +310,19 @@ default_audit_run_scope = "final"
 - **`staged`** (default for most adapters): Materializes into a staging table, runs audits, then swaps into the target. If audits fail, the production table is untouched.
 - **`immediate`**: Creates the table directly at the target location. Audits run after materialization. Simpler but no pre-promotion safety net.
 
-## Kata
+## Rules
 
-Kata policy belongs in the shared `sqlbuild_project.toml` so local and CI evaluation use the same
-architecture rules:
+Rules configuration belongs in the shared `sqlbuild_project.toml` so local and CI compilation use
+the same checks:
 
 ```toml
-[kata]
-select = ["SQBK"]
+[rules]
+select = ["SQBRSQL", "SQBRGRAPH", "XSQBRARCH"]
 ```
 
-Kata is opt-in. `SQBK` activates every built-in rule; narrower prefixes activate a rule family, and
-exact codes activate individual rules. Audit, SQL test, and custom-rule test-case minimums each
-default to one and can be overridden under `[kata.thresholds]`. See
-[Kata SQL Architecture Checks](/concepts/kata) for the complete rule, configuration, and suppression
-reference.
+Rules are opt-in. Exact codes activate individual checks and prefixes activate a family. Built-in
+codes begin with `SQBR`; repository-defined codes begin with `XSQBR`. See
+[Compiler-integrated Rules](/concepts/rules) for configuration, authoring, and suppressions.
 
 ## Project variables
 

@@ -50,8 +50,8 @@ E2E replay.
 Before any model runs, SQLBuild does static analysis of your project - offline, no warehouse connection needed.
 
 - **Catch errors at compile.** SQL syntax, type inference, contract checks, and column lineage all run before execution. A bad reference or a type mismatch fails at compile, with an error that points at the line - not halfway through a warehouse run.
-- **Keep SQL consistent natively.** `sqb lint`, `sqb fix`, and `sqb format` share SQLBuild's dialect-aware parser and model semantics, without a separate linter installation.
-- **Enforce architecture deliberately.** Opt into [Kata](/concepts/kata) to check model structure, dependency CTEs, layer boundaries, joins, naming, contracts, and test coverage with coded faults and remediations.
+- **Turn review decisions into compiler checks.** Configure [Rules](/concepts/rules) over compiler-owned SQL, models, dependencies, contracts, tests, and project paths.
+- **Format separately.** `sqb format` owns deterministic source rewriting; Rules remain diagnostic-only.
 - **Fast, because it's Rust where it counts.** Static analysis runs on [Polyglot](https://github.com/tobilg/polyglot), a Rust SQL engine (MIT, 32+ dialects), so compile stays quick even on large projects.
 - **Open, not paywalled.** The static analysis is part of the Apache-2.0 core - no proprietary engine, no separate login, and no paid tier gating the smart checks.
 
