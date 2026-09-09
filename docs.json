@@ -104,6 +104,7 @@
             "group": "Rules",
             "root": "concepts/rules",
             "pages": [
+              "concepts/rules/overview",
               "concepts/rules/configuration-and-selection",
               "concepts/rules/findings-and-exceptions",
               "concepts/rules/execution-and-caching"
