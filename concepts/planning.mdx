@@ -1,118 +1,138 @@
 ---
-title: "Overview"
-description: "How SQLBuild decides what to build: fingerprints, change reasons, and warehouse-native state."
+title: "Planning and change detection"
+sidebarTitle: "Overview"
+description: "How SQLBuild explains build work, detects changes, and chooses safe model actions."
 ---
 
-When you run `sqb plan` or `sqb build`, SQLBuild compiles your project, compares it against the current warehouse state, and produces a plan. By default, SQLBuild runs your full selection - the same predictable behavior as a plain build, with nothing to configure.
+`sqb plan` previews the work for a build without executing it. `sqb build` uses the same planner
+before running the selected resources.
 
-Change-aware pruning is opt-in and requires [virtual environments](/concepts/virtual-environments). In a virtual environment, pass `--changes-only` (or set `changes_only = true` in config) to narrow the run to only stale work - unchanged models, seeds, audits, and Python nodes are then skipped. The fingerprints and change reasons below are recorded on every successful build regardless, so change detection is ready the moment you enable pruning.
+Planning and selection are separate concerns:
 
-## What is tracked
+- **Selection** determines which resources are in scope. By default, that is the whole project; use
+  `--select` and `--exclude` to choose a smaller scope.
+- **Change detection** compares compiled resources with recorded warehouse state. It explains why a
+  resource needs work, chooses the correct action for incremental models, propagates upstream
+  changes, and warns when a partial selection would be incoherent.
 
-Every node in the graph has a versioned identity stored in `_sqlbuild_fingerprints` in the target schema. The planner reads these on every run and compares them against the compiled project.
+In the default **direct mode**, a build runs its selected scope. Change detection still matters: the
+plan can show query and configuration differences, calculate replay or full-refresh actions, and
+identify stale upstreams. It does not filter a direct build to stale models.
+
+[Virtual environments](/concepts/virtual-environments) additionally bind each model to a versioned
+physical relation. Virtual builds can use those bindings to reuse existing versions or limit an
+invocation to stale work. That virtual execution behavior is documented under
+[Building in a virtual environment](/concepts/virtual-environments/building#stale-driven-execution).
+
+## Reading a plan
+
+Run the plan command with the same target and selectors you intend to build:
+
+```bash
+sqb plan
+sqb --target dev plan --select +fact_orders
+```
+
+A plan answers four questions:
+
+1. Which resources are selected?
+2. What does SQLBuild know about their current warehouse state?
+3. Why does each selected model need work?
+4. What materialization or incremental action will the build take?
+
+Plans may include query diffs, schema changes, backfill ranges, source freshness signals, cascade
+reasons, and warnings about stale dependencies. Planning does not modify model relations.
+
+## What SQLBuild compares
 
 ### Models and functions
 
-Each model and function has a **fingerprint** derived from:
+Each model and function has a version identity derived from the inputs that affect its result:
 
-- **Query hash** - the normalized SQL after macro expansion and reference resolution.
-- **Config hash** - version-identity config values (materialization settings, contracts, ordered rendered SQL hooks, Python hook invocations and version hashes, custom config/placeholders).
-- **Function hashes** - for models that depend on user-defined functions, the function's own fingerprint is included. A function change cascades to all dependent models.
+- normalized SQL after macro expansion and reference resolution;
+- materialization settings, contracts, rendered SQL hooks, Python hook versions, and other
+  version-relevant configuration;
+- referenced function identities; and
+- upstream version identities where dependency changes must propagate.
+
+A function change therefore appears on the function itself and on dependent models.
 
 ### Seeds
 
-Seeds are fingerprinted by content hash and load-affecting config. Unchanged seeds are not reloaded.
+Seeds use a content hash plus load-affecting configuration. SQLBuild can distinguish an unchanged
+seed from one whose file or loading behavior changed.
 
 ### Python nodes
 
-Loaders, tasks, assets, checks, and Python hooks are fingerprinted by source-code hash, transitive project-dependency hashes (scoped to the git root, so third-party package changes don't count), and decorator config. A Python hook's version hash is also included in every model that invokes it. Reusable SQL hooks are compiled into each consuming model, so their rendered statements participate directly in model identity.
+Loaders, tasks, assets, checks, and Python hooks have identities derived from project-owned source,
+transitive project dependencies, and decorator configuration. Python hook identities also
+participate in the identity of models that invoke them.
 
-Python identity tracking is primarily a **visual indicator** in the plan: when a node's identity changes, the plan shows source and dependency diffs. Unlike SQL models, the framework can't observe a Python node's external inputs (an API, a file, a service), so skip/run decisions are **user-controlled** via `ctx.skip()` - the node's own logic decides whether it needs to run. See [Python node pruning](#python-node-pruning).
+For standalone Python nodes, this identity is primarily planning evidence. SQLBuild cannot observe
+arbitrary external inputs such as APIs or files, so a node controls its own no-work decision with
+`ctx.skip()` rather than relying on SQL identity alone.
 
-### Audits
+### Sources
 
-Audits that already passed for the same model version identity are not re-run. When a model's version changes, its audits are re-validated.
+[Source freshness](/concepts/planning/source-freshness) records an observable data version for a
+source. A new observation can mark downstream models as affected even when their SQL is unchanged.
 
 ## Change reasons
 
-The plan assigns a reason to each node that needs work:
+The plan assigns reasons to explain detected work:
 
 | Reason | Meaning |
 |--------|---------|
-| First run | No fingerprint exists in the target schema |
-| Query changed / checksum changed | The model's query SQL differs from the stored fingerprint (the plan can show a query diff) |
-| Config changed | Version-identity config values differ |
-| Schema changed | Upstream schema changes detected (column additions, removals, type changes) |
-| Upstream changed | An upstream model's change cascades downstream (see [Cascade propagation](/concepts/planning/cascade-propagation)) |
-| Run despite unchanged | The model is configured to run periodically even without changes (see [Run despite unchanged](#run-despite-unchanged)) |
+| First run | No previous identity exists for the resource |
+| Query changed / checksum changed | Compiled SQL or seed content differs from the recorded identity |
+| Config changed | Version-relevant configuration differs |
+| Schema changed | A relevant warehouse or upstream schema changed |
+| Function changed | A referenced function has a different identity |
+| Upstream changed | A dependency change propagated to this model |
+| Run despite unchanged | A table's explicit policy requires another run despite an unchanged identity |
 
-By default, every selected node runs regardless of its reason. Under `--changes-only`, nodes with no pending work are pruned and show as current in the plan output.
+These reasons explain the plan; they are not a promise that direct mode will skip entries labelled
+current. Direct builds execute the selected scope. Virtual mode can compare expected identities with
+the versions already bound to a VDE and avoid unnecessary version creation.
 
-## Changes-only mode
+## Cascades and incremental actions
 
-Change-aware pruning requires virtual environments (`virtual_environments = true`); it is rejected in direct mode. Within a virtual environment, `--changes-only` narrows the scope to only models that are actually stale:
+Changes propagate through the DAG in dependency order. The resulting action depends on the
+materialization:
 
-```bash
-sqb build --virtual-env pr_123 --changes-only
-sqb build --virtual-env pr_123 --select path:models/marts --changes-only
-sqb plan --virtual-env pr_123 --changes-only
-```
+- views are recreated when selected for a direct build;
+- tables rebuild when selected;
+- incremental models use their cursor state, backfill policy, and `replay_on_change` setting to
+  determine the affected range; and
+- a changed upstream can alter the action of downstream models even when their own SQL is unchanged.
 
-To make it the default for a project or target, set it in config instead of passing the flag every run:
+See [Cascade propagation](/concepts/planning/cascade-propagation) for the detailed materialization
+rules.
 
-```toml
-[settings]
-virtual_environments = true
-changes_only = true
+## Selection and coherence
 
-[targets.dev]
-changes_only = true
-```
+SQLBuild reasons about dependencies outside a scoped selection without silently adding them to the
+plan. If building the selected resources would use a stale or missing upstream, the planner warns or
+blocks instead of presenting an incoherent partial build as current.
 
-The CLI flag takes precedence, followed by the selected target, explicit local settings, then project settings. When any source enables it, the planner removes models and functions from the selected scope if they have no pending work; models with any change reason, a pending backfill, or a changed upstream source are kept. Sources, seeds, and other non-model resources are always kept. See [Virtual Environments: Building](/concepts/virtual-environments/building).
+See [Selection and staleness](/concepts/planning/selection-and-staleness) for closure selectors and
+stale-upstream handling.
 
-## On this topic
+## Recorded state
 
-- [Cascade propagation](/concepts/planning/cascade-propagation) - how a change signal propagates downstream, and how each materialization type responds.
-- [Source freshness](/concepts/planning/source-freshness) - observing whether external source data has actually changed between runs.
-- [Selection and staleness](/concepts/planning/selection-and-staleness) - how `--select` interacts with change detection, and the stale warnings that prevent silent partial rebuilds.
+Direct mode records append-only planning evidence in the warehouse:
 
-## Run despite unchanged
+- `_sqlbuild_fingerprints` stores resource identities;
+- `_sqlbuild_source_freshness` stores source observations; and
+- `_sqlbuild_node_results` stores Python node outcomes.
 
-Some models depend on external data that isn't tracked by source freshness, for example a table model that reads from an API-populated staging area. `run_despite_unchanged` forces a model to run periodically even when its version identity hasn't changed.
+The planner reads the latest applicable facts and appends new facts after successful work. Virtual
+mode stores version bindings and environment-scoped planning state in its configured state backend;
+see [Virtual environment setup](/concepts/virtual-environments/setup).
 
-```sql
-MODEL (
-  materialized table,
-  run_despite_unchanged "always",
-);
-```
+## Related topics
 
-- **`always`** - run on every build regardless of state.
-- **Duration** (e.g. `24h`, `30d`, `90m`) - run if at least the specified time has passed since the model's upstream source freshness was last observed. Requires at least one upstream source with timestamp freshness tracking.
-
-Only table materializations support `run_despite_unchanged`. When triggered, downstream models are also marked as stale.
-
-## Python node pruning
-
-When unchanged SQL models are skipped, read-side Python nodes (tasks, assets, checks) that depend on those models are also skipped. Loaders always run regardless of pruning, since they populate sources that the SQL graph depends on.
-
-Python nodes also have their own identity fingerprints: if a node's source code or dependencies change, it runs even if its SQL dependencies haven't.
-
-## Warehouse-native state (direct mode)
-
-In direct mode, all change-tracking state lives in the warehouse as append-only tables in the same schemas as your data:
-
-- **`_sqlbuild_fingerprints`** - version identities for models, functions, seeds, and Python nodes. One row per successful build per identity.
-- **`_sqlbuild_source_freshness`** - source freshness observations. One row per successful build per source identity.
-- **`_sqlbuild_node_results`** - Python node runtime results (payload, metadata, status, errors). One row per execution per node.
-
-There is no external state database, no manifest files, and no state machine with transitions that can corrupt. The planner reads the latest row per identity, compares it against the compiled project, and writes new rows after successful builds. Old rows are retained as immutable history.
-
-State tables are read across all target schemas in the project, so fingerprints and freshness observations resolve consistently regardless of which schema a model targets.
-
-Use `sqb janitor` to prune old state history rows while retaining the latest per identity.
-
-## Virtual environments
-
-Virtual environments store identities and change-tracking state in the VDE state backend (PostgreSQL or DuckDB) rather than in warehouse fingerprint tables, scoped per environment. See [Virtual Environments: Building](/concepts/virtual-environments/building).
+- [Cascade propagation](/concepts/planning/cascade-propagation)
+- [Source freshness](/concepts/planning/source-freshness)
+- [Selection and staleness](/concepts/planning/selection-and-staleness)
+- [Building in a virtual environment](/concepts/virtual-environments/building)

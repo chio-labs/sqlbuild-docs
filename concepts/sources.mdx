@@ -110,7 +110,10 @@ For common ingestion you can declare the source entirely in YAML, with no `@load
 
 ## Source freshness
 
-Source freshness lets SQLBuild observe whether a source's data has changed between runs. This feeds into [planning and change detection](/concepts/planning): under `--changes-only` (in virtual environments), models downstream of unchanged sources are skipped.
+Source freshness lets SQLBuild observe whether a source's data changed between runs. This feeds into
+[planning and change detection](/concepts/planning): changed observations propagate to downstream
+models and can alter their planned action. Virtual environments can also use the signal for
+[stale-driven execution](/concepts/virtual-environments/building#stale-driven-execution).
 
 Configure freshness per source with a `freshness:` block:
 
