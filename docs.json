@@ -100,7 +100,15 @@
           },
           "concepts/snapshots",
           "concepts/audits",
-          "concepts/rules",
+          {
+            "group": "Rules",
+            "root": "concepts/rules",
+            "pages": [
+              "concepts/rules/configuration-and-selection",
+              "concepts/rules/findings-and-exceptions",
+              "concepts/rules/execution-and-caching"
+            ]
+          },
           "concepts/testing",
           "concepts/scenarios",
           "concepts/selectors",
@@ -127,7 +135,14 @@
               "concepts/declaration-scopes/explorer"
             ]
           },
-          "concepts/rules/custom-rules"
+          {
+            "group": "Custom Rules",
+            "root": "concepts/rules/custom-rules",
+            "pages": [
+              "concepts/rules/custom-rules/rule-context",
+              "concepts/rules/custom-rules/testing-and-determinism"
+            ]
+          }
         ]
       },
       {
