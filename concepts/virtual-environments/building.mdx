@@ -71,7 +71,9 @@ Build a subset of models with `--select`:
 sqb build --virtual-env pr_123 --select fact_orders
 ```
 
-Partial builds leave the VDE in `active` (working) status if downstream models remain stale. A follow-up `sqb build --virtual-env pr_123 --changes-only` (without `--select`) builds the remaining stale models to finalize the VDE; a plain `sqb build --virtual-env pr_123` rebuilds the whole selection.
+Partial builds leave the VDE in `active` (working) status if downstream models remain stale. A
+follow-up `sqb build --virtual-env pr_123 --changes-only` without `--select` builds the remaining
+stale models to finalize the VDE. A plain `sqb build --virtual-env pr_123` runs the whole selection.
 
 ### Stale upstream coherence
 
@@ -88,17 +90,58 @@ Pass `--include-stale-upstreams` to expand the selection to the minimal set of s
 sqb build --virtual-env pr_123 --select fact_orders --include-stale-upstreams
 ```
 
-### Stale-driven selection
+## Stale-driven execution
 
-Virtual environment builds run the full selection by default, like direct mode. Add `--changes-only` to intersect the selection with the stale-driven set, so only models that are both selected and stale are built:
+Virtual environment builds run the full selection by default. Add `--changes-only` to limit a plan
+or build to work whose expected version is not already bound in the target VDE:
 
 ```bash
+sqb plan --virtual-env pr_123 --changes-only
+sqb build --virtual-env pr_123 --changes-only
 sqb build --virtual-env pr_123 --select path:models/marts --changes-only
 ```
 
-This is useful when the stale cascade is large and you want to build a coherent subgraph without running unchanged models. Without `--changes-only`, every selected model is built regardless of state.
+With selectors, SQLBuild intersects the selected scope with the stale set. Models with changed SQL or
+configuration, pending backfills, changed functions, or affected upstreams remain in the plan;
+models already bound to their expected version do not need another physical version.
 
-Change-aware pruning is opt-in within virtual environments and unavailable in direct mode. See [Planning and Change Detection](/concepts/planning) for how fingerprints, source freshness, and identity tracking determine what gets built.
+`--changes-only` is a virtual-mode execution option. Direct mode always runs its selected build
+scope, although its plan still reports change reasons and uses them to choose incremental actions.
+See [Planning and change detection](/concepts/planning) for the shared identity and cascade model.
+
+You can make stale-driven execution the default for virtual plans and builds:
+
+```toml
+[settings]
+virtual_environments = true
+changes_only = true
+
+[targets.dev]
+changes_only = true
+```
+
+The CLI flag takes precedence, followed by the selected target, local settings, and project
+settings.
+
+### Run despite unchanged
+
+`run_despite_unchanged` lets a table remain eligible during stale-driven execution even when its
+version identity is unchanged. This is useful when external data changes cannot be represented by
+source freshness.
+
+```sql
+MODEL (
+  materialized table,
+  run_despite_unchanged "always",
+);
+```
+
+- `always` runs whenever the model is selected.
+- A duration such as `24h`, `30d`, or `90m` keeps the model eligible while the newest timestamp data
+  version from an upstream source is no older than that duration; it is not a periodic scheduler.
+
+Only table materializations support this setting. When it triggers, downstream models are also
+stale.
 
 ## Stale detection
 
