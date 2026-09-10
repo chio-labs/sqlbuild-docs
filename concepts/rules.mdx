@@ -19,22 +19,20 @@ compile rather than an optional report somebody must remember to run.
 
 ## What Rules are for
 
-SQLBuild's built-in Rules are an opinionated starting point for reusable requirements such as SQL
-safety, contracts, and dependency boundaries. Each Rule can be selected or ignored individually, so
-a project can adopt the defaults that fit without adopting the entire catalogue. Built-ins also
-provide concrete examples of the requirements a Rule can express.
+Start with built-in Rules, then add custom Rules for requirements specific to your project.
 
-Custom Rules capture decisions that are too specific to become universal defaults: a project's
-directory structure, a company's architectural boundaries, its definition of a public interface,
-or the combination of grain, contract, and test coverage required for a particular kind of model.
+- **Built-in Rules** are opinionated, reusable checks for areas such as SQL safety, contracts, and
+  dependency boundaries. Select or ignore each Rule individually.
+- **Custom Rules** encode local decisions such as directory structure, architectural boundaries,
+  public interfaces, or the contract and test coverage required for a particular kind of model.
 
-Both built-in and custom Rules check authored SQL or the compiled project without querying warehouse
-data. They use facts SQLBuild already has about SQL, models, paths, configuration, declarations,
-columns, contracts, tests, audits, and the resolved graph.
+Both evaluate authored SQL and the compiled project without querying warehouse data. They use
+compiler-owned facts about SQL, models, paths, configuration, columns, contracts, tests, audits,
+declarations, and dependencies.
 
-This enables checks that combine facts. For example, a project can allow `SELECT *` in staging while
-requiring final models to have explicit contracted outputs, or allow cross-area dependencies only
-when the referenced model lives under an `interface` directory.
+That context can be combined in one check—for example, allowing `SELECT *` in staging while requiring
+contracted outputs in final models, or allowing cross-area dependencies only through an `interface`
+model.
 
 ## How Rules work
 
@@ -157,7 +155,7 @@ select = [
 ]
 ```
 
-<Card title="Author custom Rules" icon="code" href="/concepts/rules/custom-rules">
+<Card title="Author custom Rules" icon="code" href="/concepts/rules/custom-rules/overview">
   Define typed model or project checks over compiler-owned facts with `@rule`, `RuleContext`, and
   `Finding`.
 </Card>
