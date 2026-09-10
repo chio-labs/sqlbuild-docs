@@ -211,7 +211,12 @@ rather than every invocation. Project Rules run once over the complete project v
 explicit choice for genuinely project-wide requirements, with broader invalidation. SQLBuild tracks
 the inputs each Rule depends on so cached findings are reused only while those inputs remain valid.
 
-See [Execution and caching](/concepts/rules/execution-and-caching) for the complete lifecycle.
+In required CI, 20 custom Rules over a production-shaped 5,000-model project complete their first
+Rules run in just over 10 seconds and an unchanged recompile in under six. A 100-Rule stress profile
+reuses all 500,002 cached evaluations in just over seven seconds.
+
+See [Benchmarks](/benchmarks#rules-performance) for the complete workload, methodology, and results,
+and [Execution and caching](/concepts/rules/execution-and-caching) for the Rules lifecycle.
 
 ## Continue
 

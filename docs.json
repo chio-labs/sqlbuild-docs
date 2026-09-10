@@ -19,7 +19,8 @@
         "pages": [
           "index",
           "quickstart",
-          "feature-comparison"
+          "feature-comparison",
+          "benchmarks"
         ]
       },
       {
