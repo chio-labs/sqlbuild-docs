@@ -102,9 +102,8 @@
           "concepts/audits",
           {
             "group": "Rules",
-            "root": "concepts/rules",
             "pages": [
-              "concepts/rules/overview",
+              "concepts/rules",
               "concepts/rules/configuration-and-selection",
               "concepts/rules/findings-and-exceptions",
               "concepts/rules/execution-and-caching"
