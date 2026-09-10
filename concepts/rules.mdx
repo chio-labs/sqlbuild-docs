@@ -19,20 +19,18 @@ compile rather than an optional report somebody must remember to run.
 
 ## What Rules are for
 
-A Rule checks authored SQL or the compiled project without querying warehouse data. For example, a
-Rule can ask:
+SQLBuild's built-in Rules are an opinionated starting point for reusable requirements such as SQL
+safety, contracts, and dependency boundaries. Each Rule can be selected or ignored individually, so
+a project can adopt the defaults that fit without adopting the entire catalogue. Built-ins also
+provide concrete examples of the requirements a Rule can express.
 
-- Is this SQL construct safe and intentional?
-- Does this model live in the correct architectural boundary?
-- Is the dependency graph using public interfaces?
-- Do inferred output columns agree with a contract or declared grain?
-- Does a model have the tests and audits required by its role?
-- Does the project contain or omit a required path or resource?
+Custom Rules capture decisions that are too specific to become universal defaults: a project's
+directory structure, a company's architectural boundaries, its definition of a public interface,
+or the combination of grain, contract, and test coverage required for a particular kind of model.
 
-Built-in Rules cover reusable requirements such as SQL safety and dependency boundaries. Custom
-Rules encode requirements specific to your project. Both use facts SQLBuild already has about SQL,
-models, paths, configuration, declarations, columns, contracts, tests, audits, and the resolved
-graph.
+Both built-in and custom Rules check authored SQL or the compiled project without querying warehouse
+data. They use facts SQLBuild already has about SQL, models, paths, configuration, declarations,
+columns, contracts, tests, audits, and the resolved graph.
 
 This enables checks that combine facts. For example, a project can allow `SELECT *` in staging while
 requiring final models to have explicit contracted outputs, or allow cross-area dependencies only
@@ -135,8 +133,8 @@ SQL responsibility:
 | Responsibility | Owner | Example |
 |---|---|---|
 | Correctness required to understand the project | Compiler | Invalid syntax, unresolved references, incompatible output shape |
-| Configurable, deterministic requirements | `SQBRSQL` Rules | Unordered `LIMIT`, unused CTE, implicit cartesian join |
-| Canonical presentation | [`sqb format`](/cli/format) | Capitalization, indentation, spacing, comma and clause layout |
+| Configurable, deterministic requirements | `SQBRSQL` Rules (executed by the compiler) | Unordered `LIMIT`, unused CTE, implicit cartesian join |
+| Canonical presentation | [`sqb format`](/cli/format) (separate from the compiler) | Capitalization, indentation, spacing, comma and clause layout |
 
 Rules never rewrite source. `sqb format` rewrites source and does not decide whether a project
 passes its configured Rules. This keeps diagnostics and source mutation separate.
