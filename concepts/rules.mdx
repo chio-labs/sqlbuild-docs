@@ -40,8 +40,25 @@ when the referenced model lives under an `interface` directory.
 
 ## How Rules work
 
-First, select an exact Rule or a family of Rules in `sqlbuild_project.toml`. This example enables the
-complete built-in SQL family:
+Use `sqb rules show` to understand a Rule before enabling it:
+
+```bash
+sqb rules show SQBRSQL004
+```
+
+```text
+SQBRSQL004: Row selection is nondeterministic
+Family: SQBRSQL
+Slug: unordered-limit
+Subject: model
+Enabled by default: yes
+Remediation: Add ORDER BY with a deterministic tie-breaker before LIMIT or OFFSET.
+```
+
+`Enabled by default` means the Rule is included when a matching family is selected. Configurable
+Rules do not run unless `select` contains an exact code or matching family.
+
+Select Rules in `sqlbuild_project.toml`. This example enables the complete built-in SQL family:
 
 ```toml
 [rules]
@@ -55,9 +72,8 @@ correctness still applies.
 Now consider a model that returns an arbitrary row because its `LIMIT` has no ordering:
 
 ```sql
-select order_id, created_at
-from orders
-limit 1
+-- models/orders.sql
+SELECT order_id FROM orders LIMIT 1
 ```
 
 Run normal compilation:
@@ -66,23 +82,28 @@ Run normal compilation:
 sqb compile
 ```
 
-The selected SQL Rules report the unordered `LIMIT` as a finding and compilation fails before
-SQLBuild completes artifacts or opens a warehouse connection. Each finding identifies the Rule,
-source location, problem, and remediation. In this case, add deterministic ordering and compile
-again:
+The selected Rule reports the source location, problem, and remediation:
 
-```sql
-select order_id, created_at
-from orders
-order by order_id
-limit 1
+```text
+error[SQBRSQL004]: Row selection is nondeterministic
+  --> models/orders.sql:2:36
+    |
+  2 | SELECT order_id FROM orders LIMIT 1
+    |                                    ^
+  = help: Add ORDER BY with a deterministic tie-breaker before LIMIT or OFFSET.
 ```
 
-Use focused commands when inspecting or adopting one Rule:
+Compilation fails before SQLBuild completes artifacts or opens a warehouse connection. Add
+deterministic ordering and compile again:
+
+```sql
+SELECT order_id FROM orders ORDER BY order_id LIMIT 1
+```
+
+Use focused commands when discovering or adopting Rules:
 
 ```bash
 sqb rules list
-sqb rules show SQBRSQL004
 sqb rules run SQBRSQL004
 ```
 
