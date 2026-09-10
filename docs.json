@@ -12,6 +12,16 @@
     "dark": "/dark-logo-long-cropped.png"
   },
   "favicon": "/favicon.png",
+  "redirects": [
+    {
+      "source": "/concepts/rules/overview",
+      "destination": "/concepts/rules"
+    },
+    {
+      "source": "/concepts/rules/custom-rules",
+      "destination": "/concepts/rules/custom-rules/overview"
+    }
+  ],
   "navigation": {
     "groups": [
       {
@@ -19,7 +29,8 @@
         "pages": [
           "index",
           "quickstart",
-          "feature-comparison"
+          "feature-comparison",
+          "benchmarks"
         ]
       },
       {
@@ -137,8 +148,8 @@
           },
           {
             "group": "Custom Rules",
-            "root": "concepts/rules/custom-rules",
             "pages": [
+              "concepts/rules/custom-rules/overview",
               "concepts/rules/custom-rules/rule-context",
               "concepts/rules/custom-rules/testing-and-determinism"
             ]
