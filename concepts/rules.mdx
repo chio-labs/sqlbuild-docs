@@ -19,7 +19,8 @@ compile rather than an optional report somebody must remember to run.
 
 ## What Rules are for
 
-A Rule answers a static question about authored SQL or the compiled project:
+A Rule checks authored SQL or the compiled project without querying warehouse data. For example, a
+Rule can ask:
 
 - Is this SQL construct safe and intentional?
 - Does this model live in the correct architectural boundary?
@@ -28,13 +29,65 @@ A Rule answers a static question about authored SQL or the compiled project:
 - Does a model have the tests and audits required by its role?
 - Does the project contain or omit a required path or resource?
 
-SQLBuild already knows the SQL, models, paths, configuration, declarations, columns, contracts,
-tests, audits, and resolved graph. Rules expose those compiler-owned facts instead of asking each
-check to reconstruct an incomplete view from files or generated artifacts.
+Built-in Rules cover reusable requirements such as SQL safety and dependency boundaries. Custom
+Rules encode requirements specific to your project. Both use facts SQLBuild already has about SQL,
+models, paths, configuration, declarations, columns, contracts, tests, audits, and the resolved
+graph.
 
 This enables checks that combine facts. For example, a project can allow `SELECT *` in staging while
 requiring final models to have explicit contracted outputs, or allow cross-area dependencies only
 when the referenced model lives under an `interface` directory.
+
+## How Rules work
+
+First, select an exact Rule or a family of Rules in `sqlbuild_project.toml`. This example enables the
+complete built-in SQL family:
+
+```toml
+[rules]
+select = ["SQBRSQL"]
+```
+
+An exact code such as `SQBRSQL004` selects one Rule. A family code such as `SQBRSQL` selects every
+Rule in that family. An empty `select` disables configurable Rules, but mandatory compiler
+correctness still applies.
+
+Now consider a model that returns an arbitrary row because its `LIMIT` has no ordering:
+
+```sql
+select order_id, created_at
+from orders
+limit 1
+```
+
+Run normal compilation:
+
+```bash
+sqb compile
+```
+
+The selected SQL Rules report the unordered `LIMIT` as a finding and compilation fails before
+SQLBuild completes artifacts or opens a warehouse connection. Each finding identifies the Rule,
+source location, problem, and remediation. In this case, add deterministic ordering and compile
+again:
+
+```sql
+select order_id, created_at
+from orders
+order by order_id
+limit 1
+```
+
+Use focused commands when inspecting or adopting one Rule:
+
+```bash
+sqb rules list
+sqb rules show SQBRSQL004
+sqb rules run SQBRSQL004
+```
+
+A focused run checks only the requested Rule or family. Run `sqb compile` before treating the whole
+project as valid.
 
 ## Where SQL linting went
 
@@ -51,19 +104,9 @@ The `SQBRSQL` built-in family covers deterministic SQL diagnostics such as:
 - risky set-operation shapes;
 - selected SQL structure and convention requirements.
 
-```toml
-[rules]
-select = ["SQBRSQL"]
-```
-
-These checks run through ordinary compilation:
-
-```bash
-sqb compile
-```
-
-There is intentionally no separate `sqb lint` lifecycle. If an SQL requirement affects whether the
-project is acceptable, the compiler enforces it with the rest of the configured Rules.
+These checks run through ordinary compilation. There is intentionally no separate `sqb lint`
+lifecycle. If an SQL requirement affects whether the project is acceptable, the compiler enforces
+it with the rest of the configured Rules.
 
 Not every traditional lint concern should become a diagnostic. SQLBuild separates three kinds of
 SQL responsibility:
@@ -95,9 +138,6 @@ select = [
 ]
 ```
 
-Exact codes select one Rule. A code without its final three digits selects the family. An empty
-`select` disables configurable Rules, but never disables mandatory compiler correctness.
-
 <Card title="Author custom Rules" icon="code" href="/concepts/rules/custom-rules">
   Define typed model or project checks over compiler-owned facts with `@rule`, `RuleContext`, and
   `Finding`.
@@ -117,18 +157,6 @@ mandatory compiler correctness
 Build and planning commands use the same compiler path. Configured findings stop execution before a
 warehouse connection is opened. Compile artifacts are not completed from a project that failed its
 Rules.
-
-Use a focused command while developing or adopting one Rule:
-
-```bash
-sqb rules list
-sqb rules show SQBRSQL004
-sqb rules run SQBRSQL004
-sqb rules run XSQBRARCH --select customer_orders
-```
-
-A focused run proves only that requested Rule and model selection passed. Run normal compilation
-before treating the complete configured project as valid.
 
 ## Rules compared with tests, audits, and contracts
 
@@ -161,12 +189,8 @@ See [Findings and exceptions](/concepts/rules/findings-and-exceptions) for confi
 
 Model Rules are evaluated and cached per model. Editing one model invalidates affected subjects
 rather than every invocation. Project Rules run once over the complete project view and are the
-explicit choice for genuinely project-wide invariants, with broader invalidation.
-
-Cache identity includes the Rule implementation and referenced module bindings, imported helpers,
-options, subject, accessed compiler facts, tracked project-tree observations, dialect, and
-compatibility versions. Negative observations are dependencies too: if a Rule observes that a glob
-has no matches, adding a matching file invalidates the result.
+explicit choice for genuinely project-wide requirements, with broader invalidation. SQLBuild tracks
+the inputs each Rule depends on so cached findings are reused only while those inputs remain valid.
 
 See [Execution and caching](/concepts/rules/execution-and-caching) for the complete lifecycle.
 
