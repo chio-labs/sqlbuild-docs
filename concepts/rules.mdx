@@ -196,9 +196,9 @@ need to execute SQL against controlled data. Use an audit when the answer depend
 A finding contains a stable code, project-relative path, line, column, explanation, and remediation.
 This makes the same requirement usable in a terminal, JSON output, CI annotation, or agent workflow.
 
-Intentional departures remain explicit. Exact exceptions and path-scoped ignores require a reason;
-exact exceptions are stale-checked so obsolete suppressions do not silently accumulate. Mandatory
-compiler correctness cannot be suppressed.
+Intentional departures remain explicit. Exact exceptions and path- or resource-scoped ignores
+require a reason; exact exceptions are stale-checked so obsolete suppressions do not silently
+accumulate. Mandatory compiler correctness cannot be suppressed.
 
 See [Findings and exceptions](/concepts/rules/findings-and-exceptions) for configuration examples.
 
