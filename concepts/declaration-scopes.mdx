@@ -13,8 +13,8 @@ decide which files can access it. No TOML configuration is required.
 | Where the declaration lives | Who can use it |
 |-------------------------------------|--------------------|
 | Top-level `macros/`, `constants/`, or `enums/` | The whole project |
-| Nested `macros/`, `constants/`, or `enums/` | Files in that folder and folders below it |
-| Nested `_macros/`, `_constants/`, or `_enums/` | Files directly in that folder only |
+| Nested `_sqlbuild/macros/`, `_sqlbuild/constants/`, or `_sqlbuild/enums/` | Files in the owner folder and folders below it |
+| Nested `_sqlbuild/_macros/`, `_sqlbuild/_constants/`, or `_sqlbuild/_enums/` | Files directly in the owner folder only |
 | An underscored constant or enum inside `MODEL()` | That model and its inline SQL hooks only |
 
 Macro declarations are Python files (`.py`). Constant and enum declarations are SQL files
@@ -29,22 +29,27 @@ models/
 ├── constants/                 published throughout models/
 │   └── warehouse.sql
 └── commerce/
-    ├── macros/                published throughout commerce/
-    │   └── currency.py
-    ├── _enums/                exact commerce/ directory only
-    │   └── grain.sql
+    ├── _sqlbuild/
+    │   ├── macros/            published throughout commerce/
+    │   │   └── currency.py
+    │   └── _enums/            exact commerce/ directory only
+    │       └── grain.sql
     ├── orders.sql              sees warehouse, currency, and grain
     ├── finance/
-    │   ├── macros/            published throughout finance/
-    │   │   └── tax.py
+    │   ├── _sqlbuild/
+    │   │   └── macros/        published throughout finance/
+    │   │       └── tax.py
     │   └── revenue.sql         sees warehouse, currency, and tax
     └── fulfillment/
         └── shipments.sql       sees warehouse and currency
 ```
 
-A nested unprefixed role applies to its folder and everything below it. An underscored role applies
-only to files directly beside it. The same unprefixed role name applies to the whole project only
-when it is at the project root.
+The folder containing `_sqlbuild/` is the declaration owner. An unprefixed role applies to that
+owner and everything below it. An underscored role applies only to files directly in the owner.
+Legacy declaration roles directly below an owner remain supported.
+
+`_sqlbuild/` is reserved for the six declaration-role directories shown above. Other direct files or
+folders are rejected, and a project-root `_sqlbuild/` is invalid because it has no resource owner.
 
 | Resource | Visible from the example tree | Not visible |
 |----------|-------------------------------|-------------|
@@ -79,8 +84,8 @@ versioned JSON schema rather than parsing text labels.
 | Where the value is needed | Placement |
 |---------------------------|-----------|
 | One model only | In that model's `MODEL()` header |
-| Files directly in one folder | In an underscored role beside those files |
-| Files across one folder tree | In an unprefixed role at their nearest shared parent folder |
+| Files directly in one folder | In an underscored role under the owner's `_sqlbuild/` folder |
+| Files across one folder tree | In an unprefixed role under the nearest shared owner's `_sqlbuild/` folder |
 | Different resource trees, such as models and tests | In a top-level declaration role |
 
 SQLBuild computes the lowest common owner of every declaration's runtime consumers. A project-wide
