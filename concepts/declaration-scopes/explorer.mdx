@@ -195,10 +195,11 @@ shows whether the declaration is placed more broadly than its real consumers req
 
 ## See declarations available through expected output
 
-Tests and scenarios can use file-based enums and constants available to a model when they define
-that model's expected output. This includes eligible exact-folder declarations, but not declarations
-inside `MODEL()`. The access applies to the whole test or scenario and remains separate from
-declarations visible through its own folder tree. The relevant report sections are:
+Tests can use file-based macros, enums, and constants available to a model when they define that
+model's expected output. Scenarios receive the model's file-based enums and constants but not its
+macros. Neither receives declarations inside `MODEL()`. The access applies to the whole test or
+scenario and remains separate from declarations visible through its own folder tree. The relevant
+report sections are:
 
 ```console
 $ sqb scope test:orders__completed_only --used-only
@@ -211,8 +212,11 @@ Relationship grants (1 of 1)
 
 The compact reason `expected_model through model:orders` means **available through expected output
 for model `orders`**. With multiple expected models, SQLBuild combines their eligible file-based
-enums and constants into one deterministic set for the test or scenario. These relationships do
-not grant macros or declarations defined inside a model's `MODEL()` header.
+declarations into one deterministic set. Tests include macros in that union; scenarios include only
+enums and constants. Neither receives declarations defined inside a model's `MODEL()` header.
+
+Macro-mode tests also report `tested_macro through macro:<name>` relationships. Those grants contain
+the tested macro and scoped file-based declarations available from its production owner.
 
 ## Preview a resource move
 

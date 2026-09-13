@@ -232,15 +232,20 @@ sqb scope model:stg_orders --used-only
 ## Expected-output access
 
 Tests and scenarios have two independent ways to reach declarations. Their own folder paths provide
-ordinary visibility. Each explicit `__expected__<model>` section adds the eligible file-based enums
-and constants available to that model. This includes exact-folder `_enums/` and `_constants/`
-declarations, despite their private visibility label.
+ordinary visibility. For tests, each explicit `__expected__<model>` section adds the eligible
+file-based macros, enums, and constants available to that model. Scenarios receive the model's
+file-based enums and constants but not its macros. These relationships include eligible
+exact-owner-private declarations.
 
 `sqb scope` reports this additional access separately under **Relationship grants** and names the
 model that provides it. With multiple expected models, SQLBuild makes the deterministic union of
 their eligible declarations available while compiling the whole test or scenario. It never includes
-macros or declarations defined inside a model's `MODEL()` header. A test filename, mirrored path,
-or mock does not provide this access by itself.
+declarations defined inside a model's `MODEL()` header. A test filename, mirrored path, or mock does
+not provide this access by itself.
+
+For macro-mode tests, **Relationship grants** also reports
+`tested_macro through macro:<name>`. This grants the tested macro and the scoped file-based
+declarations available from its production owner, as inferred from calls in `__macro_actual__`.
 
 ```bash
 sqb scope test:orders__completed_only
