@@ -5,8 +5,9 @@ description: "See which enums, constants, and macros are available to each SQL f
 
 For most SQL, the rule is simple:
 
-> A file can use declarations available to the whole project, declarations in unprefixed role
-> folders beside or above it, and declarations in an underscored role folder directly beside it.
+> A file can use declarations available to the whole project, declarations in unprefixed roles
+> under `_sqlbuild/` folders owned beside or above it, and declarations in an underscored role owned
+> directly beside it.
 
 ## Start from the SQL file
 
@@ -18,10 +19,11 @@ models/
 ├── constants/                 available throughout models/
 │   └── warehouse.sql
 └── commerce/
-    ├── enums/                 available throughout commerce/
-    │   └── order_status.sql
-    ├── _constants/       available directly in commerce/ only
-    │   └── minimum_value.sql
+    ├── _sqlbuild/
+    │   ├── enums/             available throughout commerce/
+    │   │   └── order_status.sql
+    │   └── _constants/        available directly in commerce/ only
+    │       └── minimum_value.sql
     ├── orders.sql
     └── history/
         └── archived_orders.sql
@@ -34,12 +36,12 @@ From this tree:
 | `orders.sql` | `warehouse`, `order_status`, and `minimum_value` |
 | `history/archived_orders.sql` | `warehouse` and `order_status` |
 
-`minimum_value` is not available in `history/` because `_constants/` applies only to files
-directly beside it.
+`minimum_value` is not available in `history/` because `_sqlbuild/_constants/` applies only to files
+directly in the `_sqlbuild/` owner's folder.
 
 ## Supported resource trees
 
-Scoped declaration directories can be placed below these SQL resource roots:
+Grouped declaration directories can be placed below these SQL resource roots:
 
 | Root | Contents |
 |------|----------|
@@ -56,6 +58,11 @@ under `tests/`. Put a declaration in the top-level `constants/`, `enums/`, or `m
 when it must be available across different resource trees. Project-root `_constants/`, `_enums/`,
 and `_macros/` directories are invalid because there is no owner folder at the project root for
 them to be private to.
+
+Existing scoped declaration roles directly below an owner remain supported. `_sqlbuild/` is the
+preferred layout because it keeps all declarations together without changing their visibility.
+Only the six public/private declaration-role directories are valid directly under `_sqlbuild/`;
+other entries are rejected. A project-root `_sqlbuild/` is invalid because it has no resource owner.
 
 ## Which file controls visibility?
 

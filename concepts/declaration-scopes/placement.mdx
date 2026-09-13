@@ -19,8 +19,8 @@ tree.
 | Where it is needed | Location |
 |--------------------|----------|
 | One model only | Inside that model's `MODEL()` header, for enums and constants |
-| SQL files directly in one directory | `_macros/`, `_enums/`, or `_constants/` |
-| A directory and its descendants | `macros/`, `enums/`, or `constants/` |
+| SQL files directly in one directory | `_sqlbuild/_macros/`, `_sqlbuild/_enums/`, or `_sqlbuild/_constants/` |
+| A directory and its descendants | `_sqlbuild/macros/`, `_sqlbuild/enums/`, or `_sqlbuild/constants/` |
 | Different trees, such as models and tests | Top-level `macros/`, `enums/`, or `constants/` |
 
 ## One directory
@@ -30,13 +30,14 @@ These two models use the same constant and both sit directly in `commerce/`:
 ```text
 models/
 └── commerce/
-    ├── _constants/
-    │   └── minimum_value.sql
+    ├── _sqlbuild/
+    │   └── _constants/
+    │       └── minimum_value.sql
     ├── orders.sql
     └── customers.sql
 ```
 
-Use `_constants/` because no descendant directory needs the value.
+Use `_sqlbuild/_constants/` because no descendant directory needs the value.
 
 ## One directory tree
 
@@ -45,15 +46,16 @@ These models use the same constant across two child directories:
 ```text
 models/
 └── commerce/
-    ├── constants/
-    │   └── reporting_day.sql
+    ├── _sqlbuild/
+    │   └── constants/
+    │       └── reporting_day.sql
     ├── finance/
     │   └── revenue.sql
     └── fulfillment/
         └── shipments.sql
 ```
 
-Use `constants/` in `commerce/` so both child directories can use it.
+Use `_sqlbuild/constants/` in `commerce/` so both child directories can use it.
 
 ## Different resource trees
 
