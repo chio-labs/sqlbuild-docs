@@ -62,7 +62,9 @@ them to be private to.
 Existing scoped declaration roles directly below an owner remain supported. `_sqlbuild/` is the
 preferred layout because it keeps all declarations together without changing their visibility.
 Only the six public/private declaration-role directories are valid directly under `_sqlbuild/`;
-other entries are rejected. A project-root `_sqlbuild/` is invalid because it has no resource owner.
+other entries are rejected. `_sqlbuild/` must sit below a concrete owner directory. A project-root
+`_sqlbuild/` or authored-root path such as `models/_sqlbuild/` is invalid; use the project-wide
+`macros/`, `enums/`, or `constants/` roots at that boundary.
 
 ## Which file controls visibility?
 
@@ -70,7 +72,8 @@ other entries are rejected. A project-root `_sqlbuild/` is invalid because it ha
 |--------------------|----------------------|
 | Model query | The model file |
 | Inline SQL hook in a model | The model file |
-| Unit test or scenario SQL | The test or scenario file |
+| Unit test SQL | The test file, plus inferred tested-resource relationships |
+| Scenario SQL | The scenario file, plus expected-model enum and constant relationships |
 | Named SQL hook | The hook file under `hooks/sql/` |
 | SQL function | The function file under `functions/sql/` |
 | Audit | The audit file |
@@ -81,8 +84,8 @@ hook uses declarations available where the hook itself is stored.
 
 ## Tests and expected output
 
-A test first sees declarations available from its own folder tree. It may also use file-based enums
-and constants available to a model for which it defines expected output.
+A test first sees declarations available from its own folder tree. It may also use file-based
+macros, enums, and constants available to a model for which it defines expected output.
 
 ```sql
 TEST();
@@ -91,25 +94,48 @@ WITH
 __expected__orders AS (
   SELECT
     1 AS order_id,
+    @normalize_order_status("'completed'") AS normalized_status,
     @enum("order_status").COMPLETED AS status
 )
 SELECT 1
 ```
 
-Because the test defines `__expected__orders`, the test may use file-based enums and constants
-available to `orders`, including declarations in exact-folder `_enums/` and `_constants/` roles.
+Because the test defines `__expected__orders`, the test may use file-based macros, enums, and
+constants available to `orders`, including declarations in exact-owner-private roles.
 Scope Explorer describes this as **available through expected output for model `orders`**. This is
 an additional relationship, not another visibility level.
 
 This additional access does **not** include:
 
-- Macros available only to the model
 - Enums or constants declared privately inside the model's `MODEL()` header
 - Declarations from a model merely mentioned by filename or directory layout
 
-Only an explicit `__expected__model_name` section adds the model's eligible file-based enums and
-constants. When a test checks several models, SQLBuild combines the declarations available through
-all expected models and makes that deterministic union available while compiling the entire test.
+Only an explicit `__expected__model_name` section adds the model's eligible file-based declarations.
+When a test checks several models, SQLBuild combines the declarations available through all
+expected models and makes that deterministic union available while compiling the entire test.
+
+Macro-mode tests receive the tested macro and the file-based declarations available from that
+macro's production owner. SQLBuild infers tested macros from calls in `__macro_actual__`; the test's
+filename or directory does not grant production visibility.
+
+```text
+models/orders/_sqlbuild/_macros/order_policy.py
+tests/unit/macros/models/orders/test_order_policy__returns_quantity.sql
+```
+
+The macro test can call `order_policy` without promoting it to the project-wide `macros/` root. A
+test can also use helper macros scoped to its own test directory:
+
+```text
+tests/unit/orders/
+├── _sqlbuild/
+│   └── macros/
+│       └── fixtures.py
+└── test_orders__calculates_total.sql
+```
+
+Those helpers remain unavailable to production resources. Mocked model, source, seed, and dbt
+fixture CTEs do not grant declarations from the mocked resource's production scope.
 
 ## Macros importing macros
 

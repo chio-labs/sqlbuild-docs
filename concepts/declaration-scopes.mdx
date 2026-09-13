@@ -49,7 +49,9 @@ owner and everything below it. An underscored role applies only to files directl
 Legacy declaration roles directly below an owner remain supported.
 
 `_sqlbuild/` is reserved for the six declaration-role directories shown above. Other direct files or
-folders are rejected, and a project-root `_sqlbuild/` is invalid because it has no resource owner.
+folders are rejected. It must also sit below a concrete owner directory. A project-root
+`_sqlbuild/` or authored-root path such as `models/_sqlbuild/` is invalid; declarations at that
+boundary belong in the project-wide `macros/`, `enums/`, or `constants/` roots.
 
 | Resource | Visible from the example tree | Not visible |
 |----------|-------------------------------|-------------|
