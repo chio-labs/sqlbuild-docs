@@ -69,6 +69,7 @@ The trailing `SELECT 1` is required as a ceremonial closing statement.
 | `__source__<name>` | Mock a source. Replaces `__source("<name>")` in the model SQL. |
 | `__ref__<name>` | Mock a model. Replaces `__ref("<name>")` in the model SQL. |
 | `__seed__<name>` | Mock a seed. Replaces `__seed("<name>")` in the model SQL. |
+| `__table_fn__<name>` | Mock a table function in model mode. Replaces the complete `__table_fn("<name>")(...)` invocation with the fixture relation. |
 | `__expected__<name>` | Define expected output for a model. SQLBuild resolves the model's real SQL and compares against this. |
 | `__assert__<name>` | Zero-row assertion. Passes if the query returns no rows; fails with the returned rows as diagnostics. |
 | `__macro__<name>` | Mock a macro. Replaces every `@<name>(...)` call with the mock value. |
@@ -166,6 +167,38 @@ SELECT 1
 ```
 
 You can mix `__source__`, `__ref__`, and `__seed__` mocks in the same test. As long as every leaf dependency is satisfied (either by a source mock, a ref mock, a seed mock, or by being in the expected chain), the test resolves.
+
+## Mocking table functions in model tests
+
+Use `__table_fn__<name>` when the model under test reads a managed table function but the test
+should provide rows directly. SQLBuild replaces the complete invocation, including its argument
+expressions, with the fixture relation. The mocked function is not deployed as a test dependency.
+
+```sql
+-- models/customer_order_totals.sql reads:
+-- __table_fn("customer_orders")(42)
+TEST();
+
+WITH
+fixture_orders AS (
+  SELECT 101 AS order_id, 42 AS customer_id, 2500 AS amount_cents
+),
+__table_fn__customer_orders AS (
+  SELECT order_id, customer_id, amount_cents FROM fixture_orders
+),
+__expected__customer_order_totals AS (
+  SELECT 42 AS customer_id, 2500 AS total_cents
+)
+SELECT 1
+```
+
+The fixture name must match a declared table function. Helper CTEs are available inside the fixture,
+just as they are for source, ref, and seed mocks. A table-function fixture can also be used directly
+inside a zero-row assertion.
+
+This is separate from `TEST (mode table_fn)`, which tests the table function implementation itself.
+Model-mode fixtures isolate a model from that implementation; table-function mode executes and
+compares the real function.
 
 ## Multiple expected models
 
