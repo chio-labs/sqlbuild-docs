@@ -1,183 +1,114 @@
 ---
 title: "Benchmarks"
-description: "End-to-end compiler and Rules performance on deterministic, production-shaped projects."
+description: "Complete compiler performance on projects with thousands of models, SQL tests, and audit attachments."
 ---
 
-SQLBuild benchmarks run the real `sqb compile` command. They measure complete compiler workflows,
-including project discovery, parsing, dependency resolution, SQL expansion and analysis, contracts,
-tests, Rules, cache publication, and artifact generation.
+SQLBuild compiles a 5,000-model project with nearly 5,000 SQL tests and more than 8,000 audit
+attachments from scratch in **19 seconds** in our CI benchmark. An unchanged recompile takes
+**13 seconds**.
 
-The benchmark projects are generated so each run is deterministic and reproducible. Their shape is
-not arbitrary: the reference workload was calibrated from a real working SQLBuild project, including
-its resource ratios, graph structure, SQL-size distribution, tests, audits, macros, functions,
-sources, seeds, and hooks.
-
-The generated projects contain neutral names and data. They do not contain source code or business
-data from the reference project.
-
-## Production-shaped workload
-
-The reference compiler workload reproduces the measured characteristics of a working SQLBuild
-project:
-
-| Characteristic | Observed project | Generated benchmark |
-|---|---:|---:|
-| Models | 976 | 976 |
-| Sources | 232 | 232 |
-| Seeds | 46 | 46 |
-| SQL functions | 23 | 23 |
-| Python macros | 12 | 12 |
-| Attached audits | 731 | 700 |
-| Native SQL test cases | 130 | 130 |
-| SQL hooks | 2 | 2 |
-| Execution layers | 54 | 54 |
-| Authored model SQL | 6.05 MB | about 6.4 MB |
-| Median model size | 1.9 KB | 1.9 KB |
-| 75th-percentile model size | 4.5 KB | 4.5 KB |
-| 90th-percentile model size | 10.9 KB | 11.0 KB |
-| 95th-percentile model size | 15.2 KB | 15.2 KB |
-| 99th-percentile model size | 48.2 KB | 48.0 KB |
-| Largest model | 519 KB | 520 KB |
-
-The generated dependency graph combines a 54-layer spine with bounded model chains. The workload
-also includes path defaults, reusable schemas, enforced contracts, attached audits, SQL hooks,
-source and seed references, SQL functions, composed Python macros, CTEs, derived tables, assertions,
-repeated test targets, and test fixtures ranging from 40 to 200 rows.
-
-This preserves the characteristics that exercise the compiler without publishing or depending on
-one specific project.
+These measurements run the complete `sqb compile` command, including project discovery, dependency
+resolution, SQL expansion and analysis, contract validation, test and audit preparation, configured
+Rules, cache publication, and artifact generation.
 
 ## Compiler performance
 
-On the production-shaped 976-model workload, a required CI run measured:
+| Compile time | **3k models**<br />2.9k tests · 5.1k audit attachments | **5k models**<br />4.9k tests · 8.4k audit attachments |
+|---|---:|---:|
+| First compile / cache fill | **12.48s** | **19.01s** |
+| Unchanged recompile | **8.79s** | **12.76s** |
 
-| Compile path | End-to-end `sqb compile` time |
-|---|---:|
-| First compile | 3.21s |
-| Unchanged recompile | 0.60s |
-| Recompile after a leaf-model edit | 0.78s |
-| Recompile after a central-model edit | 0.67s |
-| Recompile after a SQL-test edit | 0.70s |
-| Recompile after a Python-macro edit | 0.94s |
-| Recompile after a project-configuration edit | 3.56s |
+Timings include test and audit preparation, not warehouse execution.
 
-Model, test, and macro edits reuse unaffected compiler work. The project-configuration scenario
-deliberately changes an input with broad impact and therefore performs wider recomputation.
+The 5,000-model compiler process used approximately **1.3 GiB peak resident memory** on its first
+compile and **0.7 GiB** on its unchanged recompile.
 
-### Model and SQL-volume scaling
+### Workload details
 
-A separate compiler profile increases model count and authored SQL volume while retaining the
-measured model-size distribution:
+The deterministic generated projects exercise compiler work at scale, with synthetic SQL,
+contracts, macros, functions, tests, and audits.
 
-| Models | Authored model SQL | First compile | Unchanged recompile |
-|---:|---:|---:|---:|
-| 3,000 | 18–25 MB | 2.37s | 1.84s |
-| 10,000 | 60–80 MB | 7.50s | 5.09s |
+| Resource | 3k-model project | 5k-model project |
+|---|---:|---:|
+| Models | 3,000 | 5,000 |
+| Sources | 713 | 1,189 |
+| Seeds | 141 | 236 |
+| SQL functions | 71 | 118 |
+| Python macros | 37 | 61 |
+| SQL test cases | 2,945 | 4,908 |
+| Audit attachments | 5,056 | 8,427 |
 
-This profile isolates compiler scaling by model count and SQL volume. The production-shaped profile
-above is the broader test of sources, seeds, functions, macros, tests, audits, hooks, contracts, and
-artifact generation occurring together.
+The projects use repeated generated structures. Individual project timings depend on SQL
+complexity, macros, configuration, and hardware as well as model count.
+
+### Incremental compilation
+
+SQLBuild reuses cached analysis for unaffected models. In the 5,000-model benchmark, a single-model
+file edit reused **4,999 model analyses**. A scoped Python-macro edit required fresh analysis for
+**7 models**. Both scenarios completed in approximately **9.8 seconds**.
+
+The single-model scenario appends a SQL comment to exercise file-change invalidation. Separate
+regression coverage checks expression-changing edits against uncached compilation results.
+Scenarios run in a fixed sequence and use different cache-loading paths; an edit timing below the
+initial unchanged timing does not mean editing inherently requires less work.
 
 ## Rules performance
 
-The Rules benchmark scales the same production-shaped generator to 5,000 models. The resulting
-project contains:
+Rules participate in ordinary compilation. Model Rules are cached per model, and SQLBuild tracks
+their dependencies so unaffected findings can be reused after edits. Project Rules evaluate the
+complete project view and have broader invalidation.
 
-| Characteristic | Generated workload |
-|---|---:|
-| Models | 5,000 |
-| Sources | 1,189 |
-| Seeds | 236 |
-| SQL functions | 118 |
-| Python macros | 61 |
-| Native SQL tests | 666 |
-| Attached audits | 3,586 |
-| SQL hooks | 2 |
-| Authored model SQL | 31.3 MB |
-| Authored SQL-test definitions | 6.4 MB |
+A separate custom-Rules benchmark exercises 20- and 100-Rule packs over 5,000 models. It measures
+first compilation, unchanged compilation, model edits, and Rule implementation changes. This is a
+different workload from the compiler table above; its results should be compared within that profile.
 
-On this project, 20 custom Rules complete their first compile in just over 10 seconds. An unchanged
-compile completes in under six seconds.
-
-Even with 100 custom Rules, an unchanged compile completes in just over seven seconds.
-
-| Compile | 20 Custom Rules | 100 Custom Rules |
-|---|---:|---:|
-| First compile (no cache) | 10.83s | 12.19s |
-| Unchanged compile | 5.81s | 7.24s |
-| After editing 1% of models | 7.43s | 10.02s |
-
-Each measurement executes the complete `sqb compile` command. The edit scenario changes 50 of the
-5,000 models before recompiling.
-
-Because most Rules in this profile evaluate once per model, the 20- and 100-Rule configurations
-perform roughly 100,000 and 500,000 Rule evaluations respectively.
-
-Increasing the custom Rule pack from 20 to 100 multiplies the number of Rule evaluations by five,
-while the unchanged compile median increases from 5.81 to 7.24 seconds.
-
-### Rule implementation changes
-
-Changing a Rule or one of its imported helpers participates in cache invalidation.
-
-In the 5,000-model, 100-Rule profile, editing one custom Rule invalidated exactly 5,001 evaluations
-while preserving 495,001 cached results. The complete compile finished in a 9.89-second median.
-
-CI also verifies exact invalidation for model edits, SQL-test edits, macro edits, project
-configuration, directly observed project inputs, custom Rule source, and imported custom helpers. A
-cache result with an unexpected hit or miss count fails the benchmark.
+See [Execution and caching](/concepts/rules/execution-and-caching) for the Rules lifecycle, or run
+the publication profile below to collect current custom-Rules measurements.
 
 ## Methodology
 
-Compiler and Rules benchmarks run on an 8-vCPU, 32 GB Linux CI runner class using Python 3.12 and
-Polyglot 0.9.2.
+The compiler results above are individual scenario measurements from the
+[passing CI run on September 22, 2026](https://github.com/chio-labs/sqlbuild/actions/runs/35764207007),
+using the compiler code released in **SQLBuild 0.113.3** and Python 3.12 on Linux. They are not
+multi-run medians.
 
-The Rules results shown above are the median of five required-CI runs. Allocated CPUs across those
-runs were AMD EPYC or Intel Xeon processors.
+Each scenario launches a fresh process. The first compile starts with an empty project cache;
+subsequent scenarios reuse that cache. The CI job enforces a **4 GiB combined memory limit**.
+Reported peak resident memory is for the compiler process, not the entire CI job.
 
-The Rules benchmark output records:
+CI checks cache-hit and miss expectations and pinned semantic fingerprints alongside timing and
+memory budgets. The varied 1,000-model guard additionally compares SQL-expression and macro edits
+with uncached analysis and Rules results.
 
-- complete CLI elapsed time;
-- compiler phase timings;
-- Rule cache hits and misses;
-- Rule cache size;
-- peak resident memory;
-- workload resource counts;
-- SQLBuild, Python, and Polyglot versions;
-- every raw timing and memory sample.
-
-The required Rules CI profile enforces profile-specific latency, cache-size, peak-memory, timeout,
-and aggregate compiler budgets. Cache hit and miss expectations are exact.
-
-These measurements cover compilation and static analysis. They do not measure warehouse query
-execution.
+These measurements cover compilation and static analysis. SQL tests and audits are prepared, not
+executed against a warehouse.
 
 ## Reproduce the benchmarks
 
-Run the five-iteration Rules publication profile:
+Run the fresh-process compiler cache guards from the
+[SQLBuild repository](https://github.com/chio-labs/sqlbuild):
+
+```bash
+make test-e2e-cache-compile-performance SQLBUILD_BENCHMARK_MODELS=3000
+make test-e2e-cache-compile-performance SQLBUILD_BENCHMARK_MODELS=5000
+```
+
+Run the five-iteration custom-Rules publication profile:
 
 ```bash
 uv run python -m scripts.benchmark_rules \
   --models 5000 \
+  --rule-counts 20 100 \
   --iterations 5 \
   --output rules-5000.json
 ```
 
-Run the bounded profile used by required CI:
+Run the bounded Rules profile used by required CI:
 
 ```bash
 uv run python -m scripts.benchmark_rules_ci \
   --output rules-performance-ci.json \
   --summary-output rules-performance-ci.md
-```
-
-Run the compiler performance guards:
-
-```bash
-uv run pytest \
-  tests/e2e/src/sqlbuild/cli/commands/main/compile/test_compile_performance.py \
-  -n auto \
-  --dist loadfile
 ```
 
 The benchmark generators, guard thresholds, and CI workflow are maintained in the public
