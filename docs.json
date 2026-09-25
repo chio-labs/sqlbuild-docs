@@ -69,6 +69,7 @@
               "concepts/models/schemas",
               "concepts/models/type-enforcement",
               "concepts/models/contracts",
+              "concepts/models/migrations",
               {
                 "group": "Hooks",
                 "root": "concepts/models/hooks",
