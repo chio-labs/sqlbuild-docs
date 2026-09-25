@@ -16,13 +16,13 @@ Add `migrate_from` to the renamed model's header, naming the old model:
 ```sql
 MODEL (
   materialized incremental,
-  migrate_from "stg_orders",
+  migrate_from stg_orders,
   cursor order_date,
   ...
 );
 ```
 
-Use `"schema.name"` when the old relation is in a different schema of the same database.
+Use `schema.name` when the old relation is in a different schema of the same database.
 
 On the next build, SQLBuild copies the old relation's data to the new name through a staging table (see [How a move runs](#how-a-move-runs)), records the move, and builds the model incrementally from the migrated state. There is no first-run rebuild, and no `replay_on_change` replay caused by the rename. The old relation is never modified or dropped. Once it is no longer part of the project, [janitor](/cli/janitor) archives it like any other stale relation.
 
