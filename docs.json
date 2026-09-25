@@ -171,23 +171,6 @@
         ]
       },
       {
-        "group": "Virtual Environments (Alpha)",
-        "pages": [
-          "concepts/virtual-environments",
-          "concepts/virtual-environments/setup",
-          "concepts/virtual-environments/building",
-          "concepts/virtual-environments/promotion",
-          "concepts/virtual-environments/rollback",
-          "concepts/virtual-environments/adopt-detach",
-          "concepts/virtual-environments/clone",
-          "concepts/virtual-environments/diff",
-          "concepts/virtual-environments/reconcile",
-          "concepts/virtual-environments/locks",
-          "concepts/virtual-environments/janitor",
-          "concepts/virtual-environments/recovery"
-        ]
-      },
-      {
         "group": "Integrations",
         "pages": [
           {
@@ -230,11 +213,7 @@
           "cli/debug",
           "cli/janitor",
           "cli/clean",
-          "cli/dbt",
-          "cli/state",
-          "cli/promote",
-          "cli/rollback",
-          "cli/reconcile"
+          "cli/dbt"
         ]
       }
     ]
