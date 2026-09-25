@@ -65,17 +65,17 @@ A move never overwrites the destination directly:
 
 The old relation is never modified. Staging and replaced tables use the [janitor](/cli/janitor) archive format, so an abandoned staging table or a replaced destination is deleted by janitor after `archive_retention_days`. A staging table left by an interrupted run is never reused; the next run stages again. Don't run janitor at the same time as a build in the same schema.
 
-`sqb plan` shows how each move will run, for example `zero-copy clone, transient -> permanent, promote by swap`.
+`sqb plan` shows how each move will run, for example `physical copy, transient -> permanent, promote by swap`.
 
 ## State
 
-Each move is recorded in an append-only `_sqlbuild_migrations` table in the destination schema. A missing record means the move didn't complete. Re-running after an interruption at any point converges without manual steps.
+Each move is recorded in an append-only `_sqlbuild_migrations` table in the destination schema. A missing record means completion is unrecorded; staging or promotion may already have happened. Re-running after an interruption recovers through the migration decisions above.
 
 ## Adapter support
 
 | Adapter | Staging | Promotion |
 |---------|---------|-----------|
-| Snowflake | Zero-copy clone with `COPY GRANTS`. Transient → permanent is a physical copy, because Snowflake can't clone a transient table into a permanent one. | `ALTER TABLE … SWAP WITH` |
+| Snowflake | Zero-copy clone with `COPY GRANTS`. Transient → permanent is a physical copy, because Snowflake can't clone a transient table into a permanent one. | `ALTER TABLE … SWAP WITH` for an existing destination; rename for a missing destination |
 | BigQuery | `CREATE TABLE … CLONE`, or `CREATE TABLE … COPY` when BigQuery refuses the clone | Two renames; the destination is briefly missing between them, and an interrupted run recovers on retry |
 | Databricks | `DEEP CLONE` | Two renames, as for BigQuery |
 | PostgreSQL, SQL Server, DuckDB, MotherDuck | Physical copy | Renames and the migration record in one transaction |
